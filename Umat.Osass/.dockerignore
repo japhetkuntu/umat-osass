@@ -1,0 +1,14 @@
+# Build artifacts
+**/bin/
+**/obj/
+
+# IDE / OS metadata
+.vs/
+.idea/
+*.user
+*.DotSettings.user
+.DS_Store
+
+# Test results
+TestResults/
+coverage/

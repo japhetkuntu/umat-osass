@@ -1,0 +1,350 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Admin Portal Design System
+   UMaT University Administration Interface
+   All colors in HSL format */
+
+@layer base {
+  :root {
+    /* Claude + UMaT brand overrides */
+    --brand-primary: #0e7143;
+    --brand-primary-light: #d1ede0;
+    --brand-primary-mid: #0e7143;
+    --brand-primary-dark: #073d25;
+    --brand-primary-50: #d1ede0;
+    --brand-primary-100: #83bba1;
+    --brand-primary-200: #5ca382;
+    --brand-primary-600: #0e7143;
+    --brand-primary-800: #0a5734;
+    --brand-primary-900: #073d25;
+
+    --brand-accent: #ebb30a;
+    --brand-accent-light: #fdf3cc;
+    --brand-accent-mid: #ebb30a;
+    --brand-accent-dark: #6b4f02;
+    --brand-accent-50: #fdf3cc;
+    --brand-accent-100: #f6d97e;
+    --brand-accent-200: #f2cd58;
+    --brand-accent-600: #ebb30a;
+    --brand-accent-800: #ab8106;
+    --brand-accent-900: #6b4f02;
+
+    --color-background-primary: #ffffff;
+    --color-background-info: #d1ede0;
+    --color-text-info: #073d25;
+    --color-border-info: #0e7143;
+
+    --background: 0 0% 100%;           /* White */
+    --foreground: 0 0% 10%;            /* Black */
+
+    /* Card surfaces */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+
+    /* Popover surfaces */
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    --primary: 152 78% 25%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 45 92% 48%;
+    --secondary-foreground: 0 0% 10%;
+
+    --muted: 152 15% 92%;
+    --muted-foreground: 152 15% 42%;
+
+    --accent: 45 92% 48%;
+    --accent-foreground: 0 0% 10%;
+
+    --destructive: 4 84% 47%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 65% 32%;            /* Emerald green */
+    --success-foreground: 0 0% 100%;
+    --success-light: 152 50% 95%;
+
+    --warning: 45 92% 48%;             /* Golden yellow */
+    --warning-foreground: 0 0% 10%;
+    --warning-light: 45 90% 95%;
+
+    --info: 152 78% 25%;               /* Emerald green */
+    --info-foreground: 0 0% 100%;
+    --info-light: 152 15% 92%;
+
+    --border: 152 15% 90%;
+    --input: 152 15% 94%;
+    --ring: 152 78% 25%;
+
+    --radius: 0.75rem;
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+
+    --font-serif: 'Lora', Georgia, serif;
+    --font-sans: 'Anthropic Sans', Inter, system-ui, -apple-system, sans-serif;
+
+    --sidebar-background: 152 78% 15%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 45 92% 48%;     /* Golden yellow */
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 152 78% 25%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 152 78% 20%;
+    --sidebar-ring: 45 92% 48%;
+    --sidebar-muted: 152 30% 65%;
+
+    --table-header: 152 25% 96%;
+    --table-row-hover: 152 40% 97%;
+    --table-border: 152 15% 90%;
+  }
+
+  .dark {
+    --background: 0 0% 8%;             /* Black */
+    --foreground: 0 0% 96%;            /* White */
+
+    --card: 152 15% 11%;
+    --card-foreground: 0 0% 96%;
+
+    --popover: 152 15% 11%;
+    --popover-foreground: 0 0% 96%;
+
+    --primary: 152 78% 40%;            /* Lighter emerald for dark mode */
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 152 78% 50%;
+
+    --secondary: 45 60% 22%;           /* Dark golden */
+    --secondary-foreground: 45 90% 80%;
+
+    --muted: 152 15% 14%;
+    --muted-foreground: 152 10% 62%;
+
+    --accent: 45 85% 55%;             /* Dark golden yellow */
+    --accent-foreground: 0 0% 10%;
+
+    --destructive: 4 75% 52%;          /* Scarlet red */
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 60% 32%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 45 85% 45%;             /* Golden yellow */
+    --warning-foreground: 0 0% 10%;
+
+    --info: 152 60% 32%;               /* Emerald green */
+    --info-foreground: 0 0% 100%;
+
+    --border: 152 15% 22%;
+    --input: 152 15% 22%;
+    --brand-primary-light: #5dbf8e;
+    --brand-accent-light: #f5d06a;
+    --color-background-primary: #081210;
+    --color-background-info: #0f2f1d;
+    --color-text-info: #d1ede0;
+    --color-border-info: #5dbf8e;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    font-weight: 400;
+    font-size: 1rem;
+    letter-spacing: -0.3px;
+  }
+
+  h1 {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 1.375rem;
+    line-height: 1.4;
+    letter-spacing: -0.24px;
+    text-transform: none;
+  }
+
+  h2 {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 1.125rem;
+    line-height: 1.5;
+    letter-spacing: -0.2px;
+    text-transform: none;
+  }
+
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 1rem;
+    line-height: 1.5;
+    text-transform: none;
+  }
+
+  svg {
+    stroke-width: 0.5px;
+  }
+
+  .card,
+  .card-elevated {
+    background: var(--color-background-primary);
+    border: 0.5px solid rgba(14, 113, 67, 0.12);
+    border-radius: var(--radius);
+  }
+
+  .badge-primary {
+    background: var(--brand-primary-light);
+    color: var(--brand-primary-dark);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 9999px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+
+  .badge-accent {
+    background: var(--brand-accent-light);
+    color: var(--brand-accent-dark);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 9999px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+
+  .btn {
+    min-height: 36px;
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--foreground);
+    font-weight: 500;
+    transition: background-color 0.15s ease-in-out;
+  }
+
+  .btn:hover,
+  .btn:focus-visible {
+    background: var(--brand-primary-light);
+  }
+
+  input,
+  textarea,
+  select {
+    min-height: 36px;
+    border: 1px solid hsl(var(--border));
+    border-radius: 16px;
+    background: hsl(var(--input));
+    color: var(--foreground);
+    padding: 0 0.75rem;
+    box-shadow: inset 0 0 0 1px hsla(var(--border), 0.85), inset 0 1px 2px rgba(0, 0, 0, 0.08);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04), 0 0 0 3px rgba(14, 113, 67, 0.12);
+    border-color: var(--brand-primary);
+    background: var(--background);
+  }
+
+  .node {
+    cursor: pointer;
+  }
+
+  .node:hover {
+    opacity: 0.95;
+  }
+}
+
+@layer components {
+  /* Admin page container */
+  .admin-page {
+    @apply p-6 space-y-6;
+  }
+
+  /* Page header */
+  .page-header {
+    @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold text-foreground;
+  }
+
+  .page-description {
+    @apply text-muted-foreground text-sm;
+  }
+
+  /* Data table container */
+  .data-table-container {
+    @apply bg-card rounded-lg border shadow-sm overflow-hidden;
+  }
+
+  /* Stats card */
+  .stats-card {
+    @apply bg-card rounded-lg border p-6 shadow-sm transition-shadow hover:shadow-md;
+  }
+
+  .stats-card-title {
+    @apply text-sm font-medium text-muted-foreground;
+  }
+
+  .stats-card-value {
+    @apply text-3xl font-bold text-foreground mt-2;
+  }
+
+  .stats-card-trend {
+    @apply text-sm mt-2 flex items-center gap-1;
+  }
+
+  .stats-card-trend.positive {
+    @apply text-success;
+  }
+
+  .stats-card-trend.negative {
+    @apply text-destructive;
+  }
+
+  /* Form styles */
+  .form-section {
+    @apply space-y-4;
+  }
+
+  .form-section-title {
+    @apply text-lg font-semibold text-foreground pb-2 border-b;
+  }
+
+  /* Status badges */
+  .status-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .status-badge.active {
+    @apply bg-success/10 text-success;
+  }
+
+  .status-badge.inactive {
+    @apply bg-muted text-muted-foreground;
+  }
+
+  .status-badge.pending {
+    @apply bg-warning/10 text-warning;
+  }
+
+  .status-badge.rejected {
+    @apply bg-destructive/10 text-destructive;
+  }
+}

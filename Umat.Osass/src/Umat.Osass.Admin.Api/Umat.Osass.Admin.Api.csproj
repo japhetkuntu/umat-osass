@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Akka" Version="1.5.52"/>
+        <PackageReference Include="Akka.Cluster" Version="1.5.52"/>
+        <PackageReference Include="Akka.Cluster.Tools" Version="1.5.52"/>
+        <PackageReference Include="Akka.DependencyInjection" Version="1.5.52"/>
+        <PackageReference Include="Mapster.DependencyInjection" Version="1.0.1"/>
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.16"/>
+        <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1"/>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.11"/>
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning.ApiExplorer" Version="5.0.0"/>
+        <PackageReference Include="Serilog.AspNetCore" Version="9.0.0"/>
+        <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0"/>
+        <PackageReference Include="Serilog.Sinks.File" Version="6.0.0"/>
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2"/>
+        <PackageReference Include="BCrypt.Net-Core" Version="1.6.0"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+    </ItemGroup>
+    
+    <ItemGroup>
+      <Folder Include="Controllers\NonAcademic\" />
+      <Folder Include="docs\" />
+      <Folder Include="Middlewares\" />
+      <Folder Include="Models\Validators\" />
+      <Folder Include="Services\Providers\NonAcademic\" />
+    </ItemGroup>
+    
+    <ItemGroup>
+      <ProjectReference Include="..\Umat.Osass.Common.Sdk\Umat.Osass.Common.Sdk.csproj" />
+      <ProjectReference Include="..\Umat.Osass.Email.Sdk\Umat.Osass.Email.Sdk.csproj" />
+      <ProjectReference Include="..\Umat.Osass.PostgresDb.Sdk\Umat.Osass.PostgresDb.Sdk.csproj" />
+      <ProjectReference Include="..\Umat.Osass.Redis.Sdk\Umat.Osass.Redis.Sdk.csproj" />
+      <ProjectReference Include="..\Umat.Osass.Storage.Sdk\Umat.Osass.Storage.Sdk.csproj" />
+      <ProjectReference Include="..\Umat.Osass.WhatsApp.Sdk\Umat.Osass.WhatsApp.Sdk.csproj" />
+    </ItemGroup>
+
+</Project>

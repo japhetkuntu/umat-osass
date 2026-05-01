@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Committee Assignment</title>
+  <style>
+    body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#f4f4f7; color:#333; margin:0; }
+    .container { max-width:600px; margin:32px auto; padding:24px; background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,.08); }
+    .button { display:inline-block; padding:12px 24px; background:#065f46; color:#fff; text-decoration:none; border-radius:8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Committee Assignment</h1>
+    <p>Hi {{staff_name}},</p>
+    <p>You have been added to a new committee.</p>
+    <p><strong>Committee Type:</strong> {{committee_type}}</p>
+    <p><strong>Role:</strong> {{committee_role}}</p>
+    <p><strong>Department:</strong> {{department_name}}</p>
+    <p><a href="{{portal_url}}" class="button">Go to Portal</a></p>
+  </div>
+</body>
+</html>

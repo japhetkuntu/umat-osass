@@ -1,0 +1,75 @@
+# .gitignore for ReservEase.Accommodation (C# .NET + VS Code + common tools)
+
+# Build results
+bin/
+obj/
+out/
+*.exe
+*.dll
+*.app
+*.log
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS Code settings
+.vscode/
+.history/
+
+# Rider settings
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# NuGet
+*.nupkg
+packages/
+.nuget/
+project.lock.json
+project.fragment.lock.json
+
+# Test results
+TestResults/
+*.TestResults/
+*.trx
+
+# Publish
+publish/
+*.publish/
+src/**/obj
+src/**/bin
+
+# Secrets
+
+!src/**/appsettings.*.json
+src/**/appsettings.json
+
+
+secrets.json
+appsettings.Development.json
+appsettings.Local.json
+
+# Others
+*.swp
+*.bak
+*.tmp
+
+# Node/npm (if any frontend)
+node_modules/
+npm-debug.log
+
+# Python (if any scripts)
+__pycache__/
+*.pyc
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# Local tools
+.localtoolsettings.json

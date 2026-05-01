@@ -1,0 +1,24 @@
+
+namespace Umat.Osass.Promotion.Academic.Api.Models.Responses;
+
+public class PromotionHistoryResponse
+{
+    public string Id { get; set; } = string.Empty;
+    public string PromotionPosition { get; set; } = string.Empty;
+    public string ApplicantCurrentPosition { get; set; } = string.Empty;
+    public string ApplicationStatus { get; set; } = string.Empty;
+    public string ReviewStatus { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public DateTime? SubmissionDate { get; set; }
+    public bool IsActive { get; set; }
+    public string? Feedback { get; set; }
+    public ApplicationScores? Scores { get; set; }
+    public string? PromotionLetterUrl { get; set; }
+}
+
+public class ApplicationScores
+{
+    public double Teaching { get; set; }
+    public double Publication { get; set; }
+    public double Service { get; set; }
+}

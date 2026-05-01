@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Non-Academic Staff Onboarding</title>
+  <style>
+    body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#f4f4f7; color:#333; margin:0; }
+    .container { max-width:600px; margin:32px auto; padding:24px; background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,.08); }
+    .button { display:inline-block; padding:12px 24px; background:#065f46; color:#fff; text-decoration:none; border-radius:8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Welcome, Staff Member</h1>
+    <p>Hi {{first_name}} {{last_name}},</p>
+    <p>Your non-academic staff account has been created.</p>
+    <p><strong>Staff ID:</strong> {{staff_id}}</p>
+    <p><strong>Temporary Password:</strong> {{temporal_password}}</p>
+    <p><a href="{{portal_login_url}}" class="button">Login to Portal</a></p>
+  </div>
+</body>
+</html>
