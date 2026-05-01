@@ -128,7 +128,16 @@ configure_firewall() {
   sudo ufw allow 80/tcp   comment "HTTP"   2>/dev/null
   sudo ufw allow 443/tcp  comment "HTTPS"  2>/dev/null
 
-  # Defence-in-depth: block direct access to internal ports
+  # IP mode: open per-service ports when using nginx.ip.conf.
+  local nginx_conf="${NGINX_CONF_FILE:-}"
+  if [[ "$nginx_conf" == *nginx.ip.conf* ]]; then
+    for port in 8001 8002 8003 8004 8081 8082 8083 8084; do
+      sudo ufw allow "$port"/tcp comment "OSASS IP-mode service port" 2>/dev/null || true
+    done
+    ok "Firewall: IP-mode ports 8001-8004, 8081-8084 opened."
+  fi
+
+  # Defence-in-depth: block direct access to internal infra ports
   # (they already bind to 127.0.0.1 in prod compose)
   for port in 5432 6379 9000 9001; do
     sudo ufw deny "$port"/tcp comment "Block direct service port" 2>/dev/null || true
