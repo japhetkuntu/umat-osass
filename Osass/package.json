@@ -1,0 +1,20 @@
+{
+    "name": "osass",
+    "private": true,
+    "workspaces": [
+        "apps/*"
+    ],
+    "scripts": {
+        "dev:assessment": "npm run dev -w @osass/academic-assessment",
+        "dev:academic": "npm run dev -w @osass/academic",
+        "dev:admin": "npm run dev -w @osass/admin",
+        "dev:non-academic": "npm run dev -w @osass/non-academic",
+        "dev:non-academic-assessment": "npm run dev -w @osass/non-academic-assessment",
+        "build:academic": "npm run build -w @osass/academic",
+        "build:admin": "npm run build -w @osass/admin",
+        "build:non-academic": "npm run build -w @osass/non-academic",
+        "build:non-academic-assessment": "npm run build -w @osass/non-academic-assessment",
+        "lint": "npm run lint -ws",
+        "test": "npm run test -ws"
+    }
+}

@@ -1,0 +1,374 @@
+# =============================================================================
+# UMaT OSASS – Docker Compose
+# =============================================================================
+# Copy .env.example to .env and fill in any secrets before running.
+# Start everything:  docker compose up --build -d
+# Stop everything:   docker compose down
+# Wipe volumes too:  docker compose down -v
+# =============================================================================
+
+services:
+
+  # ── Infrastructure ──────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: osass-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+      POSTGRES_DB: OsassIdentityDb
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - osass-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: osass-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - osass-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: osass-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioapp}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioapp}
+    command: server /data --console-address ":9001"
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - osass-net
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: osass-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioapp}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioapp}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-osass}
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://osass-minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
+        mc mb --ignore-existing local/$$MINIO_BUCKET_NAME;
+        mc anonymous set download local/$$MINIO_BUCKET_NAME;
+        exit 0;
+      "
+    networks:
+      - osass-net
+    # ── Backend APIs ─────────────────────────────────────────────────────────────
+    # All four APIs share a single Dockerfile; the project is selected via
+    # the PROJECT_NAME build-arg and the correct DLL is selected via `command`.
+
+  identity-api:
+    build:
+      context: ./Umat.Osass
+      dockerfile: Dockerfile
+      args:
+        PROJECT_NAME: Umat.Osass.Identity.Api
+    image: osass/identity-api:local
+    container_name: osass-identity-api
+    restart: unless-stopped
+    command: ["Umat.Osass.Identity.Api.dll"]
+    ports:
+      - "5001:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      # Database
+      ConnectionStrings__IdentityConnection: >-
+        Host=postgres;Port=5432;Database=OsassIdentityDb;
+        Username=${POSTGRES_USER:-admin};Password=${POSTGRES_PASSWORD:-admin}
+      # Redis
+      Redis__IdentityRedisConfig__ConnectionString: redis:6379
+      Redis__IdentityRedisConfig__DbNumber: 0
+      # JWT (override with real secrets in .env)
+      BearerTokenConfig__Issuer: ${JWT_ISSUER:-https://osass.umat.edu.gh}
+      BearerTokenConfig__Audience: ${JWT_AUDIENCE:-https://osass.umat.edu.gh}
+      BearerTokenConfig__ApplicantSigningKey: ${JWT_APPLICANT_KEY:-zYxWvUtSrqPoNmLkJiHgFeDcBa987654}
+      BearerTokenConfig__AdminSigningKey: ${JWT_ADMIN_KEY:-98765UtSrqPoNmLkJiHgFeDcBa987654}
+      # Email
+      EmailProvider__CurrentProvider: ${EMAIL_PROVIDER:-CustomEmail}
+      CustomEmailConfig__TemplatesDirectory: EmailTemplates
+    volumes:
+      - ./Osass/EmailTemplates:/app/EmailTemplates:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - osass-net
+
+  admin-api:
+    build:
+      context: ./Umat.Osass
+      dockerfile: Dockerfile
+      args:
+        PROJECT_NAME: Umat.Osass.Admin.Api
+    image: osass/admin-api:local
+    container_name: osass-admin-api
+    restart: unless-stopped
+    command: ["Umat.Osass.Admin.Api.dll"]
+    ports:
+      - "5003:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__AcademicConnection: >-
+        Host=postgres;Port=5432;Database=AcademicPromotionDb;
+        Username=${POSTGRES_USER:-admin};Password=${POSTGRES_PASSWORD:-admin}
+      ConnectionStrings__NonAcademicConnection: >-
+        Host=postgres;Port=5432;Database=NonAcademicPromotionDb;
+        Username=${POSTGRES_USER:-admin};Password=${POSTGRES_PASSWORD:-admin}
+      ConnectionStrings__IdentityConnection: >-
+        Host=postgres;Port=5432;Database=OsassIdentityDb;
+        Username=${POSTGRES_USER:-admin};Password=${POSTGRES_PASSWORD:-admin}
+      Redis__PropertyRedisConfig__ConnectionString: redis:6379
+      Redis__PropertyRedisConfig__DbNumber: 1
+      BearerTokenConfig__Issuer: ${JWT_ISSUER:-https://osass.umat.edu.gh}
+      BearerTokenConfig__Audience: ${JWT_AUDIENCE:-https://osass.umat.edu.gh}
+      BearerTokenConfig__AdminSigningKey: ${JWT_ADMIN_KEY:-98765UtSrqPoNmLkJiHgFeDcBa987654}
+      # Storage (DigitalOcean Spaces / S3-compatible)
+      StorageConfig__AccessKey: ${STORAGE_ACCESS_KEY:-minioapp}
+      StorageConfig__SecretKey: ${STORAGE_SECRET_KEY:-minioapp}
+      StorageConfig__BucketName: ${STORAGE_BUCKET:-osass}
+      StorageConfig__Region: ${STORAGE_REGION:-us-east-1}
+      StorageConfig__Endpoint: ${STORAGE_ENDPOINT:-http://minio:9000}
+      StorageConfig__CdnEndpoint: ${STORAGE_CDN_ENDPOINT:-http://minio:9000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - osass-net
+
+  academic-promotion-api:
+    build:
+      context: ./Umat.Osass
+      dockerfile: Dockerfile
+      args:
+        PROJECT_NAME: Umat.Osass.Promotion.Academic.Api
+    image: osass/academic-promotion-api:local
+    container_name: osass-academic-promotion-api
+    restart: unless-stopped
+    command: ["Umat.Osass.Promotion.Academic.Api.dll"]
+    ports:
+      - "5004:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__AcademicConnection: >-
+        Host=postgres;Port=5432;Database=AcademicPromotionDb;
+        Username=${POSTGRES_USER:-admin};Password=${POSTGRES_PASSWORD:-admin}
+      ConnectionStrings__IdentityConnection: >-
+        Host=postgres;Port=5432;Database=OsassIdentityDb;
+        Username=${POSTGRES_USER:-admin};Password=${POSTGRES_PASSWORD:-admin}
+      Redis__PropertyRedisConfig__ConnectionString: redis:6379
+      Redis__PropertyRedisConfig__DbNumber: 1
+      BearerTokenConfig__Issuer: ${JWT_ISSUER:-https://osass.umat.edu.gh}
+      BearerTokenConfig__Audience: ${JWT_AUDIENCE:-https://osass.umat.edu.gh}
+      BearerTokenConfig__ApplicantSigningKey: ${JWT_APPLICANT_KEY:-zYxWvUtSrqPoNmLkJiHgFeDcBa987654}
+      StorageConfig__AccessKey: ${STORAGE_ACCESS_KEY:-minioapp}
+      StorageConfig__SecretKey: ${STORAGE_SECRET_KEY:-minioapp}
+      StorageConfig__BucketName: ${STORAGE_BUCKET:-osass}
+      StorageConfig__Region: ${STORAGE_REGION:-us-east-1}
+      StorageConfig__Endpoint: ${STORAGE_ENDPOINT:-http://minio:9000}
+      StorageConfig__CdnEndpoint: ${STORAGE_CDN_ENDPOINT:-http://minio:9000}
+      StorageConfig__FolderName: academic
+      EmailProvider__CurrentProvider: ${EMAIL_PROVIDER:-CustomEmail}
+      CustomEmailConfig__TemplatesDirectory: EmailTemplates
+    volumes:
+      - ./Osass/EmailTemplates:/app/EmailTemplates:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - osass-net
+
+  non-academic-promotion-api:
+    build:
+      context: ./Umat.Osass
+      dockerfile: Dockerfile
+      args:
+        PROJECT_NAME: Umat.Osass.Promotion.NonAcademic.Api
+    image: osass/non-academic-promotion-api:local
+    container_name: osass-non-academic-promotion-api
+    restart: unless-stopped
+    command: ["Umat.Osass.Promotion.NonAcademic.Api.dll"]
+    ports:
+      - "5006:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__NonAcademicConnection: >-
+        Host=postgres;Port=5432;Database=NonAcademicPromotionDb;
+        Username=${POSTGRES_USER:-admin};Password=${POSTGRES_PASSWORD:-admin}
+      ConnectionStrings__IdentityConnection: >-
+        Host=postgres;Port=5432;Database=OsassIdentityDb;
+        Username=${POSTGRES_USER:-admin};Password=${POSTGRES_PASSWORD:-admin}
+      Redis__PromotionRedisConfig__ConnectionString: redis:6379
+      Redis__PromotionRedisConfig__DbNumber: 2
+      BearerTokenConfig__Issuer: ${JWT_ISSUER:-https://osass.umat.edu.gh}
+      BearerTokenConfig__Audience: ${JWT_AUDIENCE:-https://osass.umat.edu.gh}
+      BearerTokenConfig__ApplicantSigningKey: ${JWT_APPLICANT_KEY:-zYxWvUtSrqPoNmLkJiHgFeDcBa987654}
+      StorageConfig__AccessKey: ${STORAGE_ACCESS_KEY:-minioapp}
+      StorageConfig__SecretKey: ${STORAGE_SECRET_KEY:-minioapp}
+      StorageConfig__BucketName: ${STORAGE_BUCKET:-osass}
+      StorageConfig__Region: ${STORAGE_REGION:-us-east-1}
+      StorageConfig__Endpoint: ${STORAGE_ENDPOINT:-http://minio:9000}
+      StorageConfig__CdnEndpoint: ${STORAGE_CDN_ENDPOINT:-http://minio:9000}
+      StorageConfig__FolderName: non-academic
+      EmailProvider__CurrentProvider: ${EMAIL_PROVIDER:-CustomEmail}
+      CustomEmailConfig__TemplatesDirectory: EmailTemplates
+    volumes:
+      - ./Osass/EmailTemplates:/app/EmailTemplates:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - osass-net
+
+  # ── Frontend Apps ─────────────────────────────────────────────────────────
+  # VITE_* variables are baked into the JS bundle at build time.
+  # They should point to API URLs reachable from the user's browser, which
+  # means the host-side mapped ports (localhost:<port>).
+
+  academic-portal:
+    build:
+      context: ./Osass/apps/academic-portal
+      args:
+        VITE_IDENTITY_API_URL: ${VITE_IDENTITY_API_URL:-http://localhost:5001/api/v1}
+        VITE_ACADEMIC_API_URL: ${VITE_ACADEMIC_API_URL:-http://localhost:5004/api/v1}
+        # Landing-page links to sibling OSASS portals
+        VITE_ACADEMIC_PORTAL_URL: ${VITE_ACADEMIC_PORTAL_URL:-/login}
+        VITE_NON_ACADEMIC_PORTAL_URL: ${VITE_NON_ACADEMIC_PORTAL_URL:-http://localhost:3002}
+        VITE_ACADEMIC_ASSESSMENT_PORTAL_URL: ${VITE_ACADEMIC_ASSESSMENT_PORTAL_URL:-http://localhost:3003}
+        VITE_NON_ACADEMIC_ASSESSMENT_PORTAL_URL: ${VITE_NON_ACADEMIC_ASSESSMENT_PORTAL_URL:-http://localhost:3004}
+        VITE_ADMIN_PORTAL_URL: ${VITE_ADMIN_PORTAL_URL:-http://localhost:3001}
+    image: osass/academic-portal:local
+    container_name: osass-academic-portal
+    restart: unless-stopped
+    ports:
+      - "3005:80"
+    networks:
+      - osass-net
+
+  admin-portal:
+    build:
+      context: ./Osass/apps/admin-portal
+      args:
+        VITE_IDENTITY_API_URL: ${VITE_IDENTITY_API_URL:-http://localhost:5001/api/v1}
+        VITE_ADMIN_API_URL: ${VITE_ADMIN_API_URL:-http://localhost:5003/api/v1}
+    image: osass/admin-portal:local
+    container_name: osass-admin-portal
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    networks:
+      - osass-net
+
+  non-academic-portal:
+    build:
+      context: ./Osass/apps/non-academic-portal
+      args:
+        VITE_IDENTITY_API_URL: ${VITE_IDENTITY_API_URL:-http://localhost:5001/api/v1}
+        VITE_NON_ACADEMIC_API_URL: ${VITE_NON_ACADEMIC_API_URL:-http://localhost:5006/api/v1}
+    image: osass/non-academic-portal:local
+    container_name: osass-non-academic-portal
+    restart: unless-stopped
+    ports:
+      - "3002:80"
+    networks:
+      - osass-net
+
+  academic-assessment-portal:
+    build:
+      context: ./Osass/apps/academic-assessment-portal
+      args:
+        VITE_IDENTITY_API_URL: ${VITE_IDENTITY_API_URL:-http://localhost:5001/api/v1}
+        VITE_ACADEMIC_API_URL: ${VITE_ACADEMIC_API_URL:-http://localhost:5004/api/v1}
+    image: osass/academic-assessment-portal:local
+    container_name: osass-academic-assessment-portal
+    restart: unless-stopped
+    ports:
+      - "3003:80"
+    networks:
+      - osass-net
+
+  non-academic-assessment-portal:
+    build:
+      context: ./Osass/apps/non-academic-assessment-portal
+      args:
+        VITE_IDENTITY_API_URL: ${VITE_IDENTITY_API_URL:-http://localhost:5001/api/v1}
+        VITE_NON_ACADEMIC_API_URL: ${VITE_NON_ACADEMIC_API_URL:-http://localhost:5006/api/v1}
+    image: osass/non-academic-assessment-portal:local
+    container_name: osass-non-academic-assessment-portal
+    restart: unless-stopped
+    ports:
+      - "3004:80"
+    networks:
+      - osass-net
+
+# =============================================================================
+# Named volumes – data is preserved across container restarts / rebuilds
+# =============================================================================
+volumes:
+  postgres_data:
+    name: osass_postgres_data
+  redis_data:
+    name: osass_redis_data
+  minio_data:
+    name: osass_minio_data
+
+# =============================================================================
+# Shared bridge network
+# =============================================================================
+networks:
+  osass-net:
+    name: osass-net
+    driver: bridge
