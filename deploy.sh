@@ -12,7 +12,7 @@ set -euo pipefail
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 readonly COMPOSE_FILE="docker-compose.prod.yml"
-readonly ENV_FILE=".env.production"
+readonly ENV_FILE=".env"
 readonly DOMAIN_BASE="osass.umat.edu.gh"
 readonly SUBDOMAINS=(auth-api academic-api nonacademic-api nonacademic nonacademic-assessment assessment admin admin-api)
 CERTBOT_EMAIL="${CERTBOT_EMAIL:-admin@umat.edu.gh}"
@@ -55,11 +55,11 @@ check_prerequisites() {
   ok "Compose      $(docker compose version --short)"
 }
 
-# ── 2. Validate .env.production ────────────────────────────────────────────────
+# ── 2. Validate .env ───────────────────────────────────────────────────────────────
 validate_env() {
   banner "Environment validation"
   [[ -f "$ENV_FILE" ]] \
-    || die "$ENV_FILE not found. Copy .env.production.example and fill in secrets."
+    || die "$ENV_FILE not found. Copy .env.production.example to .env and fill in secrets."
 
   local required_vars=(
     POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB
@@ -99,8 +99,8 @@ validate_compose() {
   banner "Compose file validation"
   # Set ENV_FILE so compose can read it during config check
   set -a; source "$ENV_FILE"; set +a
-  docker compose -f "$COMPOSE_FILE" config --quiet \
-    || die "$COMPOSE_FILE has syntax errors. Run: docker compose -f $COMPOSE_FILE config"
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" config --quiet \
+    || die "$COMPOSE_FILE has syntax errors. Run: docker compose --env-file $ENV_FILE -f $COMPOSE_FILE config"
   ok "$COMPOSE_FILE syntax OK."
 
   # Warn if nginx config is missing
@@ -150,7 +150,7 @@ configure_firewall() {
 # ── 6. Pull base images ─────────────────────────────────────────────────────────
 pull_images() {
   banner "Pulling base images"
-  docker compose -f "$COMPOSE_FILE" pull --ignore-buildable --quiet
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" pull --ignore-buildable --quiet
   ok "Base images pulled."
 }
 
@@ -160,7 +160,7 @@ build_images() {
   log "This may take 5-15 minutes on first run…"
   # Source env so VITE_* build args are available
   set -a; source "$ENV_FILE"; set +a
-  docker compose -f "$COMPOSE_FILE" build --parallel
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" build --parallel
   ok "All images built."
 }
 
@@ -168,7 +168,7 @@ build_images() {
 start_services() {
   banner "Starting services"
   set -a; source "$ENV_FILE"; set +a
-  docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --remove-orphans
   ok "Services started."
 }
 
@@ -218,7 +218,7 @@ provision_ssl() {
 
   # Ensure nginx (and the certbot_www volume) is running
   set -a; source "$ENV_FILE"; set +a
-  docker compose -f "$COMPOSE_FILE" up -d nginx certbot
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d nginx certbot
   log "Waiting 5 s for nginx to accept connections…"
   sleep 5
 
@@ -231,7 +231,7 @@ provision_ssl() {
   log "ACME e-mail: $CERTBOT_EMAIL"
 
   # certbot runs inside the container, shares volumes with nginx
-  docker compose -f "$COMPOSE_FILE" run --rm certbot certonly \
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" run --rm certbot certonly \
     --webroot \
     --webroot-path /var/www/certbot \
     --non-interactive \
@@ -262,7 +262,7 @@ print_summary() {
   echo ""
 
   echo -e "  ${BOLD}SERVICES:${NC}"
-  docker compose -f "$COMPOSE_FILE" ps --format \
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps --format \
     "table {{.Name}}\t{{.Status}}" 2>/dev/null \
     | sed 's/^/    /' \
     || docker ps --filter "name=osass-" --format "    {{.Names}}\t{{.Status}}"
@@ -289,7 +289,7 @@ print_summary() {
 
   echo ""
   local ssl_status="Not configured. Run: ./deploy.sh --ssl"
-  if docker compose -f "$COMPOSE_FILE" exec certbot \
+  if docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec certbot \
        test -d /etc/letsencrypt/live 2>/dev/null; then
     ssl_status="Certificates present. Verify HTTPS blocks in nginx.conf."
   fi
@@ -297,9 +297,9 @@ print_summary() {
 
   echo ""
   echo -e "  ${BOLD}USEFUL COMMANDS:${NC}"
-  echo "    Logs:    docker compose -f $COMPOSE_FILE logs -f <service>"
-  echo "    Restart: docker compose -f $COMPOSE_FILE restart <service>"
-  echo "    Stop:    docker compose -f $COMPOSE_FILE down"
+  echo "    Logs:    docker compose --env-file $ENV_FILE -f $COMPOSE_FILE logs -f <service>"
+  echo "    Restart: docker compose --env-file $ENV_FILE -f $COMPOSE_FILE restart <service>"
+  echo "    Stop:    docker compose --env-file $ENV_FILE -f $COMPOSE_FILE down"
   echo "    Update:  ./deploy.sh --update"
   echo ""
 }
