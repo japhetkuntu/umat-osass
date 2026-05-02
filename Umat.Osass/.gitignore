@@ -46,8 +46,9 @@ src/**/bin
 
 # Secrets
 
+# appsettings.json is tracked so it ships in Docker builds (all real config via env vars)
+!src/**/appsettings.json
 !src/**/appsettings.*.json
-src/**/appsettings.json
 
 
 secrets.json
