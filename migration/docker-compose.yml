@@ -1,0 +1,68 @@
+# =============================================================================
+# OSASS Migration – Local Docker Compose
+# =============================================================================
+# Spins up a MongoDB (v1 source) and PostgreSQL (v2 target) for local testing.
+# PostgreSQL is pre-seeded with all three v2 databases and EF Core schemas.
+#
+# Start:  docker compose -f migration/docker-compose.yml up -d
+# Stop:   docker compose -f migration/docker-compose.yml down
+# Wipe:   docker compose -f migration/docker-compose.yml down -v
+#
+# After starting, seed MongoDB with v1 data:
+#   mongorestore --host localhost:27017 --db LiveOsassDB <dump_dir>
+# Or connect directly to the live v1 server instead (see migration/.env).
+# =============================================================================
+
+services:
+
+  migration-mongo:
+    image: mongo:6
+    container_name: osass-migration-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+      MONGO_INITDB_DATABASE: LiveOsassDB
+    ports:
+      - "27018:27017"
+    volumes:
+      - migration_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping').ok", "--quiet"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - migration-net
+
+  migration-postgres:
+    image: postgres:15-alpine
+    container_name: osass-migration-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - migration_pg_data:/var/lib/postgresql/data
+      - ./docker/init-pg.sh:/docker-entrypoint-initdb.d/00-init-pg.sh:ro
+      - ./docker/identity-schema.sql:/docker-entrypoint-initdb.d/identity-schema.sql:ro
+      - ./docker/academic-schema.sql:/docker-entrypoint-initdb.d/academic-schema.sql:ro
+      - ./docker/nonacademic-schema.sql:/docker-entrypoint-initdb.d/nonacademic-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    networks:
+      - migration-net
+
+volumes:
+  migration_mongo_data:
+  migration_pg_data:
+
+networks:
+  migration-net:
+    driver: bridge

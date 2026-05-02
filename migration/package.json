@@ -1,0 +1,15 @@
+{
+  "name": "osass-v1-to-v2-migration",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "inspect": "node inspect-mongo-dump.js",
+    "migrate": "node migrate-v1-to-v2.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
+    "dotenv": "^16.0.0",
+    "mongodb": "^6.0.0",
+    "pg": "^8.0.0"
+  }
+}
