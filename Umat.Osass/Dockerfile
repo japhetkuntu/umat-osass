@@ -24,10 +24,16 @@ RUN dotnet publish "src/${PROJECT_NAME}/${PROJECT_NAME}.csproj" \
 
 # ── Stage 2: Runtime ──────────────────────────────────────────────────────────
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+ARG PROJECT_NAME
 WORKDIR /app
 
 # Copy published output from build stage
 COPY --from=build /app/publish .
+
+# Ensure appsettings files are present in the runtime image.
+# Some SDK publish scenarios may omit explicit copies for JSON content,
+# so we include the service-specific appsettings files directly.
+COPY --from=build /src/src/${PROJECT_NAME}/appsettings*.json ./
 
 # ASP.NET Core will listen on 8080 inside the container;
 # docker-compose maps this to the desired host port.
