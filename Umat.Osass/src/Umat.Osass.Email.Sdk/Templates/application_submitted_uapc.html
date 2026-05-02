@@ -1,26 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Application Submitted to UAPC</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>OSASS – Application Submitted to UAPC</title>
   <style>
-    body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#f4f4f7; color:#333; margin:0; }
-    .container { max-width:600px; margin:32px auto; padding:24px; background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,.08); }
-    .button { display:inline-block; padding:12px 24px; background:#065f46; color:#fff; text-decoration:none; border-radius:8px; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f4f6;color:#111827;-webkit-font-smoothing:antialiased}
+    .wrapper{max-width:640px;margin:0 auto;padding:32px 16px 48px}
+    .card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.04)}
+    .header{background:#065f46;padding:24px 32px}
+    .brand{font-size:20px;font-weight:700;color:#fff;letter-spacing:.5px}
+    .brand-sub{font-size:11px;color:rgba(255,255,255,.65);margin-top:3px;letter-spacing:.3px;text-transform:uppercase}
+    .banner{padding:10px 32px;font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}
+    .banner-amber{background:#fffbeb;color:#92400e;border-bottom:1px solid #fde68a}
+    .body{padding:32px}
+    h1{font-size:20px;font-weight:700;color:#111827;margin-bottom:4px;line-height:1.3}
+    .sub{font-size:14px;color:#6b7280;margin-bottom:20px;margin-top:2px}
+    p{font-size:15px;color:#374151;line-height:1.65;margin-bottom:12px}
+    .info-table{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:20px 0;font-size:14px}
+    .info-row{padding:10px 16px;border-bottom:1px solid #f3f4f6;display:table;width:100%;table-layout:fixed}
+    .info-row:last-child{border-bottom:none}
+    .info-row:nth-child(even){background:#f9fafb}
+    .info-label{display:table-cell;font-weight:600;color:#6b7280;width:160px;vertical-align:top;padding-right:8px}
+    .info-value{display:table-cell;color:#111827;vertical-align:top}
+    .cta{margin:24px 0 8px}
+    .btn{display:inline-block;color:#fff!important;text-decoration:none;padding:13px 28px;border-radius:8px;font-size:14px;font-weight:600}
+    .btn-amber{background:#d97706}
+    hr{border:none;border-top:1px solid #f3f4f6;margin:24px 0}
+    .note{font-size:13px;color:#9ca3af;line-height:1.6}
+    .footer{background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center}
+    .footer p{font-size:12px;color:#9ca3af;line-height:1.7}
+    .footer strong{color:#6b7280;font-weight:600}
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>New Application Submitted</h1>
-    <p>Hi {{committee_member_name}},</p>
-    <p>An application has been submitted for review by the {{committee_type}} committee.</p>
-    <ul>
-      <li><strong>Applicant:</strong> {{applicant_name}}</li>
-      <li><strong>Current Position:</strong> {{applicant_position}}</li>
-      <li><strong>Target Position:</strong> {{target_position}}</li>
-      <li><strong>Application Date:</strong> {{applied_date}}</li>
-    </ul>
-    <p><a href="{{application_url}}" class="button">View Application</a></p>
+  <div class="wrapper">
+    <div class="card">
+      <div class="header">
+        <div class="brand">OSASS</div>
+        <div class="brand-sub">Online Staff Appointment &amp; Promotion System</div>
+      </div>
+      <div class="banner banner-amber">Action Required — UAPC Review</div>
+      <div class="body">
+        <h1>New Application Awaiting Review</h1>
+        <p class="sub">University Appointments and Promotions Committee</p>
+        <p>Hi <strong>{{committee_member_name}}</strong>,</p>
+        <p>A promotion application has been submitted to the <strong>{{committee_type}}</strong> for your review. Please log in to the assessment portal to evaluate the application.</p>
+        <div class="info-table">
+          <div class="info-row">
+            <span class="info-label">Applicant</span>
+            <span class="info-value">{{applicant_name}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Current Position</span>
+            <span class="info-value">{{applicant_position}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Target Position</span>
+            <span class="info-value">{{target_position}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Application Date</span>
+            <span class="info-value">{{applied_date}}</span>
+          </div>
+        </div>
+        <div class="cta">
+          <a href="{{application_url}}" class="btn btn-amber">View Application</a>
+        </div>
+        <hr/>
+        <p class="note">Please complete your review within the designated assessment period. Contact the OSASS administrator if you have questions about this application.</p>
+      </div>
+      <div class="footer">
+        <p><strong>OSASS</strong> — Online Staff Appointment &amp; Promotion System</p>
+        <p>University of Mines and Technology, Tarkwa, Ghana</p>
+        <p>This is an automated message. Please do not reply to this email.</p>
+      </div>
+    </div>
   </div>
 </body>
 </html>
