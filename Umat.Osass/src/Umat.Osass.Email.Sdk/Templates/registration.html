@@ -2,23 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Welcome to UMaT Osass</title>
+  <title>Welcome to OSASS</title>
   <style>
     body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#f4f4f7; color:#333; margin:0; }
     .container { max-width:600px; margin:32px auto; padding:24px; background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,.08); }
     .button { display:inline-block; padding:12px 24px; background:#065f46; color:#fff; text-decoration:none; border-radius:8px; }
+    .code { font-size:24px; font-weight:700; letter-spacing:0.16em; color:#065f46; margin:16px 0; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>UMaT Osass Verification</h1>
+    <h1>OSASS Verification Code</h1>
     <p>Hi {{Name}},</p>
-    <p>Thank you for starting your registration with UMaT Osass.</p>
+    <p>Welcome to OSASS, your staff appointment and promotion system.</p>
     <p>Your verification code is:</p>
     <p class="code">{{Otp}}</p>
-    <p>This code is valid for a short time. Use it to complete your account verification.</p>
+    <p>This code is valid for 15 minutes. Enter it to complete your account verification.</p>
     <p><strong>Email:</strong> {{Email}}</p>
-    <p>If you did not initiate this request, please ignore this email.</p>
+    <p>If you did not request this verification code, you can safely ignore this message.</p>
   </div>
 </body>
 </html>

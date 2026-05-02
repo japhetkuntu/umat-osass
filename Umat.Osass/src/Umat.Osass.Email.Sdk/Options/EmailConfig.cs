@@ -8,8 +8,8 @@ public class EmailConfig
     public bool UseStartTls { get; set; } = true;
     public string? SmtpUsername { get; set; }
     public string? SmtpPassword { get; set; }
-    public string DefaultSenderName { get; set; } = "UMaT Alumni";
-    public string DefaultSenderEmail { get; set; } = "noreply@alumni.umat.edu.gh";
+    public string DefaultSenderName { get; set; } = "OSASS";
+    public string DefaultSenderEmail { get; set; } = "noreply@osass.umat.edu.gh";
     public string TemplateDirectory { get; set; } = "Templates";
     //public Dictionary<string, string> TemplateSubjects { get; set; } = new();
     public EmailTemplates Templates { get; set; } = new();

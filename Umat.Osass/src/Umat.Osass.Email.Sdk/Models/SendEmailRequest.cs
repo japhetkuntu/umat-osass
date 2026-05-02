@@ -13,10 +13,10 @@ public class SendEmailRequest
     [JsonPropertyName("bcc")] public List<EmailContact> Bcc { get; set; } = [];
 
     [JsonPropertyName("from")]
-    public EmailContact From { get; set; } = new() { Email = "customersupport@reservease.com", Name = "customer support" };
+    public EmailContact From { get; set; } = new() { Email = "customersupport@osass.umat.edu.gh", Name = "customer support" };
 
     [JsonPropertyName("reply_to")]
-    public EmailContact ReplyTo { get; set; } = new() { Email = "noreply@reservease.com", Name = "noreply" };
+    public EmailContact ReplyTo { get; set; } = new() { Email = "noreply@osass.umat.edu.gh", Name = "noreply" };
 
     [JsonPropertyName("attachments")] public List<Attachment> Attachments { get; set; } = [];
 
