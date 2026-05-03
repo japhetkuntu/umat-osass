@@ -61,7 +61,7 @@ namespace Umat.Osass.Identity.Api.Services.Implementations
                 auth.Issuer,
                 auth.Issuer,
                 [.. claims],
-                expires: DateTime.UtcNow.AddMinutes(auth.DurationInHours),
+                expires: DateTime.UtcNow.AddHours(auth.DurationInHours),
                 signingCredentials: creds);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
