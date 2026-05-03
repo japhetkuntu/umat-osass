@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "inspect": "node inspect-mongo-dump.js",
-    "migrate": "node migrate-v1-to-v2.js"
+    "migrate": "node migrate-v1-to-v2.js",
+    "reupload": "node reupload-files.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.0.0",

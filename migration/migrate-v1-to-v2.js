@@ -66,6 +66,57 @@ const S3_BUCKET      = env.MINIO_BUCKET || 'osass';
 const S3_FOLDER      = env.MINIO_FOLDER || 'legacy';
 const DRY_RUN        = env.DRY_RUN === 'true';
 const DEFAULT_SCHOOL = env.DEFAULT_SCHOOL_NAME || 'University of Mines and Technology';
+const CONCURRENCY    = env.CONCURRENCY ? parseInt(env.CONCURRENCY, 10) : 100;
+const UPLOAD_RETRIES = env.UPLOAD_RETRIES ? parseInt(env.UPLOAD_RETRIES, 10) : 3;
+
+/**
+ * Retry an async fn up to `retries` times with exponential back-off.
+ * Doubles the delay after each failure: 1 s, 2 s, 4 s, …
+ */
+async function withRetry(fn, retries = UPLOAD_RETRIES, delayMs = 1000) {
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastErr = e;
+      if (attempt < retries) {
+        const wait = delayMs * Math.pow(2, attempt);
+        console.warn(`  [retry ${attempt + 1}/${retries}] ${e.message} — waiting ${wait}ms`);
+        await new Promise(res => setTimeout(res, wait));
+      }
+    }
+  }
+  throw lastErr;
+}
+
+/**
+ * Run an array of async task-factories with at most `limit` running at the same time.
+ * Returns results in input order.
+ */
+async function runConcurrent(tasks, limit = CONCURRENCY) {
+  const results = [];
+  for (let i = 0; i < tasks.length; i += limit) {
+    const batchResults = await Promise.all(tasks.slice(i, i + limit).map(fn => fn()));
+    results.push(...batchResults);
+  }
+  return results;
+}
+
+let _s3Client = null;  // singleton — reused across all uploads to avoid per-call client creation
+
+const EXCLUDE_KEYWORDS = [];
+const excludedFacultyIds = new Set();
+const excludedDeptIds = new Set();
+const excludedUserIds = new Set();
+
+function containsExcludeKeyword(value) {
+  return false;
+}
+
+function shouldExcludeText(...values) {
+  return false;
+}
 
 // ID maps: v1 ObjectId hex → v2 GUID (populated as each phase runs)
 const schoolIdMap      = {};
@@ -208,17 +259,19 @@ async function uploadLegacyFile(filename) {
   const objectKey = `${S3_FOLDER}/${filename}`;
   const ext = path.extname(filename).toLowerCase();
   const contentType = { '.pdf': 'application/pdf', '.png': 'image/png', '.jpg': 'image/jpeg' }[ext] || 'application/octet-stream';
-  const s3 = new S3Client({
-    endpoint: S3_ENDPOINT, region: 'us-east-1',
-    credentials: { accessKeyId: S3_KEY, secretAccessKey: S3_SECRET },
-    forcePathStyle: true,
-  });
+  if (!_s3Client) {
+    _s3Client = new S3Client({
+      endpoint: S3_ENDPOINT, region: 'us-east-1',
+      credentials: { accessKeyId: S3_KEY, secretAccessKey: S3_SECRET },
+      forcePathStyle: true,
+    });
+  }
   try {
-    await s3.send(new PutObjectCommand({
+    await withRetry(() => _s3Client.send(new PutObjectCommand({
       Bucket: S3_BUCKET, Key: objectKey,
       Body: fs.createReadStream(localPath),
       ContentType: contentType, ACL: 'public-read',
-    }));
+    })));
     uploadStats.succeeded++;
     console.log(`  [upload] ${filename} → ${objectKey}`);
     return filename;
@@ -236,16 +289,19 @@ async function pgInsert(pgClient, table, rows, columns) {
   if (!rows.length) return;
   if (DRY_RUN) { console.log(`  [dry-run] Would insert ${rows.length} rows into ${table}`); return; }
   const BATCH = 200;
-  for (let i = 0; i < rows.length; i += BATCH) {
-    const batch = rows.slice(i, i + BATCH);
-    const vals = [];
-    const phs = batch.map(row => {
-      const ph = columns.map((col) => { vals.push(row[col]); return `$${vals.length}`; });
-      return `(${ph.join(', ')})`;
-    });
-    const cols = columns.map(c => `"${c}"`).join(', ');
-    await pgClient.query(`INSERT INTO ${table} (${cols}) VALUES ${phs.join(', ')} ON CONFLICT ("Id") DO NOTHING`, vals);
-  }
+  await runConcurrent(
+    Array.from({ length: Math.ceil(rows.length / BATCH) }, (_, i) => async () => {
+      const batch = rows.slice(i * BATCH, (i + 1) * BATCH);
+      const vals = [];
+      const phs = batch.map(row => {
+        const ph = columns.map((col) => { vals.push(row[col]); return `$${vals.length}`; });
+        return `(${ph.join(', ')})`;
+      });
+      const cols = columns.map(c => `"${c}"`).join(', ');
+      await pgClient.query(`INSERT INTO ${table} (${cols}) VALUES ${phs.join(', ')} ON CONFLICT ("Id") DO NOTHING`, vals);
+    }),
+    5,  // 5 concurrent DB insert batches
+  );
 }
 
 // \u2500\u2500\u2500 Migration phases \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -265,15 +321,21 @@ async function phase2_faculties(pgId, db) {
   console.log('\n[2] Migrating Faculties...');
   const docs = await db.collection('faculties').find({}).toArray();
   console.log(`   Found ${docs.length}`);
-  const rows = docs.map(d => {
+  const rows = [];
+  for (const d of docs) {
+    if (shouldExcludeText(d.name)) {
+      excludedFacultyIds.add(objId(d._id));
+      continue;
+    }
     const v2Id = newGuid();
     facultyIdMap[objId(d._id)] = v2Id;
-    return { Id: v2Id, Name: d.name || '', SchoolId: DEFAULT_SCHOOL_ID,
+    rows.push({ Id: v2Id, Name: d.name || '', SchoolId: DEFAULT_SCHOOL_ID,
              CreatedAt: formatDate(d.createdAt) || new Date().toISOString(), UpdatedAt: formatDate(d.updatedAt) || null,
-             CreatedBy: 'migration', UpdatedBy: null };
-  });
+             CreatedBy: 'migration', UpdatedBy: null });
+  }
   await pgInsert(pgId, '"Faculties"', rows, ['Id', 'Name', 'SchoolId', 'CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy']);
   console.log(`   Inserted ${rows.length}`);
+  console.log(`   Skipped ${excludedFacultyIds.size} faculties matching exclude keywords`);
 }
 
 /** Phase 3: v1 departments \u2192 identity.Departments */
@@ -281,18 +343,25 @@ async function phase3_departments(pg, db) {
   console.log('\n[3] Migrating Departments...');
   const docs = await db.collection('departments').find({}).toArray();
   console.log(`   Found ${docs.length}`);
-  const rows = docs.map(d => {
+  const rows = [];
+  for (const d of docs) {
+    const v1FacultyId = objId(d.faculty);
+    if (shouldExcludeText(d.name) || (v1FacultyId && excludedFacultyIds.has(v1FacultyId))) {
+      excludedDeptIds.add(objId(d._id));
+      continue;
+    }
     const v2Id = newGuid();
     deptIdMap[objId(d._id)] = v2Id;
-    return { Id: v2Id, Name: d.name || '',
+    rows.push({ Id: v2Id, Name: d.name || '',
              SchoolId: DEFAULT_SCHOOL_ID,
              FacultyId: facultyIdMap[objId(d.faculty)] || null,
              DepartmentType: 'Academic',
              CreatedAt: formatDate(d.createdAt) || new Date().toISOString(), UpdatedAt: formatDate(d.updatedAt) || null,
-             CreatedBy: 'migration', UpdatedBy: null };
-  });
+             CreatedBy: 'migration', UpdatedBy: null });
+  }
   await pgInsert(pg, '"Departments"', rows, ['Id', 'Name', 'SchoolId', 'FacultyId', 'DepartmentType', 'CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy']);
   console.log(`   Inserted ${rows.length}`);
+  console.log(`   Skipped ${excludedDeptIds.size} departments matching exclude keywords or excluded faculties`);
   // Return dept\u2192faculty map for later use
   const deptToFaculty = {};
   for (const d of docs) deptToFaculty[objId(d._id)] = objId(d.faculty);
@@ -344,16 +413,27 @@ async function phase4_users(pgId, db, deptToFaculty) {
 
   for (const u of userDocs) {
     const v1Id = objId(u._id);
-    const v2Id = newGuid();
-    userIdMap[v1Id] = v2Id;
     const email = normalizeEmail(u.email);
-    if (!email) { console.warn(`   [skip] user ${v1Id} has no email`); continue; }
-
     const rank  = (u.rank  || '').toLowerCase();
     const title = (u.title || '').toLowerCase();
     const v1DeptId = objId(u.department);
-    const v2DeptId = v1DeptId ? (deptIdMap[v1DeptId] || '') : '';
     const v1FacId  = v1DeptId ? deptToFaculty[v1DeptId] : null;
+    const deptExcluded = v1DeptId && excludedDeptIds.has(v1DeptId);
+    const facExcluded = v1FacId && excludedFacultyIds.has(v1FacId);
+    const userText = [u.firstname, u.othername, u.lastname, u.email, u.position, u.title, u.rank, u.committee_rank].join(' ');
+    if (!email) {
+      console.warn(`   [skip] user ${v1Id} has no email`);
+      excludedUserIds.add(v1Id);
+      continue;
+    }
+    if (deptExcluded || facExcluded || shouldExcludeText(userText)) {
+      excludedUserIds.add(v1Id);
+      continue;
+    }
+
+    const v2Id = newGuid();
+    userIdMap[v1Id] = v2Id;
+    const v2DeptId = v1DeptId ? (deptIdMap[v1DeptId] || '') : '';
     const v2FacId  = v1FacId  ? (facultyIdMap[v1FacId] || null) : null;
     const password = authMap[v1Id] || '';
 
@@ -492,16 +572,35 @@ async function phase7_applications(pgAcad, db) {
     return 'Draft';
   };
 
+  // Pre-upload all files concurrently, then build rows synchronously to keep ID maps consistent
+  const fileKeys = await runConcurrent(appDocs.map(doc => async () => {
+    const applicantId = objId(doc.staff);
+    if (!userMap[applicantId]?._id || excludedUserIds.has(applicantId) || !userIdMap[applicantId]) {
+      return [null, null];
+    }
+    return Promise.all([
+      uploadLegacyFile(extractFilename(doc.curriculum_vitae)),
+      uploadLegacyFile(extractFilename(doc.application_letter)),
+    ]);
+  }));
+
   const rows = [];
-  for (const doc of appDocs) {
+  for (let i = 0; i < appDocs.length; i++) {
+    const doc = appDocs[i];
     const applicant = userMap[objId(doc.staff)] || {};
+    const applicantId = objId(doc.staff);
+    if (!applicant._id || excludedUserIds.has(applicantId) || !userIdMap[applicantId]) {
+      continue;
+    }
     const v1DeptId  = objId(applicant.department);
     const dept      = v1DeptId ? deptMap[v1DeptId] : null;
     const v1FacId   = dept ? objId(dept.faculty) : null;
     const fac       = v1FacId ? facMap[v1FacId] : null;
+    if (shouldExcludeText(doc.name, doc.curriculum_vitae, doc.application_letter, doc.status, doc.application_status)) {
+      continue;
+    }
 
-    const cvKey     = await uploadLegacyFile(extractFilename(doc.curriculum_vitae));
-    const letterKey = await uploadLegacyFile(extractFilename(doc.application_letter));
+    const [cvKey, letterKey] = fileKeys[i];
     const reviewSt  = statusMap(doc.status);
     const appSt     = appStatusMap(doc.status, doc.application_status, doc.uapc_status === true);
 
@@ -656,21 +755,27 @@ async function phase8_teachingRecords(pgAcad, db) {
     ['minisuperviseprojectworks',  miniSPW,  'SupervisionOfProjectWorkAndThesis'],
     ['miniassessmentteachings',    miniAST,  'StudentReactionToAndAssessmentOfTeaching'],
   ];
+  const evidenceUploadTasks = [];
   for (const [, docs, col] of subcatMiniMap) {
     for (const d of docs) {
       const appId = objId(d.main);
       if (!appId) continue;
-      if (!evidenceByAppCol[appId]) evidenceByAppCol[appId] = {};
-      if (!evidenceByAppCol[appId][col]) evidenceByAppCol[appId][col] = [];
-      // Upload and collect all link fields
       for (const field of ['link', 'pages_modified', 'old_link']) {
         if (d[field]) {
-          const key = await uploadLegacyFile(extractFilename(d[field]));
-          if (key) evidenceByAppCol[appId][col].push(key);
+          evidenceUploadTasks.push(async () => {
+            const key = await uploadLegacyFile(extractFilename(d[field]));
+            if (key) {
+              if (!evidenceByAppCol[appId]) evidenceByAppCol[appId] = {};
+              if (!evidenceByAppCol[appId][col]) evidenceByAppCol[appId][col] = [];
+              evidenceByAppCol[appId][col].push(key);
+            }
+          });
         }
       }
     }
   }
+  console.log(`   Uploading ${evidenceUploadTasks.length} evidence files concurrently...`);
+  await runConcurrent(evidenceUploadTasks);
 
   // Group remarks by application_id
   const byApp = {};
@@ -820,19 +925,19 @@ async function phase9_publications(pgAcad, db) {
   const kcByApp = {};
   for (const kc of knowledgeCriterias) kcByApp[objId(kc._id)] = kc;
 
-  const rows = [];
-  for (const v1AppId of appIds) {
+  const allPubRows = await runConcurrent(appIds.map(v1AppId => async () => {
     const v2AppId = applicationIdMap[v1AppId];
-    if (!v2AppId) continue;
+    if (!v2AppId) return null;
     const ctx = appContextMap[v1AppId] || {};
     const kc = kcByApp[v1AppId] || {};
 
-    const pubList = [];
-    for (const mp of byApp[v1AppId]) {
+    const pubList = await Promise.all((byApp[v1AppId] || []).map(async mp => {
       const r = remarkByPub[objId(mp._id)] || {};
-      const presentKey = mp.present_link ? await uploadLegacyFile(extractFilename(mp.present_link)) : null;
-      const supportKey = mp.link ? await uploadLegacyFile(extractFilename(mp.link)) : null;
-      pubList.push({
+      const [presentKey, supportKey] = await Promise.all([
+        mp.present_link ? uploadLegacyFile(extractFilename(mp.present_link)) : Promise.resolve(null),
+        mp.link ? uploadLegacyFile(extractFilename(mp.link)) : Promise.resolve(null),
+      ]);
+      return {
         Id: newGuid(),
         Title: mp.title || '',
         Year: 0,
@@ -852,10 +957,10 @@ async function phase9_publications(pgAcad, db) {
         UapcRemarks: r.uapc_comment  || null,
         SupportingEvidence: supportKey ? [supportKey] : [],
         CreatedAt: new Date().toISOString(), UpdatedAt: null,
-      });
-    }
+      };
+    }));
 
-    rows.push({
+    return {
       Id: newGuid(),
       PromotionApplicationId: v2AppId,
       PromotionPositionId: ctx.positionId || '',
@@ -870,8 +975,9 @@ async function phase9_publications(pgAcad, db) {
       FapcPerformance:      mapStrength(kc.fapsc_strength),
       UapcPerformance:      mapStrength(kc.uapc_strength),
       CreatedAt: new Date().toISOString(), UpdatedAt: null, CreatedBy: 'migration', UpdatedBy: null,
-    });
-  }
+    };
+  }));
+  const rows = allPubRows.filter(Boolean);
 
   await pgInsert(pgAcad, '"Publications"', rows, [
     'Id', 'PromotionApplicationId', 'PromotionPositionId',
@@ -979,13 +1085,17 @@ async function phase10_serviceRecords(pgAcad, db) {
     };
   };
 
-  const rows = [];
-  for (const v1AppId of allAppIds) {
+  const allSvcRows = await runConcurrent([...allAppIds].map(v1AppId => async () => {
     const v2AppId = applicationIdMap[v1AppId];
-    if (!v2AppId) continue;
+    if (!v2AppId) return null;
     const ctx = appContextMap[v1AppId] || {};
 
-    rows.push({
+    const [uniItems, natItems] = await Promise.all([
+      Promise.all((uniByApp[v1AppId] || []).map(toServiceItem)),
+      Promise.all((natByApp[v1AppId] || []).map(toServiceItem)),
+    ]);
+
+    return {
       Id: newGuid(),
       PromotionApplicationId: v2AppId,
       PromotionPositionId: ctx.positionId || '',
@@ -994,15 +1104,16 @@ async function phase10_serviceRecords(pgAcad, db) {
       ApplicantSchoolId: DEFAULT_SCHOOL_ID,
       ApplicantFacultyId: ctx.facId || '',
       Status: 'Submitted',
-      ServiceToTheUniversity:            JSON.stringify(await Promise.all((uniByApp[v1AppId] || []).map(toServiceItem))),
-      ServiceToNationalAndInternational: JSON.stringify(await Promise.all((natByApp[v1AppId] || []).map(toServiceItem))),
+      ServiceToTheUniversity:            JSON.stringify(uniItems),
+      ServiceToNationalAndInternational: JSON.stringify(natItems),
       ApplicantPerformance: mapStrength((scByApp[v1AppId] || {}).strength),
       DapcPerformance:      mapStrength((scByApp[v1AppId] || {}).hod_strength),
       FapcPerformance:      mapStrength((scByApp[v1AppId] || {}).fapsc_strength),
       UapcPerformance:      mapStrength((scByApp[v1AppId] || {}).uapc_strength),
       CreatedAt: new Date().toISOString(), UpdatedAt: null, CreatedBy: 'migration', UpdatedBy: null,
-    });
-  }
+    };
+  }));
+  const rows = allSvcRows.filter(Boolean);
 
   await pgInsert(pgAcad, '"ServiceRecords"', rows, [
     'Id', 'PromotionApplicationId', 'PromotionPositionId',
