@@ -29,6 +29,8 @@ import type {
   NonAcademicPositionFormData,
   KnowledgeMaterialIndicator,
   KnowledgeMaterialIndicatorFormData,
+  AdminUser,
+  AdminUserFormData,
 } from '@/types';
 
 // Helper to build query string from filter params
@@ -500,4 +502,32 @@ export const adminLogout = () => {
 
 export const getAdminProfile = async () => {
   return identityClient.get<AdminProfile>('/Admins/me');
+};
+
+// ==================== Admin User Management (SuperAdmin only) ====================
+export const fetchAdminUsers = async (
+  page = 1,
+  pageSize = 20,
+  search?: string,
+): Promise<PagedResult<AdminUser>> => {
+  const query = buildQuery({ page, pageSize, search });
+  const res = await identityClient.get<PagedResult<AdminUser>>(`/Admins${query}`);
+  return res.data ?? { results: [], totalCount: 0, pageIndex: page, pageSize, count: 0, totalPages: 0, lowerBoundSize: 0, upperBoundSize: 0 };
+};
+
+export const createAdminUser = async (data: AdminUserFormData): Promise<AdminUser> => {
+  const res = await identityClient.post<AdminUser>('/Admins', data);
+  if (!res.success) throw new Error(res.message || 'Failed to create admin');
+  return res.data;
+};
+
+export const updateAdminUser = async (id: string, data: Omit<AdminUserFormData, 'password'>): Promise<AdminUser> => {
+  const res = await identityClient.put<AdminUser>(`/Admins/${id}`, data);
+  if (!res.success) throw new Error(res.message || 'Failed to update admin');
+  return res.data;
+};
+
+export const deleteAdminUser = async (id: string): Promise<void> => {
+  const res = await identityClient.delete(`/Admins/${id}`);
+  if (!res.success) throw new Error(res.message || 'Failed to delete admin');
 };

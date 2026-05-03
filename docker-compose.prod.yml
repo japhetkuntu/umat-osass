@@ -118,6 +118,12 @@ services:
       BearerTokenConfig__AdminSigningKey: ${JWT_ADMIN_KEY}
       EmailProvider__CurrentProvider: ${EMAIL_PROVIDER}
       CustomEmailConfig__TemplatesDirectory: EmailTemplates
+      EmailConfig__SmtpHost: ${SMTP_HOST}
+      EmailConfig__SmtpPort: ${SMTP_PORT}
+      EmailConfig__SmtpUsername: ${SMTP_USERNAME}
+      EmailConfig__SmtpPassword: ${SMTP_PASSWORD}
+      EmailConfig__DefaultSenderName: ${SMTP_SENDER_NAME}
+      EmailConfig__DefaultSenderEmail: ${SMTP_SENDER_EMAIL}
     volumes:
       - ./Osass/EmailTemplates:/app/EmailTemplates:ro
     depends_on:
@@ -157,12 +163,19 @@ services:
       BearerTokenConfig__Issuer: ${JWT_ISSUER}
       BearerTokenConfig__Audience: ${JWT_AUDIENCE}
       BearerTokenConfig__AdminSigningKey: ${JWT_ADMIN_KEY}
+      BearerTokenConfig__CustomerSigningKey: ${JWT_APPLICANT_KEY}
       StorageConfig__AccessKey: ${STORAGE_ACCESS_KEY}
       StorageConfig__SecretKey: ${STORAGE_SECRET_KEY}
       StorageConfig__BucketName: ${STORAGE_BUCKET}
       StorageConfig__Region: ${STORAGE_REGION}
       StorageConfig__Endpoint: ${STORAGE_ENDPOINT}
       StorageConfig__CdnEndpoint: ${STORAGE_CDN_ENDPOINT}
+      EmailConfig__SmtpHost: ${SMTP_HOST}
+      EmailConfig__SmtpPort: ${SMTP_PORT}
+      EmailConfig__SmtpUsername: ${SMTP_USERNAME}
+      EmailConfig__SmtpPassword: ${SMTP_PASSWORD}
+      EmailConfig__DefaultSenderName: ${SMTP_SENDER_NAME}
+      EmailConfig__DefaultSenderEmail: ${SMTP_SENDER_EMAIL}
     depends_on:
       postgres:
         condition: service_healthy
@@ -208,6 +221,12 @@ services:
       StorageConfig__FolderName: academic
       EmailProvider__CurrentProvider: ${EMAIL_PROVIDER}
       CustomEmailConfig__TemplatesDirectory: EmailTemplates
+      EmailConfig__SmtpHost: ${SMTP_HOST}
+      EmailConfig__SmtpPort: ${SMTP_PORT}
+      EmailConfig__SmtpUsername: ${SMTP_USERNAME}
+      EmailConfig__SmtpPassword: ${SMTP_PASSWORD}
+      EmailConfig__DefaultSenderName: ${SMTP_SENDER_NAME}
+      EmailConfig__DefaultSenderEmail: ${SMTP_SENDER_EMAIL}
     volumes:
       - ./Osass/EmailTemplates:/app/EmailTemplates:ro
     depends_on:
@@ -255,6 +274,12 @@ services:
       StorageConfig__FolderName: non-academic
       EmailProvider__CurrentProvider: ${EMAIL_PROVIDER}
       CustomEmailConfig__TemplatesDirectory: EmailTemplates
+      EmailConfig__SmtpHost: ${SMTP_HOST}
+      EmailConfig__SmtpPort: ${SMTP_PORT}
+      EmailConfig__SmtpUsername: ${SMTP_USERNAME}
+      EmailConfig__SmtpPassword: ${SMTP_PASSWORD}
+      EmailConfig__DefaultSenderName: ${SMTP_SENDER_NAME}
+      EmailConfig__DefaultSenderEmail: ${SMTP_SENDER_EMAIL}
     volumes:
       - ./Osass/EmailTemplates:/app/EmailTemplates:ro
     depends_on:

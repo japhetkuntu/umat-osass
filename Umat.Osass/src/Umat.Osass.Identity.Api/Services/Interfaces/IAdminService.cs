@@ -61,4 +61,24 @@ public interface IAdminService
     /// <param name="request">The login request containing admin email and password.</param>
     /// <returns>An API response containing JWT tokens and admin details.</returns>
     Task<IApiResponse<AdminTokenResponse>> AccountLoginAsync(LoginRequest request);
+
+    /// <summary>
+    /// Retrieves a paged list of all admin accounts.
+    /// </summary>
+    Task<IApiResponse<PagedResult<AdminProfileResponse>>> GetAllAdminsAsync(int page, int pageSize, string? search);
+
+    /// <summary>
+    /// Creates a new admin account.
+    /// </summary>
+    Task<IApiResponse<AdminProfileResponse>> CreateAdminAsync(CreateAdminRequest request, string createdBy);
+
+    /// <summary>
+    /// Updates an existing admin account.
+    /// </summary>
+    Task<IApiResponse<AdminProfileResponse>> UpdateAdminAsync(string id, UpdateAdminRequest request, string updatedBy);
+
+    /// <summary>
+    /// Deletes an admin account by ID.
+    /// </summary>
+    Task<IApiResponse<bool>> DeleteAdminAsync(string id);
 }

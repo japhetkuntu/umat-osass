@@ -3,16 +3,18 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>OSASS – Committee Assignment</title>
+  <title>OSASS – Committee Assignment Notice</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f4f6;color:#111827;-webkit-font-smoothing:antialiased}
     .wrapper{max-width:640px;margin:0 auto;padding:32px 16px 48px}
     .card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.04)}
-    .header{background:#065f46;padding:24px 32px}
+    .header{background:#1a5c2a;padding:24px 32px}
     .brand{font-size:20px;font-weight:700;color:#fff;letter-spacing:.5px}
     .brand-sub{font-size:11px;color:rgba(255,255,255,.65);margin-top:3px;letter-spacing:.3px;text-transform:uppercase}
+    .brand-inst{font-size:10px;color:rgba(255,255,255,.5);margin-top:6px;letter-spacing:.2px}
+    .gold-bar{background:#d4a017;height:4px}
     .banner{padding:10px 32px;font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}
     .banner-blue{background:#eff6ff;color:#1e40af;border-bottom:1px solid #bfdbfe}
     .body{padding:32px}
@@ -41,13 +43,15 @@
       <div class="header">
         <div class="brand">OSASS</div>
         <div class="brand-sub">Online Staff Appointment &amp; Promotion System</div>
+        <div class="brand-inst">University of Mines and Technology · Tarkwa, Ghana</div>
       </div>
+      <div class="gold-bar"></div>
       <div class="banner banner-blue">Committee Assignment</div>
       <div class="body">
         <h1>New Committee Assignment</h1>
         <p class="sub">University of Mines and Technology, Tarkwa</p>
         <p>Hi <strong>{{staff_name}}</strong>,</p>
-        <p>You have been assigned to a promotion review committee on OSASS. Your assignment details are below.</p>
+        <p>You have been appointed to serve on a promotion review committee on OSASS. Your role is vital to ensuring a fair and rigorous assessment process. Your assignment details are below.</p>
         <div class="info-table">
           <div class="info-row">
             <span class="info-label">Committee</span>
@@ -66,11 +70,12 @@
           <a href="{{portal_url}}" class="btn btn-blue">Go to Assessment Portal</a>
         </div>
         <hr/>
-        <p class="note">If you believe this assignment was made in error, please contact the OSASS administrator.</p>
+        <p class="note">Log in to the assessment portal to begin reviewing applications assigned to your committee. If you believe this assignment was made in error, contact the OSASS administrator immediately.</p>
       </div>
       <div class="footer">
         <p><strong>OSASS</strong> — Online Staff Appointment &amp; Promotion System</p>
         <p>University of Mines and Technology, Tarkwa, Ghana</p>
+        <p><a href="https://www.umat.edu.gh" style="color:#9ca3af;text-decoration:none;">www.umat.edu.gh</a></p>
         <p>This is an automated message. Please do not reply to this email.</p>
       </div>
     </div>

@@ -15,6 +15,24 @@ export interface LoginResponse {
   metaData?: AdminProfile;
 }
 
+// Admin User management
+export interface AdminUser extends BaseEntity {
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+}
+
+export interface AdminUserFormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+}
+
+export const ADMIN_ROLES = ['SuperAdmin', 'Admin', 'Moderator'] as const;
+export type AdminRole = typeof ADMIN_ROLES[number];
+
 export interface BaseEntity {
   id: string;
   createdAt: string;

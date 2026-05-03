@@ -175,5 +175,55 @@ namespace Umat.Osass.Identity.Api.Controllers
             return StatusCode(response.Code, response);
         }
 
+        /// <summary>
+        /// Retrieves a paged list of all admin accounts. SuperAdmin only.
+        /// </summary>
+        [HttpGet]
+        [Produces(MediaTypeNames.Application.Json)]
+        [Authorize(Roles = "SuperAdmin")]
+        public async Task<IActionResult> GetAdmins([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? search = null)
+        {
+            var response = await _adminService.GetAllAdminsAsync(page, pageSize, search);
+            return StatusCode(response.Code, response);
+        }
+
+        /// <summary>
+        /// Creates a new admin account. SuperAdmin only.
+        /// </summary>
+        [HttpPost]
+        [Produces(MediaTypeNames.Application.Json)]
+        [Authorize(Roles = "SuperAdmin")]
+        public async Task<IActionResult> CreateAdmin([FromBody] CreateAdminRequest request)
+        {
+            var account = User.GetAccount();
+            var response = await _adminService.CreateAdminAsync(request, account.Email);
+            return StatusCode(response.Code, response);
+        }
+
+        /// <summary>
+        /// Updates an existing admin account. SuperAdmin only.
+        /// </summary>
+        [HttpPut("{id}")]
+        [Produces(MediaTypeNames.Application.Json)]
+        [Authorize(Roles = "SuperAdmin")]
+        public async Task<IActionResult> UpdateAdmin([FromRoute] string id, [FromBody] UpdateAdminRequest request)
+        {
+            var account = User.GetAccount();
+            var response = await _adminService.UpdateAdminAsync(id, request, account.Email);
+            return StatusCode(response.Code, response);
+        }
+
+        /// <summary>
+        /// Deletes an admin account. SuperAdmin only.
+        /// </summary>
+        [HttpDelete("{id}")]
+        [Produces(MediaTypeNames.Application.Json)]
+        [Authorize(Roles = "SuperAdmin")]
+        public async Task<IActionResult> DeleteAdmin([FromRoute] string id)
+        {
+            var response = await _adminService.DeleteAdminAsync(id);
+            return StatusCode(response.Code, response);
+        }
+
     }
 }

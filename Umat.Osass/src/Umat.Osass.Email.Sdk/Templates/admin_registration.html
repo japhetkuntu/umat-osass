@@ -3,16 +3,18 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>OSASS – Admin Account Ready</title>
+  <title>OSASS – Administrator Account Credentials</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f4f6;color:#111827;-webkit-font-smoothing:antialiased}
     .wrapper{max-width:640px;margin:0 auto;padding:32px 16px 48px}
     .card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.04)}
-    .header{background:#065f46;padding:24px 32px}
+    .header{background:#1a5c2a;padding:24px 32px}
     .brand{font-size:20px;font-weight:700;color:#fff;letter-spacing:.5px}
     .brand-sub{font-size:11px;color:rgba(255,255,255,.65);margin-top:3px;letter-spacing:.3px;text-transform:uppercase}
+    .brand-inst{font-size:10px;color:rgba(255,255,255,.5);margin-top:6px;letter-spacing:.2px}
+    .gold-bar{background:#d4a017;height:4px}
     .banner{padding:10px 32px;font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}
     .banner-blue{background:#eff6ff;color:#1e40af;border-bottom:1px solid #bfdbfe}
     .body{padding:32px}
@@ -37,24 +39,27 @@
       <div class="header">
         <div class="brand">OSASS</div>
         <div class="brand-sub">Online Staff Appointment &amp; Promotion System</div>
+        <div class="brand-inst">University of Mines and Technology · Tarkwa, Ghana</div>
       </div>
+      <div class="gold-bar"></div>
       <div class="banner banner-blue">Administrator Account</div>
       <div class="body">
-        <h1>Admin Account Created</h1>
+        <h1>Your Admin Account Is Ready</h1>
         <p class="sub">University of Mines and Technology, Tarkwa</p>
         <p>Hi <strong>{{first_name}} {{last_name}}</strong>,</p>
-        <p>Your administrator account on OSASS has been created. Use the temporary password below to log in for the first time. You will be prompted to set a new password after your first login.</p>
+        <p>Your administrator account on OSASS has been set up. Use the temporary password below to log in for the first time — you will be prompted to create a new password immediately after.</p>
         <p class="pwd-label">Temporary Password</p>
         <div class="pwd-box">{{temporal_password}}</div>
         <div class="cta">
           <a href="{{portal_login_url}}" class="btn btn-blue">Go to Admin Portal</a>
         </div>
         <hr/>
-        <p class="note">Please change your password immediately after your first login. Do not share these credentials with anyone. Contact your system administrator if you did not expect this email.</p>
+        <p class="note"><strong>IMPORTANT:</strong> Change your password immediately after your first login. Never share these credentials. If you did not expect this email, contact your system administrator right away.</p>
       </div>
       <div class="footer">
         <p><strong>OSASS</strong> — Online Staff Appointment &amp; Promotion System</p>
         <p>University of Mines and Technology, Tarkwa, Ghana</p>
+        <p><a href="https://www.umat.edu.gh" style="color:#9ca3af;text-decoration:none;">www.umat.edu.gh</a></p>
         <p>This is an automated message. Please do not reply to this email.</p>
       </div>
     </div>

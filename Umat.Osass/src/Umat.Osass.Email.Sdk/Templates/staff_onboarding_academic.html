@@ -3,18 +3,20 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>OSASS – Welcome, Academic Staff</title>
+  <title>OSASS – Your Academic Staff Account Is Ready</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f4f6;color:#111827;-webkit-font-smoothing:antialiased}
     .wrapper{max-width:640px;margin:0 auto;padding:32px 16px 48px}
     .card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.04)}
-    .header{background:#065f46;padding:24px 32px}
+    .header{background:#1a5c2a;padding:24px 32px}
     .brand{font-size:20px;font-weight:700;color:#fff;letter-spacing:.5px}
     .brand-sub{font-size:11px;color:rgba(255,255,255,.65);margin-top:3px;letter-spacing:.3px;text-transform:uppercase}
+    .brand-inst{font-size:10px;color:rgba(255,255,255,.5);margin-top:6px;letter-spacing:.2px}
+    .gold-bar{background:#d4a017;height:4px}
     .banner{padding:10px 32px;font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}
-    .banner-green{background:#ecfdf5;color:#065f46;border-bottom:1px solid #a7f3d0}
+    .banner-green{background:#eaf3ec;color:#1a5c2a;border-bottom:1px solid #9fc4aa}
     .body{padding:32px}
     h1{font-size:20px;font-weight:700;color:#111827;margin-bottom:4px;line-height:1.3}
     .sub{font-size:14px;color:#6b7280;margin-bottom:20px;margin-top:2px}
@@ -28,7 +30,7 @@
     .pwd-label{font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
     .pwd-box{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 18px;font-size:15px;font-family:'Courier New',Courier,monospace;color:#111827;margin:8px 0 20px;word-break:break-all;letter-spacing:.5px}
     .cta{margin:24px 0 8px}
-    .btn{display:inline-block;background:#065f46;color:#fff!important;text-decoration:none;padding:13px 28px;border-radius:8px;font-size:14px;font-weight:600}
+    .btn{display:inline-block;background:#1a5c2a;color:#fff!important;text-decoration:none;padding:13px 28px;border-radius:8px;font-size:14px;font-weight:600}
     hr{border:none;border-top:1px solid #f3f4f6;margin:24px 0}
     .note{font-size:13px;color:#9ca3af;line-height:1.6}
     .footer{background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center}
@@ -42,13 +44,15 @@
       <div class="header">
         <div class="brand">OSASS</div>
         <div class="brand-sub">Online Staff Appointment &amp; Promotion System</div>
+        <div class="brand-inst">University of Mines and Technology · Tarkwa, Ghana</div>
       </div>
+      <div class="gold-bar"></div>
       <div class="banner banner-green">Welcome to OSASS</div>
       <div class="body">
         <h1>Your Account Is Ready</h1>
         <p class="sub">Academic Staff — University of Mines and Technology, Tarkwa</p>
         <p>Hi <strong>{{first_name}} {{last_name}}</strong>,</p>
-        <p>Your academic staff account on OSASS has been created. You can now log in to access the Academic Promotion Portal and manage your promotion application.</p>
+        <p>Your academic staff account on OSASS is ready. Log in now to access the Academic Promotion Portal and submit your promotion application. We look forward to supporting your professional advancement.</p>
         <div class="info-table">
           <div class="info-row">
             <span class="info-label">Staff ID</span>
@@ -58,14 +62,15 @@
         <p class="pwd-label">Temporary Password</p>
         <div class="pwd-box">{{temporal_password}}</div>
         <div class="cta">
-          <a href="{{portal_login_url}}" class="btn">Login to Academic Portal</a>
+          <a href="{{portal_login_url}}" class="btn">Log In to the Academic Portal</a>
         </div>
         <hr/>
-        <p class="note">Please change your password on first login. If you did not expect this email, contact your system administrator immediately.</p>
+        <p class="note">Change your password on your first login. If you did not expect this email, contact your system administrator immediately.</p>
       </div>
       <div class="footer">
         <p><strong>OSASS</strong> — Online Staff Appointment &amp; Promotion System</p>
         <p>University of Mines and Technology, Tarkwa, Ghana</p>
+        <p><a href="https://www.umat.edu.gh" style="color:#9ca3af;text-decoration:none;">www.umat.edu.gh</a></p>
         <p>This is an automated message. Please do not reply to this email.</p>
       </div>
     </div>

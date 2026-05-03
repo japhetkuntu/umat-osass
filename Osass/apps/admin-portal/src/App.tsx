@@ -23,6 +23,7 @@ import AuditLogsPage from "./pages/AuditLogsPage";import NonAcademicCommitteesPa
 import NonAcademicPositionsPage from './pages/NonAcademicPositionsPage';
 import UnitsSectionsPage from './pages/UnitsSectionsPage';
 import KnowledgeMaterialTypesPage from './pages/KnowledgeMaterialTypesPage';
+import AdminsPage from './pages/AdminsPage';
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="/non-academic-positions" element={<ProtectedRoute><NonAcademicPositionsPage /></ProtectedRoute>} />
               <Route path="/units-sections" element={<ProtectedRoute><UnitsSectionsPage /></ProtectedRoute>} />
               <Route path="/knowledge-material-types" element={<ProtectedRoute><KnowledgeMaterialTypesPage /></ProtectedRoute>} />
+              <Route path="/admins" element={<ProtectedRoute><AdminsPage /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>

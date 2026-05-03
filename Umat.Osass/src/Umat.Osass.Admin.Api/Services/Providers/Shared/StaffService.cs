@@ -8,6 +8,7 @@ using Umat.Osass.Admin.Api.Models.Requests.Shared;
 using Umat.Osass.Admin.Api.Models.Responses.Shared;
 using Umat.Osass.Admin.Api.Services.Interfaces.Shared;
 using Umat.Osass.Common.Sdk.Models;
+using Umat.Osass.Common.Sdk.Services;
 using Umat.Osass.Email.Sdk.Models;
 using Umat.Osass.Email.Sdk.Options;
 using Umat.Osass.PostgresDb.Sdk.Entities.Identity;
@@ -66,7 +67,8 @@ public class StaffService : IStaffService
             newStaff.LastAppointmentOrPromotionDate = DateTime.SpecifyKind(newStaff.LastAppointmentOrPromotionDate, DateTimeKind.Utc);
             newStaff.FacultyId = department.FacultyId;
             newStaff.SchoolId = department.SchoolId;
-            newStaff.Password = BCrypt.Net.BCrypt.HashPassword("demoPassword");
+            var temporaryPassword = RandomNumberGeneratorExtension.GenerateTemporaryPassword();
+            newStaff.Password = BCrypt.Net.BCrypt.HashPassword(temporaryPassword);
 
             var added = await _staffRepository.AddAsync(newStaff);
             var response = newStaff.Adapt<StaffResponse>();
@@ -88,7 +90,7 @@ public class StaffService : IStaffService
                     staffId = newStaff.StaffId,
                     FirstName = newStaff.FirstName,
                     LastName = newStaff.LastName,
-                    TemporalPassword = "demoPassword",
+                    TemporalPassword = temporaryPassword,
                     StaffCategory = newStaff.StaffCategory ?? "Non-Academic",
                     PortalLoginUrl = "https://osass.umat.edu.gh/login",
                     PasswordChangeRequiredUrl = "https://osass.umat.edu.gh/password/change"

@@ -22,6 +22,7 @@ import {
   BookOpen,
   Settings,
   Network,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -38,7 +39,7 @@ interface NavGroup {
   items: NavItem[];
 }
 
-const navigationItems: (NavItem | NavGroup)[] = [
+const baseNavigationItems: (NavItem | NavGroup)[] = [
   {
     title: 'Dashboard',
     href: '/',
@@ -75,14 +76,6 @@ const navigationItems: (NavItem | NavGroup)[] = [
       { title: 'Committees', href: '/non-academic-committees', icon: UserCheck },
     ],
   },
-  {
-    title: 'Administration',
-    icon: Settings,
-    items: [
-      { title: 'Staff Updates', href: '/staff-updates', icon: Megaphone },
-      { title: 'Audit Logs', href: '/audit-logs', icon: ClipboardList },
-    ],
-  },
 ];
 
 function isNavGroup(item: NavItem | NavGroup): item is NavGroup {
@@ -92,6 +85,21 @@ function isNavGroup(item: NavItem | NavGroup): item is NavGroup {
 export function AdminSidebar() {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const isSuperAdmin = user?.role === 'SuperAdmin';
+
+  const navigationItems: (NavItem | NavGroup)[] = [
+    ...baseNavigationItems,
+    {
+      title: 'Administration',
+      icon: Settings,
+      items: [
+        { title: 'Staff Updates', href: '/staff-updates', icon: Megaphone },
+        { title: 'Audit Logs', href: '/audit-logs', icon: ClipboardList },
+        ...(isSuperAdmin ? [{ title: 'Administrators', href: '/admins', icon: ShieldCheck }] : []),
+      ],
+    },
+  ];
+
   const [expandedGroups, setExpandedGroups] = useState<string[]>(['Organization', 'Academic', 'Non-Academic', 'Administration']);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 

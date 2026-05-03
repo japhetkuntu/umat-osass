@@ -50,6 +50,10 @@ import {
   createKnowledgeMaterialIndicator,
   updateKnowledgeMaterialIndicator,
   deleteKnowledgeMaterialIndicator,
+  fetchAdminUsers,
+  createAdminUser,
+  updateAdminUser,
+  deleteAdminUser,
 } from '@/services/api';
 import type {
   School,
@@ -78,6 +82,8 @@ import type {
   NonAcademicPositionFormData,
   KnowledgeMaterialIndicator,
   KnowledgeMaterialIndicatorFormData,
+  AdminUser,
+  AdminUserFormData,
 } from '@/types';
 
 // Query keys
@@ -93,6 +99,7 @@ export const queryKeys = {
   committeeMembers: () => ['committeeMembers'],
   staffUpdates: () => ['staffUpdates'],
   auditLogs: (filters?: object) => ['auditLogs', filters],
+  adminUsers: () => ['adminUsers'],
 };
 
 // ==================== SCHOOLS ====================
@@ -898,6 +905,67 @@ export const useDeleteKnowledgeMaterialIndicator = () => {
     },
     onError: () => {
       toast({ title: 'Error', description: 'Failed to delete knowledge material indicator', variant: 'destructive' });
+    },
+  });
+};
+
+// ==================== ADMIN USERS ====================
+export const useAdminUsers = () => {
+  return useQuery({
+    queryKey: queryKeys.adminUsers(),
+    queryFn: async () => {
+      const data = await fetchAdminUsers();
+      return data.results ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useCreateAdminUser = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (data: AdminUserFormData) => createAdminUser(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers() });
+      toast({ title: 'Success', description: 'Admin created successfully' });
+    },
+    onError: (err: Error) => {
+      toast({ title: 'Error', description: err.message || 'Failed to create admin', variant: 'destructive' });
+    },
+  });
+};
+
+export const useUpdateAdminUser = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Omit<AdminUserFormData, 'password'> }) =>
+      updateAdminUser(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers() });
+      toast({ title: 'Success', description: 'Admin updated successfully' });
+    },
+    onError: (err: Error) => {
+      toast({ title: 'Error', description: err.message || 'Failed to update admin', variant: 'destructive' });
+    },
+  });
+};
+
+export const useDeleteAdminUser = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (id: string) => deleteAdminUser(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers() });
+      toast({ title: 'Success', description: 'Admin deleted successfully' });
+    },
+    onError: (err: Error) => {
+      toast({ title: 'Error', description: err.message || 'Failed to delete admin', variant: 'destructive' });
     },
   });
 };

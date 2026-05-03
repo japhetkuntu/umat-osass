@@ -16,7 +16,8 @@ var corsPolicyName = "Osass.Academic.PolicyName";
 
 
 // Load the common configuration file for all environments
-config.AddJsonFile("appsettings.json", false, true)
+config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
 

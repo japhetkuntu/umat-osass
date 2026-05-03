@@ -395,6 +395,136 @@ public class AdminService : IAdminService
             return new ApiResponse<AdminTokenResponse>("Failed to login Admin", 500);
         }
     }
+    public async Task<IApiResponse<PagedResult<AdminProfileResponse>>> GetAllAdminsAsync(int page, int pageSize, string? search)
+    {
+        try
+        {
+            var paged = await _adminRepository.GetPagedAsync(
+                pageIndex: page,
+                pageSize: pageSize,
+                filter: string.IsNullOrWhiteSpace(search)
+                    ? null
+                    : x => x.FirstName.Contains(search) || x.LastName.Contains(search) || x.Email.Contains(search));
+
+            var items = paged.Results.Adapt<IEnumerable<AdminProfileResponse>>();
+            var result = new PagedResult<AdminProfileResponse>(items, paged.PageIndex, paged.PageSize, paged.Count, paged.TotalCount);
+            return result.ToOkApiResponse("Admins retrieved successfully");
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "[GetAllAdminsAsync] Failed to retrieve admins");
+            return new ApiResponse<PagedResult<AdminProfileResponse>>("Failed to retrieve admins", 500);
+        }
+    }
+
+    public async Task<IApiResponse<AdminProfileResponse>> CreateAdminAsync(CreateAdminRequest request, string createdBy)
+    {
+        try
+        {
+            var email = request.Email.ToLower().Trim();
+            var existing = await _adminRepository.GetOneAsync(x => x.Email == email);
+            if (existing != null)
+                return new ApiResponse<AdminProfileResponse>("An admin with this email already exists", 409);
+
+            var temporaryPassword = RandomNumberGeneratorExtension.GenerateTemporaryPassword();
+
+            var admin = new Umat.Osass.PostgresDb.Sdk.Entities.Identity.Admin
+            {
+                FirstName = request.FirstName.Trim(),
+                LastName = request.LastName.Trim(),
+                Email = email,
+                Password = BCrypt.Net.BCrypt.HashPassword(temporaryPassword),
+                Role = request.Role,
+                CreatedBy = createdBy,
+            };
+
+            var result = await _adminRepository.AddAsync(admin);
+            if (result < 1)
+                return new ApiResponse<AdminProfileResponse>("Failed to create admin", 500);
+
+            // Fire-and-forget onboarding email with the generated password.
+            if (!string.IsNullOrWhiteSpace(_emailTemplates.Templates.AdminRegister))
+            {
+                var emailRequest = new SendEmailRequest
+                {
+                    To =
+                    [
+                        new EmailContact { Email = admin.Email, Name = $"{admin.FirstName} {admin.LastName}" }
+                    ],
+                    TemplateId = _emailTemplates.Templates.AdminRegister,
+                    TemplateVariables = new
+                    {
+                        Name = admin.FirstName,
+                        Email = admin.Email,
+                        TemporaryPassword = temporaryPassword,
+                        Role = admin.Role,
+                        LoginUrl = "https://osass.umat.edu.gh/admin/login",
+                        PasswordChangeUrl = "https://osass.umat.edu.gh/admin/change-password"
+                    }
+                };
+                _actorSystem.SendEmailAsync(emailRequest);
+            }
+
+            var response = admin.Adapt<AdminProfileResponse>();
+            return response.ToOkApiResponse("Admin created successfully");
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "[CreateAdminAsync] Failed to create admin");
+            return new ApiResponse<AdminProfileResponse>("Failed to create admin", 500);
+        }
+    }
+
+    public async Task<IApiResponse<AdminProfileResponse>> UpdateAdminAsync(string id, UpdateAdminRequest request, string updatedBy)
+    {
+        try
+        {
+            var admin = await _adminRepository.GetByIdAsync(id);
+            if (admin == null)
+                return new ApiResponse<AdminProfileResponse>("Admin not found", 404);
+
+            admin.FirstName = request.FirstName.Trim();
+            admin.LastName = request.LastName.Trim();
+            admin.Email = request.Email.ToLower().Trim();
+            admin.Role = request.Role;
+            admin.UpdatedAt = DateTime.UtcNow;
+            admin.UpdatedBy = updatedBy;
+
+            var result = await _adminRepository.UpdateAsync(admin);
+            if (result < 1)
+                return new ApiResponse<AdminProfileResponse>("Failed to update admin", 500);
+
+            var response = admin.Adapt<AdminProfileResponse>();
+            return response.ToOkApiResponse("Admin updated successfully");
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "[UpdateAdminAsync] Failed to update admin {Id}", id);
+            return new ApiResponse<AdminProfileResponse>("Failed to update admin", 500);
+        }
+    }
+
+    public async Task<IApiResponse<bool>> DeleteAdminAsync(string id)
+    {
+        try
+        {
+            var admin = await _adminRepository.GetByIdAsync(id);
+            if (admin == null)
+                return new ApiResponse<bool>("Admin not found", 404);
+
+            var result = await _adminRepository.Remove(admin);
+            if (result < 1)
+                return new ApiResponse<bool>("Failed to delete admin", 500);
+
+            return true.ToOkApiResponse("Admin deleted successfully");
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "[DeleteAdminAsync] Failed to delete admin {Id}", id);
+            return new ApiResponse<bool>("Failed to delete admin", 500);
+        }
+    }
+
     private string GetRefreshTokenKey(string adminId)
     {
         return $"{RefreshTokenPrefix}-{adminId}";
