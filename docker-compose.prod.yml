@@ -14,7 +14,7 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_DB: ${POSTGRES_IDENTITY_DB:-OsassIdentityDb}
     # Loopback-only: accessible from host for debugging, not from the internet.
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
@@ -108,7 +108,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__IdentityConnection: >-
-        Host=postgres;Port=5432;Database=${POSTGRES_DB};
+        Host=postgres;Port=5432;Database=${POSTGRES_IDENTITY_DB:-OsassIdentityDb};
         Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       Redis__IdentityRedisConfig__ConnectionString: redis:6379
       Redis__IdentityRedisConfig__DbNumber: 0
@@ -150,13 +150,13 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__AcademicConnection: >-
-        Host=postgres;Port=5432;Database=AcademicPromotionDb;
+        Host=postgres;Port=5432;Database=${POSTGRES_ACADEMIC_DB:-AcademicPromotionDb};
         Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       ConnectionStrings__NonAcademicConnection: >-
-        Host=postgres;Port=5432;Database=NonAcademicPromotionDb;
+        Host=postgres;Port=5432;Database=${POSTGRES_NON_ACADEMIC_DB:-NonAcademicPromotionDb};
         Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       ConnectionStrings__IdentityConnection: >-
-        Host=postgres;Port=5432;Database=${POSTGRES_DB};
+        Host=postgres;Port=5432;Database=${POSTGRES_IDENTITY_DB:-OsassIdentityDb};
         Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       Redis__PropertyRedisConfig__ConnectionString: redis:6379
       Redis__PropertyRedisConfig__DbNumber: 1
@@ -202,10 +202,10 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__AcademicConnection: >-
-        Host=postgres;Port=5432;Database=AcademicPromotionDb;
+        Host=postgres;Port=5432;Database=${POSTGRES_ACADEMIC_DB:-AcademicPromotionDb};
         Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       ConnectionStrings__IdentityConnection: >-
-        Host=postgres;Port=5432;Database=${POSTGRES_DB};
+        Host=postgres;Port=5432;Database=${POSTGRES_IDENTITY_DB:-OsassIdentityDb};
         Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       Redis__PropertyRedisConfig__ConnectionString: redis:6379
       Redis__PropertyRedisConfig__DbNumber: 1
@@ -255,10 +255,10 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__NonAcademicConnection: >-
-        Host=postgres;Port=5432;Database=NonAcademicPromotionDb;
+        Host=postgres;Port=5432;Database=${POSTGRES_NON_ACADEMIC_DB:-NonAcademicPromotionDb};
         Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       ConnectionStrings__IdentityConnection: >-
-        Host=postgres;Port=5432;Database=${POSTGRES_DB};
+        Host=postgres;Port=5432;Database=${POSTGRES_IDENTITY_DB:-OsassIdentityDb};
         Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       Redis__PromotionRedisConfig__ConnectionString: redis:6379
       Redis__PromotionRedisConfig__DbNumber: 2
