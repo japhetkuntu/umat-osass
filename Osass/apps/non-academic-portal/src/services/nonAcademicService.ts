@@ -21,6 +21,10 @@ class NonAcademicService {
         return await nonAcademicClient.get<ApplicationCategoryState>("/Applications/category-state");
     }
 
+    async startApplication(): Promise<ApiResponse<ApplicationCategoryState>> {
+        return await nonAcademicClient.post<ApplicationCategoryState>("/Applications/start");
+    }
+
     async getOverallReview(): Promise<ApiResponse<OverallReview>> {
         return await nonAcademicClient.get<OverallReview>("/Applications/overall-review");
     }

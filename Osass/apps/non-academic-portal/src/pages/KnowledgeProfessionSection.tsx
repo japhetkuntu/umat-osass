@@ -49,7 +49,8 @@ const KnowledgeProfessionSection = () => {
 
         if (appStateRes.success && appStateRes.data) {
           const status = appStateRes.data.applicationStatus?.toLowerCase();
-          setIsReadOnly(!eligibility?.applicantNextPosition || (status && status !== "draft" && status !== "returned"));
+          const hasApplication = !!appStateRes.data.applicationId;
+          setIsReadOnly(!eligibility?.applicantNextPosition || !hasApplication || (status && status !== "draft" && status !== "returned"));
         }
 
         if (indicatorsRes.success && indicatorsRes.data) {

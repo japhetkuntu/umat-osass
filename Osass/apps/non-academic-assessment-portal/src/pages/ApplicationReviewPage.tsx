@@ -194,8 +194,6 @@ export default function ApplicationReviewPage() {
       throw new Error(response.message || "Failed to fetch application");
     },
     enabled: !!applicationId,
-    refetchInterval: 3000, // Poll every 3 seconds for real-time updates
-    refetchIntervalInBackground: true, // Continue polling even when tab is not focused
   });
 
   // Determine current user's committee access
@@ -1647,19 +1645,42 @@ export default function ApplicationReviewPage() {
                             Review & Approve Promotion
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-                          <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                              <Award className="h-5 w-5 text-emerald-600" />
-                              Promotion Validation & Approval
-                            </DialogTitle>
-                            <DialogDescription>
-                              Review the validation analysis before making the final promotion decision.
-                            </DialogDescription>
-                          </DialogHeader>
-                          
-                          <div className="flex-1 min-h-0 overflow-y-auto pr-4">
-                            <div className="space-y-4 py-4">
+                        <DialogContent className="sm:max-w-2xl p-0 overflow-hidden gap-0 flex flex-col max-h-[90vh]">
+                          <div className="relative bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-800 px-8 pt-8 pb-10 text-white overflow-hidden">
+                            <div className="absolute -top-8 -right-8 w-36 h-36 rounded-full bg-white/10" />
+                            <div className="absolute -bottom-10 -left-8 w-28 h-28 rounded-full bg-white/10" />
+                            <div className="relative space-y-4">
+                              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                                <Award className="w-6 h-6 text-white" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-1">Promotion Validation</p>
+                                <DialogTitle className="text-2xl font-bold text-white leading-tight">Review & Approve Promotion</DialogTitle>
+                                <p className="mt-2 max-w-2xl text-sm text-white/80">
+                                  Check the final validation analysis and confirm the UAPC recommendation with confidence.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="px-8 -mt-4 relative z-10">
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                { icon: CheckCircle2, label: "Approve" },
+                                { icon: AlertCircle, label: "Validate" },
+                                { icon: User, label: "UAPC" },
+                              ].map(({ icon: Icon, label }) => (
+                                <span key={label} className="inline-flex items-center gap-1.5 bg-white/95 text-emerald-800 border border-emerald-200 rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm">
+                                  <Icon className="w-3.5 h-3.5 text-emerald-600" />
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="flex-1 min-h-0 overflow-y-auto px-8 py-4">
+                            <DialogDescription className="sr-only">Confirm final promotion approval and validation.</DialogDescription>
+                            <div className="space-y-4">
                               {/* Loading State */}
                               {isValidating && (
                                 <div className="flex items-center justify-center py-8">
@@ -1816,7 +1837,7 @@ export default function ApplicationReviewPage() {
                             </div>
                           </div>
                           
-                          <DialogFooter className="border-t pt-4">
+                          <div className="px-8 pb-7 border-t pt-4 flex flex-col-reverse sm:flex-row justify-end gap-2">
                             <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>
                               Cancel
                             </Button>
@@ -1839,7 +1860,7 @@ export default function ApplicationReviewPage() {
                                 }
                               </Button>
                             )}
-                          </DialogFooter>
+                          </div>
                         </DialogContent>
                       </Dialog>
 
@@ -1851,18 +1872,42 @@ export default function ApplicationReviewPage() {
                             Return for Update
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-lg">
-                          <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2 text-amber-600">
-                              <RotateCcw className="h-5 w-5" />
-                              Return Application for Update
-                            </DialogTitle>
-                            <DialogDescription>
-                              The applicant will be notified and can make changes before resubmitting.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4 py-4">
-                            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <DialogContent className="sm:max-w-lg p-0 overflow-hidden gap-0 flex flex-col max-h-[80vh]">
+                          <div className="relative bg-gradient-to-br from-amber-600 via-amber-700 to-amber-800 px-8 pt-8 pb-10 text-white overflow-hidden">
+                            <div className="absolute -top-8 -right-8 w-36 h-36 rounded-full bg-white/10" />
+                            <div className="absolute -bottom-10 -left-8 w-28 h-28 rounded-full bg-white/10" />
+                            <div className="relative space-y-4">
+                              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                                <RotateCcw className="w-6 h-6 text-white" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-1">Return for Update</p>
+                                <DialogTitle className="text-2xl font-bold text-white leading-tight">Send Feedback to the Applicant</DialogTitle>
+                                <p className="mt-2 max-w-xl text-sm text-white/80">
+                                  Provide clear, actionable guidance so the applicant can improve and resubmit with confidence.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="px-8 -mt-4 relative z-10">
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                { icon: RotateCcw, label: "Return" },
+                                { icon: FileText, label: "Feedback" },
+                                { icon: User, label: "Applicant" },
+                              ].map(({ icon: Icon, label }) => (
+                                <span key={label} className="inline-flex items-center gap-1.5 bg-white/95 text-amber-800 border border-amber-200 rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm">
+                                  <Icon className="w-3.5 h-3.5 text-amber-600" />
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="flex-1 min-h-0 overflow-y-auto space-y-4 py-4 px-8">
+                            <DialogDescription className="sr-only">Send clear feedback to the applicant for revisions before resubmitting.</DialogDescription>
+                            <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-2xl border border-amber-200 dark:border-amber-800">
                               <p className="text-sm text-amber-800 dark:text-amber-300">
                                 <strong>Important:</strong> Provide clear feedback so the applicant knows exactly what needs to be addressed before resubmission.
                               </p>
@@ -1873,7 +1918,7 @@ export default function ApplicationReviewPage() {
                                 Detailed Feedback *
                               </Label>
                               <p className="text-xs text-muted-foreground mb-2">
-                                Explain what needs to be improved or updated
+                                Explain what needs to be improved or updated.
                               </p>
                               <RichTextEditor
                                 content={uapcReturnRemarks}
@@ -1882,7 +1927,7 @@ export default function ApplicationReviewPage() {
                               />
                             </div>
                           </div>
-                          <DialogFooter>
+                          <div className="px-8 pb-7 flex flex-col-reverse sm:flex-row justify-end gap-2">
                             <Button variant="outline" onClick={() => setUapcReturnDialogOpen(false)}>
                               Cancel
                             </Button>
@@ -1895,7 +1940,7 @@ export default function ApplicationReviewPage() {
                               <RotateCcw className="h-4 w-4" />
                               {uapcReturnMutation.isPending ? "Processing..." : "Return for Update"}
                             </Button>
-                          </DialogFooter>
+                          </div>
                         </DialogContent>
                       </Dialog>
                     </>
@@ -1909,50 +1954,77 @@ export default function ApplicationReviewPage() {
                             Advance to Next Stage
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
-                          <DialogHeader>
-                            <DialogTitle>Advance Application</DialogTitle>
-                            <DialogDescription>
-                              This will forward the application to the next committee level for review.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4 py-4">
-                            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                          <p className="text-sm text-blue-800 dark:text-blue-300">
-                            <strong>Note:</strong> Your recommendation will be recorded and visible to the next committee.
-                          </p>
-                        </div>
-                        <div>
-                          <Label className="text-sm font-semibold">
-                            Recommendation / Remarks
-                          </Label>
-                          <p className="text-xs text-muted-foreground mb-2">
-                            Provide your assessment summary or key observations for the next committee
-                          </p>
-                          <Textarea
-                            placeholder="E.g., 'Applicant meets all requirements for teaching and publications. Recommend approval pending service verification...'"
-                            value={advanceRecommendation}
-                            onChange={(e) => setAdvanceRecommendation(e.target.value)}
-                            rows={4}
-                            className="resize-none"
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setAdvanceDialogOpen(false)}>
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={() => advanceMutation.mutate()}
-                          disabled={advanceMutation.isPending}
-                          className="gap-2"
-                        >
-                          <ArrowRight className="h-4 w-4" />
-                          Advance Application
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                        <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0 flex flex-col max-h-[80vh]">
+                          <div className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 px-8 pt-8 pb-10 text-white overflow-hidden">
+                            <div className="absolute -top-8 -right-8 w-36 h-36 rounded-full bg-white/10" />
+                            <div className="absolute -bottom-10 -left-8 w-28 h-28 rounded-full bg-white/10" />
+                            <div className="relative space-y-4">
+                              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                                <ArrowRight className="w-6 h-6 text-white" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-1">Advance Application</p>
+                                <DialogTitle className="text-2xl font-bold text-white leading-tight">Send to the Next Committee</DialogTitle>
+                                <p className="mt-2 max-w-xl text-sm text-white/80">
+                                  Forward the application with your recommendation and help the next committee move faster.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="px-8 -mt-4 relative z-10">
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                { icon: ArrowRight, label: "Advance" },
+                                { icon: FileText, label: "Review" },
+                                { icon: User, label: "Committee" },
+                              ].map(({ icon: Icon, label }) => (
+                                <span key={label} className="inline-flex items-center gap-1.5 bg-white/95 text-blue-800 border border-blue-200 rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm">
+                                  <Icon className="w-3.5 h-3.5 text-blue-600" />
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="flex-1 min-h-0 overflow-y-auto space-y-4 py-4 px-8">
+                            <DialogDescription className="sr-only">Confirm forwarding to the next committee for review.</DialogDescription>
+                            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-200 dark:border-blue-800">
+                              <p className="text-sm text-blue-800 dark:text-blue-300">
+                                <strong>Note:</strong> Your recommendation will be recorded and visible to the next committee.
+                              </p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-semibold">
+                                Recommendation / Remarks
+                              </Label>
+                              <p className="text-xs text-muted-foreground mb-2">
+                                Provide your assessment summary or key observations for the next committee.
+                              </p>
+                              <Textarea
+                                placeholder="E.g., 'Applicant meets all requirements for teaching and publications. Recommend approval pending service verification...'"
+                                value={advanceRecommendation}
+                                onChange={(e) => setAdvanceRecommendation(e.target.value)}
+                                rows={4}
+                                className="resize-none"
+                              />
+                            </div>
+                          </div>
+                          <div className="px-8 pb-7 flex flex-col-reverse sm:flex-row justify-end gap-2">
+                            <Button variant="outline" onClick={() => setAdvanceDialogOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button
+                              onClick={() => advanceMutation.mutate()}
+                              disabled={advanceMutation.isPending}
+                              className="gap-2"
+                            >
+                              <ArrowRight className="h-4 w-4" />
+                              Advance Application
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
 
                       {/* HOU/AAPSC: Return to Applicant */}
                       <Dialog open={returnDialogOpen} onOpenChange={setReturnDialogOpen}>
@@ -1962,14 +2034,46 @@ export default function ApplicationReviewPage() {
                             Return to Applicant
                           </Button>
                         </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Return Application</DialogTitle>
-                            <DialogDescription>
-                              The applicant will be notified and can make modifications.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4 py-4">
+                        <DialogContent className="sm:max-w-lg p-0 overflow-hidden gap-0 flex flex-col max-h-[80vh]">
+                          <div className="relative bg-gradient-to-br from-rose-600 via-rose-700 to-rose-800 px-8 pt-8 pb-10 text-white overflow-hidden">
+                            <div className="absolute -top-8 -right-8 w-36 h-36 rounded-full bg-white/10" />
+                            <div className="absolute -bottom-10 -left-8 w-28 h-28 rounded-full bg-white/10" />
+                            <div className="relative space-y-4">
+                              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                                <RotateCcw className="w-6 h-6 text-white" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-1">Return Application</p>
+                                <DialogTitle className="text-2xl font-bold text-white leading-tight">Send It Back for Revision</DialogTitle>
+                                <p className="mt-2 max-w-xl text-sm text-white/80">
+                                  Share the reasons and expectations clearly so the applicant can improve the submission.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="px-8 -mt-4 relative z-10">
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                { icon: RotateCcw, label: "Return" },
+                                { icon: FileText, label: "Explain" },
+                                { icon: User, label: "Revise" },
+                              ].map(({ icon: Icon, label }) => (
+                                <span key={label} className="inline-flex items-center gap-1.5 bg-white/95 text-rose-800 border border-rose-200 rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm">
+                                  <Icon className="w-3.5 h-3.5 text-rose-600" />
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="flex-1 min-h-0 overflow-y-auto space-y-4 py-4 px-8">
+                            <DialogDescription className="sr-only">Return the application to the applicant for revision with clear instructions.</DialogDescription>
+                            <div className="p-4 bg-rose-50 dark:bg-rose-900/20 rounded-2xl border border-rose-200 dark:border-rose-800">
+                              <p className="text-sm text-rose-800 dark:text-rose-300">
+                                <strong>Tip:</strong> A concise return reason helps the applicant resolve issues faster.
+                              </p>
+                            </div>
                             <div>
                               <Label>Reason for Return *</Label>
                               <Input
@@ -1987,7 +2091,7 @@ export default function ApplicationReviewPage() {
                               />
                             </div>
                           </div>
-                          <DialogFooter>
+                          <div className="px-8 pb-7 flex flex-col-reverse sm:flex-row justify-end gap-2">
                             <Button variant="outline" onClick={() => setReturnDialogOpen(false)}>
                               Cancel
                             </Button>
@@ -1998,7 +2102,7 @@ export default function ApplicationReviewPage() {
                             >
                               Return Application
                             </Button>
-                          </DialogFooter>
+                          </div>
                         </DialogContent>
                       </Dialog>
                     </>

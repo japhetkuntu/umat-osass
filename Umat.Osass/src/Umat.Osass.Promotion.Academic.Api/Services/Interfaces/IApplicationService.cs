@@ -10,6 +10,7 @@ public interface IApplicationService
     public Task<IApiResponse<EligibilityResponse>> GetPromotionPositionEligibilityStatus(AuthData auth);
     public Task<IApiResponse<EligibilityForecastResponse>> GetEligibilityForecast(AuthData auth);
     public Task<IApiResponse<ApplicationCategoryStateResponse>> ApplicationCategoryState(AuthData auth, string? id=null);
+    public Task<IApiResponse<ApplicationCategoryStateResponse>> StartAcademicPromotionApplication(AuthData auth);
     public Task<AcademicPromotionApplication> CreateAcademicPromotionApplication(string applicantId);
 
     //application review

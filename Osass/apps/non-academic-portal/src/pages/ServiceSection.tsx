@@ -57,9 +57,10 @@ const ServiceSection = () => {
         }
 
         if (appStateRes.success && appStateRes.data) {
-          // Allow editing for: No active application OR Draft OR Returned applications
+          // Allow editing for: Draft OR Returned applications only
           const status = appStateRes.data.applicationStatus?.toLowerCase();
-          setIsReadOnly(!eligibility?.applicantNextPosition || (status && status !== "draft" && status !== "returned"));
+          const hasApplication = !!appStateRes.data.applicationId;
+          setIsReadOnly(!eligibility?.applicantNextPosition || !hasApplication || (status && status !== "draft" && status !== "returned"));
         }
       } catch (error) {
         console.error("Failed to fetch service data:", error);

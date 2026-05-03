@@ -65,6 +65,16 @@ public class ApplicationsController : DefaultController
         return StatusCode(response.Code, response);
     }
 
+    [HttpPost("start")]
+    [Produces(MediaTypeNames.Application.Json)]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ApiResponse<ApplicationCategoryStateResponse>))]
+    public async Task<IActionResult> StartApplication()
+    {
+        var account = User.GetAccount();
+        var response = await _applicationService.StartNonAcademicPromotionApplication(account);
+        return StatusCode(response.Code, response);
+    }
+
     [HttpPost("submit")]
     [Produces(MediaTypeNames.Application.Json)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ApiResponse<bool>))]

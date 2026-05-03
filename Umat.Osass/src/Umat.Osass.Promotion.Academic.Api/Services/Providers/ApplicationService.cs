@@ -226,6 +226,29 @@ public class ApplicationService : IApplicationService
         }
     }
 
+    public async Task<IApiResponse<ApplicationCategoryStateResponse>> StartAcademicPromotionApplication(AuthData auth)
+    {
+        try
+        {
+            _logger.LogInformation(
+                "[StartAcademicPromotionApplication] Starting application for {ApplicantId}", auth.Id);
+
+            // If an active application already exists, just return the current state
+            var existing = await _applicationRepository.GetOneAsync(
+                a => a.IsActive && a.ApplicantId == auth.Id);
+            if (existing != null)
+                return await ApplicationCategoryState(auth);
+
+            await CreateAcademicPromotionApplication(auth.Id);
+            return await ApplicationCategoryState(auth);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "[StartAcademicPromotionApplication] failed for {ApplicantId}", auth.Id);
+            return new ApiResponse<ApplicationCategoryStateResponse>("Failed to start application", 500);
+        }
+    }
+
     public async Task<AcademicPromotionApplication> CreateAcademicPromotionApplication(string applicantId)
     {
         var staff = await _staffRepository.GetOneAsync(a => a.Id == applicantId);

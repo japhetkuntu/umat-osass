@@ -24,31 +24,45 @@ import {
   AlertCircle,
   MinusCircle,
   Archive,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 export default function ApplicationHistoryPage() {
   const { committeeType } = useParams<{ committeeType: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const currentCommittee = user?.committees.find(
     (c) => c.committeeType === committeeType
   );
 
-  const { data: applications, isLoading, error } = useQuery({
-    queryKey: ["application-history", committeeType],
+  const { data: applications, isLoading, error, isFetching } = useQuery({
+    queryKey: ["application-history", committeeType, page, debouncedSearch],
     queryFn: async () => {
-      const response = await assessmentApi.getApplicationHistory(committeeType!);
+      const response = await assessmentApi.getApplicationHistory(committeeType!, page, 20, debouncedSearch || undefined);
       if (response.code >= 200 && response.code < 300 && response.data) {
         return response.data;
       }
       throw new Error(response.message || "Failed to fetch application history");
     },
     enabled: !!committeeType,
+    placeholderData: (prev) => prev,
   });
 
   // Extract and normalize API response (paged object with results from backend)
@@ -58,8 +72,17 @@ export default function ApplicationHistoryPage() {
     const items = Array.isArray(applications) ? applications : (applications.results || applications.items || applications.Items || []);
     
     if (items.length === 0) return [];
-    
-    return items.map((a: any) => {
+
+    const statusOrder: Record<string, number> = {
+      Submitted: 0,
+      "Under Review": 1,
+      Returned: 2,
+      "Not Approved": 3,
+      Approved: 4,
+    };
+
+    return items
+      .map((a: any) => {
       const perf = a.applicantPerformance || a.ApplicantPerformance || {};
       return {
         applicationId: a.applicationId || a.ApplicationId,
@@ -79,18 +102,19 @@ export default function ApplicationHistoryPage() {
         isResubmission: a.isResubmission || a.IsResubmission,
         resubmissionCount: a.resubmissionCount || a.ResubmissionCount || 0,
       };
+    })
+    .sort((a, b) => {
+      const aRank = statusOrder[a.applicationStatus] ?? 99;
+      const bRank = statusOrder[b.applicationStatus] ?? 99;
+      if (aRank !== bRank) return aRank - bRank;
+      return new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime();
     });
   }, [applications]);
 
-  const filteredApplications = useMemo(() => {
-    if (!searchTerm) return applications_list;
-    const term = searchTerm.toLowerCase();
-    return applications_list.filter(app =>
-      (app.applicantName || "").toLowerCase().includes(term) ||
-      (app.unitName || "").toLowerCase().includes(term) ||
-      (app.applyingForPosition || "").toLowerCase().includes(term)
-    );
-  }, [applications_list, searchTerm]);
+  const totalCount = applications?.totalCount ?? 0;
+  const totalPages = applications?.totalPages ?? Math.ceil(totalCount / 20);
+  const startItem = totalCount === 0 ? 0 : (page - 1) * 20 + 1;
+  const endItem = Math.min(page * 20, totalCount);
 
   const getPerformanceBadge = (performance: string) => {
     const variants: Record<string, { variant: "success" | "warning" | "destructive" | "secondary"; icon: React.ReactNode }> = {
@@ -101,7 +125,7 @@ export default function ApplicationHistoryPage() {
     };
     const config = variants[performance] || { variant: "secondary" as const, icon: null };
     return (
-      <Badge variant={config.variant} className="gap-1 text-xs">
+      <Badge variant={config.variant} className="inline-flex items-center gap-1 whitespace-nowrap text-xs">
         {config.icon}
         {performance}
       </Badge>
@@ -184,9 +208,10 @@ export default function ApplicationHistoryPage() {
               className="pl-10"
             />
           </div>
-          <p className="text-sm text-muted-foreground whitespace-nowrap">
-            {filteredApplications.length} application{filteredApplications.length !== 1 ? 's' : ''}
-          </p>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
+            {isFetching && !isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+            <span>{totalCount > 0 ? `${startItem}–${endItem} of ${totalCount} applications` : "0 applications"}</span>
+          </div>
         </div>
 
         {/* Applications List */}
@@ -209,12 +234,12 @@ export default function ApplicationHistoryPage() {
               </div>
             </div>
           </div>
-        ) : filteredApplications.length === 0 ? (
+        ) : applications_list.length === 0 ? (
           <div className="card-elevated p-12 text-center">
             <Archive className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-2">No application history</h3>
             <p className="text-muted-foreground">
-              {searchTerm
+              {debouncedSearch
                 ? "No applications match your search criteria"
                 : "There are no completed or reviewed applications yet"}
             </p>
@@ -234,7 +259,7 @@ export default function ApplicationHistoryPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredApplications.map((app) => (
+                {applications_list.map((app) => (
                   <TableRow
                     key={app.applicationId}
                     className="cursor-pointer hover:bg-muted/40 transition-colors"
@@ -291,7 +316,7 @@ export default function ApplicationHistoryPage() {
                         </span>
                       </div>
                       {app.isResubmission && (
-                        <Badge variant="outline" className="text-xs mt-2">
+                        <Badge variant="outline" className="text-xs mt-2 inline-flex items-center gap-1 whitespace-nowrap px-3 py-1">
                           Resubmission #{app.resubmissionCount}
                         </Badge>
                       )}
@@ -306,6 +331,38 @@ export default function ApplicationHistoryPage() {
                 ))}
               </TableBody>
             </Table>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
+                <p className="text-sm text-muted-foreground">
+                  Showing {startItem}–{endItem} of {totalCount} applications
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1 || isFetching}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <span className="text-sm font-medium px-1 min-w-[5rem] text-center">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages || isFetching}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>

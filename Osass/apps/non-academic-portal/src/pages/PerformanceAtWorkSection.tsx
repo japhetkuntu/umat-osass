@@ -119,7 +119,8 @@ const PerformanceAtWorkSection = () => {
       const res = await nonAcademicService.getApplicationCategoryState();
       if (res.success && res.data) {
         const status = res.data.applicationStatus?.toLowerCase();
-        setIsReadOnly(!eligibility?.applicantNextPosition || (status && status !== "draft" && status !== "returned"));
+        const hasApplication = !!res.data.applicationId;
+        setIsReadOnly(!eligibility?.applicantNextPosition || !hasApplication || (status && status !== "draft" && status !== "returned"));
       }
     } catch (error) {
       console.error("Failed to fetch application status:", error);

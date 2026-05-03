@@ -55,6 +55,10 @@ class AcademicService {
         return await academicClient.get<any[]>("/Services/positions");
     }
 
+    async startApplication(): Promise<ApiResponse<ApplicationCategoryState>> {
+        return await academicClient.post<ApplicationCategoryState>("/Applications/start");
+    }
+
     async submitApplication(): Promise<ApiResponse<boolean>> {
         return await academicClient.post<boolean>("/Applications/submit");
     }

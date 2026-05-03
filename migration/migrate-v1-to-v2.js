@@ -72,11 +72,47 @@ const schoolIdMap      = {};
 const facultyIdMap     = {};
 const deptIdMap        = {};
 const userIdMap        = {};
-const positionIdMap    = {};
+const positionIdMap      = {};
+const positionNameMap    = {};  // v1 application._id → position name (e.g. "PROFESSOR")
+const positionCriteriaMap = {}; // v1 application._id → PerformanceCriteria array
 const applicationIdMap = {};  // v1 smapplication._id → v2 AcademicPromotionApplication.Id
 const appContextMap    = {};  // v1 smapplication._id → { positionId, applicantId, deptId, facId }
 
 let DEFAULT_SCHOOL_ID = null;
+
+const uploadStats = {
+  attempted: 0,
+  succeeded: 0,
+  missingFilename: 0,
+  noS3Config: 0,
+  noOldFilesRoot: 0,
+  notFound: 0,
+  failed: 0,
+  failures: [],
+};
+const MAX_UPLOAD_FAILURES = 100;
+
+function printUploadSummary() {
+  console.log('\n[Upload Summary]');
+  console.log(`  Attempted: ${uploadStats.attempted}`);
+  console.log(`  Succeeded: ${uploadStats.succeeded}`);
+  const notUploaded = uploadStats.missingFilename + uploadStats.noS3Config + uploadStats.noOldFilesRoot + uploadStats.notFound + uploadStats.failed;
+  console.log(`  Not uploaded: ${notUploaded}`);
+  if (uploadStats.missingFilename) console.log(`    Missing filename references: ${uploadStats.missingFilename}`);
+  if (uploadStats.noS3Config) console.log(`    Skipped due to missing S3 config: ${uploadStats.noS3Config}`);
+  if (uploadStats.noOldFilesRoot) console.log(`    Skipped due to missing OLD_FILES_ROOT: ${uploadStats.noOldFilesRoot}`);
+  if (uploadStats.notFound) console.log(`    Local file not found: ${uploadStats.notFound}`);
+  if (uploadStats.failed) console.log(`    Upload failed: ${uploadStats.failed}`);
+  if (uploadStats.failures.length) {
+    console.log('  Failure details (first entries):');
+    for (const failure of uploadStats.failures) {
+      console.log(`    - ${failure.filename}: ${failure.reason}${failure.detail ? ` (${failure.detail})` : ''}`);
+    }
+    if (uploadStats.failures.length >= MAX_UPLOAD_FAILURES) {
+      console.log(`    ...plus more failures not shown (max ${MAX_UPLOAD_FAILURES})`);
+    }
+  }
+}
 
 function assertEnv() {
   const missing = [];
@@ -114,6 +150,23 @@ function normalizeEmail(raw) {
   return String(raw).trim().toLowerCase();
 }
 
+/**
+ * v1 stores the full name (with honorific) in the `firstname` field, e.g.:
+ *   "PROF BERNARD KUMI-BOATENG", "ASSOC PROF MICHAEL AFFAM", "DR MRS ETORNAM BANI FIADONU"
+ * Strip leading title words, then first remaining word → FirstName, rest → LastName.
+ */
+const TITLE_WORDS = new Set(['PROF', 'PROF.', 'DR', 'DR.', 'MR', 'MR.', 'MRS', 'MRS.', 'MS', 'MS.', 'MISS', 'ASSOC', 'PFOF', 'REV', 'ENG', 'ENGR']);
+function parseFullName(fullName) {
+  const words = (fullName || '').trim().split(/\s+/).filter(Boolean);
+  const titleParts = [];
+  while (words.length > 0 && TITLE_WORDS.has(words[0].toUpperCase())) {
+    titleParts.push(words.shift());
+  }
+  const firstName = words.shift() || '';
+  const lastName  = words.join(' ');
+  return { title: titleParts.length ? `${titleParts.join(' ')}.` : '', firstName, lastName };
+}
+
 /** Extract just the filename from a v1 file URL.
  * v1 stored files as: "https://host/public/data/1680000000000-name.pdf" */
 function extractFilename(fileValue) {
@@ -122,20 +175,36 @@ function extractFilename(fileValue) {
 }
 
 async function uploadLegacyFile(filename) {
-  if (!filename || !S3_ENDPOINT || !S3_KEY || !S3_SECRET) return filename || null;
-  if (!OLD_FILES_ROOT) return filename;
+  if (!filename) {
+    uploadStats.missingFilename++;
+    return null;
+  }
+  if (!S3_ENDPOINT || !S3_KEY || !S3_SECRET) {
+    uploadStats.noS3Config++;
+    return filename;
+  }
+  if (!OLD_FILES_ROOT) {
+    uploadStats.noOldFilesRoot++;
+    return filename;
+  }
   let S3Client, PutObjectCommand;
   try {
     ({ S3Client, PutObjectCommand } = require('@aws-sdk/client-s3'));
   } catch (_) {
     console.warn('  [warn] @aws-sdk/client-s3 not installed; skipping upload');
+    uploadStats.noS3Config++;
     return filename;
   }
-  const localPath = path.join(OLD_FILES_ROOT, 'public', 'data', filename);
+  const localPath = path.join(OLD_FILES_ROOT, filename);
   if (!fs.existsSync(localPath)) {
+    uploadStats.notFound++;
+    if (uploadStats.failures.length < MAX_UPLOAD_FAILURES) {
+      uploadStats.failures.push({ filename, reason: 'Local file not found' });
+    }
     console.warn(`  [warn] File not found locally: ${localPath}`);
     return filename;
   }
+  uploadStats.attempted++;
   const objectKey = `${S3_FOLDER}/${filename}`;
   const ext = path.extname(filename).toLowerCase();
   const contentType = { '.pdf': 'application/pdf', '.png': 'image/png', '.jpg': 'image/jpeg' }[ext] || 'application/octet-stream';
@@ -150,9 +219,14 @@ async function uploadLegacyFile(filename) {
       Body: fs.createReadStream(localPath),
       ContentType: contentType, ACL: 'public-read',
     }));
+    uploadStats.succeeded++;
     console.log(`  [upload] ${filename} → ${objectKey}`);
-    return objectKey;
+    return filename;
   } catch (e) {
+    uploadStats.failed++;
+    if (uploadStats.failures.length < MAX_UPLOAD_FAILURES) {
+      uploadStats.failures.push({ filename, reason: 'Upload failed', detail: e.message });
+    }
     console.warn(`  [warn] Upload failed for ${filename}: ${e.message}`);
     return filename;
   }
@@ -237,6 +311,35 @@ async function phase4_users(pgId, db, deptToFaculty) {
   const userDocs = await db.collection('users').find({}).toArray();
   console.log(`   Found ${userDocs.length} users`);
 
+  // Pre-build a map of v1 staff _id → latest completed application date
+  // Used to intelligently set LastAppointmentOrPromotionDate instead of defaulting to migration run date
+  const allSmApps = await db.collection('smapplications').find({}).toArray();
+  const lastPromotionDateByStaff = {};
+  const lastApplicationDateByStaff = {};
+  for (const app of allSmApps) {
+    const staffV1Id = objId(app.staff);
+    if (!staffV1Id) continue;
+    // Track latest submission date for any application
+    const submittedDate = app.date_submitted ? new Date(app.date_submitted) : null;
+    if (submittedDate && !isNaN(submittedDate.getTime())) {
+      if (!lastApplicationDateByStaff[staffV1Id] || submittedDate > lastApplicationDateByStaff[staffV1Id]) {
+        lastApplicationDateByStaff[staffV1Id] = submittedDate;
+      }
+    }
+    // Track latest completed (promoted) application date separately.
+    // Also treat "denied but UAPC completed" as effectively promoted (user instruction).
+    const isDenied = /denied|not.approved/i.test(app.status || '') || /denied|not.approved/i.test(app.application_status || '');
+    const isPromoted = /promot/i.test(app.status || '') || /promot/i.test(app.application_status || '')
+      || (isDenied && app.uapc_status === true);
+    if (isPromoted && submittedDate && !isNaN(submittedDate.getTime())) {
+      if (!lastPromotionDateByStaff[staffV1Id] || submittedDate > lastPromotionDateByStaff[staffV1Id]) {
+        lastPromotionDateByStaff[staffV1Id] = submittedDate;
+      }
+    }
+  }
+  console.log(`   Found last promotion dates for ${Object.keys(lastPromotionDateByStaff).length} staff from completed applications`);
+  console.log(`   Found last application dates for ${Object.keys(lastApplicationDateByStaff).length} staff from any application`);
+
   const staffRows = [], adminRows = [], committeeUsers = [];
 
   for (const u of userDocs) {
@@ -254,20 +357,26 @@ async function phase4_users(pgId, db, deptToFaculty) {
     const v2FacId  = v1FacId  ? (facultyIdMap[v1FacId] || null) : null;
     const password = authMap[v1Id] || '';
 
+    const parsed = parseFullName(u.firstname);
+
     if (rank === 'admin') {
-      adminRows.push({ Id: v2Id, FirstName: u.firstname || '', LastName: [u.lastname, u.othername].filter(Boolean).join(' '),
+      adminRows.push({ Id: v2Id, FirstName: parsed.firstName, LastName: parsed.lastName,
                        Email: email, Password: password, Role: 'Admin', LastLoginAt: null,
                        CreatedAt: formatDate(u.createdAt) || new Date().toISOString(), UpdatedAt: formatDate(u.updatedAt) || null,
                        CreatedBy: 'migration', UpdatedBy: null });
     } else {
       staffRows.push({ Id: v2Id, Email: email,
-                       FirstName: u.firstname || '',
-                       LastName: [u.lastname, u.othername].filter(Boolean).join(' '),
+                       FirstName: parsed.firstName,
+                       LastName: parsed.lastName,
                        StaffId: email.split('@')[0].toUpperCase(),
-                       Position: u.position || '',
+                       Position: (u.position || '').toUpperCase(),
                        PreviousPosition: '',
-                       LastAppointmentOrPromotionDate: formatDate(u.date_joined) || new Date().toISOString(),
-                       Title: '',
+                       Title: parsed.title,
+                       LastAppointmentOrPromotionDate: lastPromotionDateByStaff[v1Id]
+                         ? lastPromotionDateByStaff[v1Id].toISOString()
+                         : lastApplicationDateByStaff[v1Id]
+                           ? lastApplicationDateByStaff[v1Id].toISOString()
+                           : (formatDate(u.date_joined) || new Date().toISOString()),
                        StaffCategory: 'Academic',
                        UniversityRole: null,
                        Password: password,
@@ -329,12 +438,15 @@ async function phase6_positions(pgAcad, db) {
   const rows = docs.map(d => {
     const v2Id = newGuid();
     positionIdMap[objId(d._id)] = v2Id;
+    positionNameMap[objId(d._id)] = d.name || '';
+    const req = getPositionRequirements(d.name);
+    positionCriteriaMap[objId(d._id)] = req.criteria;
     return { Id: v2Id, Name: d.name || '',
-             PerformanceCriteria: JSON.stringify([]),
-             MinimumNumberOfYearsFromLastPromotion: 0,
-             PreviousPosition: null,
-             MinimumNumberOfPublications: 0,
-             MinimumNumberOfRefereedJournal: 0,
+             PerformanceCriteria: JSON.stringify(req.criteria),
+             MinimumNumberOfYearsFromLastPromotion: req.minYears,
+             PreviousPosition: req.previousPosition,
+             MinimumNumberOfPublications: req.minPubs,
+             MinimumNumberOfRefereedJournal: req.minRefereed,
              CreatedAt: formatDate(d.createdAt) || new Date().toISOString(), UpdatedAt: formatDate(d.updatedAt) || null,
              CreatedBy: 'migration', UpdatedBy: null };
   });
@@ -366,15 +478,17 @@ async function phase7_applications(pgAcad, db) {
     if (l.includes('dapc'))    return 'Department Review';
     if (l.includes('fapsc') || l.includes('fapc')) return 'Faculty Review';
     if (l.includes('uapc'))    return 'UAPC Review';
-    if (l.includes('complet')) return 'Council Decision';
+    if (l.includes('complet')) return 'Council Approved'; // matches AcademicPromotionState.CouncilApproved
     return 'Draft';
   };
-  const appStatusMap = (status, appStatus) => {
+  const appStatusMap = (status, appStatus, uapcDone) => {
     const c = ((status || '') + ' ' + (appStatus || '')).toLowerCase();
     if (c.includes('promoted'))               return 'Approved';
+    // If UAPC completed their review but system recorded denial, treat as promoted (data quality fix)
+    if ((c.includes('denied') || c.includes('not approved')) && uapcDone) return 'Approved';
     if (c.includes('denied') || c.includes('not approved')) return 'Not Approved';
     if (c.includes('returned'))               return 'Returned';
-    if (c.includes('pending') || c.includes('submit') || c.includes('review')) return 'Under Review';
+    if (c.includes('pending') || c.includes('submit') || c.includes('review')) return 'Submitted';
     return 'Draft';
   };
 
@@ -389,7 +503,7 @@ async function phase7_applications(pgAcad, db) {
     const cvKey     = await uploadLegacyFile(extractFilename(doc.curriculum_vitae));
     const letterKey = await uploadLegacyFile(extractFilename(doc.application_letter));
     const reviewSt  = statusMap(doc.status);
-    const appSt     = appStatusMap(doc.status, doc.application_status);
+    const appSt     = appStatusMap(doc.status, doc.application_status, doc.uapc_status === true);
 
     const history = [
       doc.hod_status    && 'HoD Review',
@@ -411,11 +525,11 @@ async function phase7_applications(pgAcad, db) {
         return v2Id;
       })(),
       PromotionPositionId: positionIdMap[objId(doc.application)] || '',
-      PromotionPosition:   '',
+      PromotionPosition:   positionNameMap[objId(doc.application)] || '',
       ApplicantId:         userIdMap[objId(doc.staff)] || '',
       ApplicantName:       [applicant.firstname, applicant.othername, applicant.lastname].filter(Boolean).join(' '),
       ApplicantEmail:      normalizeEmail(applicant.email) || '',
-      ApplicantCurrentPosition: applicant.position || '',
+      ApplicantCurrentPosition: (applicant.position || '').toUpperCase(),
       ApplicantDepartmentId:   deptIdMap[v1DeptId]    || '',
       ApplicantSchoolId:       DEFAULT_SCHOOL_ID,
       ApplicantFacultyId:      facultyIdMap[v1FacId]  || '',
@@ -427,7 +541,7 @@ async function phase7_applications(pgAcad, db) {
       ReviewStatus:      reviewSt,
       ReviewStatusHistory: history,
       ApplicationStatus: appSt,
-      PerformanceCriteria: JSON.stringify([]),
+      PerformanceCriteria: JSON.stringify(positionCriteriaMap[objId(doc.application)] || []),
       CurriculumVitaeFile:       cvKey  || null,
       CurriculumVitaeUploadedAt: cvKey  ? formatDate(doc.date_submitted) : null,
       ApplicationLetterFile:     letterKey || null,
@@ -458,6 +572,49 @@ function mapStrength(s) {
     case 'ADEQUATE':  return 'Adequate';
     default:          return 'In Adequate';
   }
+}
+
+/** Returns position-specific promotion requirements based on v1 position name.
+ * Performance criteria format: each string is "Teaching,Publication,Service" performance levels.
+ * Criteria are derived from the official UMaT OSASS promotion guidelines (v1 application descriptions). */
+function getPositionRequirements(name) {
+  const n = (name || '').toUpperCase().trim();
+  if (n === 'PROFESSOR') return {
+    criteria: ['High,High,High'],
+    previousPosition: 'Associate Professor',
+    minYears: 4, minPubs: 10, minRefereed: 6,
+  };
+  if (n === 'ASSOCIATE PROFESSOR') return {
+    criteria: ['High,High,Good', 'High,Good,High', 'Good,High,High'],
+    previousPosition: 'Senior Lecturer',
+    minYears: 4, minPubs: 6, minRefereed: 5,
+  };
+  if (n === 'SENIOR LECTURER') return {
+    criteria: ['High,High,Adequate', 'High,Adequate,High', 'Adequate,High,High', 'Good,Good,Good'],
+    previousPosition: 'Lecturer',
+    minYears: 4, minPubs: 4, minRefereed: 3,
+  };
+  if (n === 'SENIOR RESEARCH FELLOW') return {
+    criteria: ['High,High,Adequate', 'High,Adequate,High', 'Adequate,High,High', 'Good,Good,Good'],
+    previousPosition: 'Research Fellow',
+    minYears: 4, minPubs: 6, minRefereed: 4,
+  };
+  if (n === 'LECTURER') return {
+    criteria: [],
+    previousPosition: 'Assistant Lecturer',
+    minYears: 4, minPubs: 0, minRefereed: 0,
+  };
+  if (n === 'RESEARCH FELLOW') return {
+    criteria: [],
+    previousPosition: 'Technical Instructor',
+    minYears: 4, minPubs: 0, minRefereed: 0,
+  };
+  if (n === 'ASSISTANT LECTURER') return {
+    criteria: [],
+    previousPosition: null,
+    minYears: 3, minPubs: 0, minRefereed: 0,
+  };
+  return { criteria: [], previousPosition: null, minYears: 0, minPubs: 0, minRefereed: 0 };
 }
 
 /** Phase 8: v1 remarks (teaching) → TeachingRecords */
@@ -505,9 +662,12 @@ async function phase8_teachingRecords(pgAcad, db) {
       if (!appId) continue;
       if (!evidenceByAppCol[appId]) evidenceByAppCol[appId] = {};
       if (!evidenceByAppCol[appId][col]) evidenceByAppCol[appId][col] = [];
-      // Collect all link fields
+      // Upload and collect all link fields
       for (const field of ['link', 'pages_modified', 'old_link']) {
-        if (d[field]) evidenceByAppCol[appId][col].push(extractFilename(d[field]));
+        if (d[field]) {
+          const key = await uploadLegacyFile(extractFilename(d[field]));
+          if (key) evidenceByAppCol[appId][col].push(key);
+        }
       }
     }
   }
@@ -667,9 +827,12 @@ async function phase9_publications(pgAcad, db) {
     const ctx = appContextMap[v1AppId] || {};
     const kc = kcByApp[v1AppId] || {};
 
-    const pubList = byApp[v1AppId].map(mp => {
+    const pubList = [];
+    for (const mp of byApp[v1AppId]) {
       const r = remarkByPub[objId(mp._id)] || {};
-      return {
+      const presentKey = mp.present_link ? await uploadLegacyFile(extractFilename(mp.present_link)) : null;
+      const supportKey = mp.link ? await uploadLegacyFile(extractFilename(mp.link)) : null;
+      pubList.push({
         Id: newGuid(),
         Title: mp.title || '',
         Year: 0,
@@ -678,7 +841,7 @@ async function phase9_publications(pgAcad, db) {
         PublicationTypeName: mp.publication_category || '',
         IsPresented: mp.presentation === true || r.present === 1,
         PresentationBonus: 0,
-        PresentationEvidence: mp.present_link ? [mp.present_link] : [],
+        PresentationEvidence: presentKey ? [presentKey] : [],
         ApplicantScore:  r.applicant_score  ?? null,
         ApplicantRemarks: r.applicant_comment || null,
         DapcScore:  r.hod_score   ?? null,
@@ -687,10 +850,10 @@ async function phase9_publications(pgAcad, db) {
         FapcRemarks: r.fapsc_comment || null,
         UapcScore:  r.uapc_score   ?? null,
         UapcRemarks: r.uapc_comment  || null,
-        SupportingEvidence: mp.link ? [extractFilename(mp.link)] : [],
+        SupportingEvidence: supportKey ? [supportKey] : [],
         CreatedAt: new Date().toISOString(), UpdatedAt: null,
-      };
-    });
+      });
+    }
 
     rows.push({
       Id: newGuid(),
@@ -794,8 +957,9 @@ async function phase10_serviceRecords(pgAcad, db) {
     return otherRemMap[id] || {};
   };
 
-  const toServiceItem = d => {
+  const toServiceItem = async d => {
     const r = getRemarkForDoc(d);
+    const supportKey = d.link ? await uploadLegacyFile(extractFilename(d.link)) : null;
     return {
       Id: newGuid(),
       ServiceTitle: d.position || d.committee || d.title_of_service || '',
@@ -810,7 +974,7 @@ async function phase10_serviceRecords(pgAcad, db) {
       FapcRemarks: r.fapsc_comment || null,
       UapcScore:  r.uapc_score   ?? null,
       UapcRemarks: r.uapc_comment  || null,
-      SupportingEvidence: d.link ? [extractFilename(d.link)] : [],
+      SupportingEvidence: supportKey ? [supportKey] : [],
       CreatedAt: new Date().toISOString(), UpdatedAt: null,
     };
   };
@@ -830,8 +994,8 @@ async function phase10_serviceRecords(pgAcad, db) {
       ApplicantSchoolId: DEFAULT_SCHOOL_ID,
       ApplicantFacultyId: ctx.facId || '',
       Status: 'Submitted',
-      ServiceToTheUniversity:            JSON.stringify((uniByApp[v1AppId] || []).map(toServiceItem)),
-      ServiceToNationalAndInternational: JSON.stringify((natByApp[v1AppId] || []).map(toServiceItem)),
+      ServiceToTheUniversity:            JSON.stringify(await Promise.all((uniByApp[v1AppId] || []).map(toServiceItem))),
+      ServiceToNationalAndInternational: JSON.stringify(await Promise.all((natByApp[v1AppId] || []).map(toServiceItem))),
       ApplicantPerformance: mapStrength((scByApp[v1AppId] || {}).strength),
       DapcPerformance:      mapStrength((scByApp[v1AppId] || {}).hod_strength),
       FapcPerformance:      mapStrength((scByApp[v1AppId] || {}).fapsc_strength),
@@ -905,6 +1069,101 @@ async function phase12_publicationIndicators(pgId, db) {
   console.log(`   Inserted ${rows.length} publication indicators`);
 }
 
+/** Phase 13: Close UAPC-reviewed applications where UAPC has actually scored all 3 categories.
+ * Matches the v2 backend logic exactly:
+ *   - Only close if UapcPerformance is non-default in ALL THREE categories (teaching, publication, service)
+ *   - Uses sorted rank comparison (category-agnostic), matching MatchesPerformanceCriteria in AssessmentService.cs
+ *   - Approved → ReviewStatus="Council Approved", ApplicationStatus="Approved", IsActive=false
+ *   - Not Approved → ReviewStatus="Council Approved", ApplicationStatus="Not Approved", IsActive=false
+ *   - No UAPC scores → leave at current ReviewStatus/ApplicationStatus (pending for UAPC to score) */
+async function phase13_closeCompletedPromotions(pgAcad) {
+  console.log('\n[13] Closing completed UAPC-reviewed promotions...');
+
+  const result = await pgAcad.query(`
+    SELECT
+      a."Id" AS app_id,
+      p."PerformanceCriteria" AS position_criteria,
+      t."Id" AS teaching_id, t."UapcPerformance" AS teaching_uapc,
+      pub."Id" AS pub_id, pub."UapcPerformance" AS pub_uapc,
+      s."Id" AS svc_id, s."UapcPerformance" AS svc_uapc
+    FROM "AcademicPromotionApplications" a
+    LEFT JOIN "AcademicPromotionPositions" p ON p."Id" = a."PromotionPositionId"
+    LEFT JOIN "TeachingRecords" t ON t."PromotionApplicationId" = a."Id"
+    LEFT JOIN "Publications" pub ON pub."PromotionApplicationId" = a."Id"
+    LEFT JOIN "ServiceRecords" s ON s."PromotionApplicationId" = a."Id"
+    WHERE a."ReviewStatus" = 'UAPC Review'
+      AND a."ApplicationStatus" = 'Submitted'
+  `);
+
+  console.log(`   Found ${result.rows.length} UAPC Review applications to evaluate`);
+
+  // Performance level map matching PerformanceTypes in v2 EnumTypes.cs
+  const PERF_LEVEL = { 'In Adequate': 1, 'Adequate': 2, 'Good': 3, 'High': 4 };
+  const DEFAULT_PERF = 'In Adequate';
+
+  // Replicates MatchesPerformanceCriteria from AssessmentService.cs:
+  // Sorts both actual and required ranks descending, then checks each required rank
+  // is satisfied by the corresponding actual rank (greedy match on sorted arrays).
+  function meetsCriteria(teachingPerf, pubPerf, svcPerf, criteriaList) {
+    if (!criteriaList || criteriaList.length === 0) return true; // no criteria = any performance passes
+    const actualRanks = [PERF_LEVEL[teachingPerf] || 0, PERF_LEVEL[pubPerf] || 0, PERF_LEVEL[svcPerf] || 0]
+      .sort((a, b) => b - a);
+    return criteriaList.some(criterion => {
+      const parts = criterion.split(',').map(p => p.trim());
+      if (parts.length !== 3) return false;
+      const requiredRanks = parts.map(p => PERF_LEVEL[p] || 0).sort((a, b) => b - a);
+      const used = [false, false, false];
+      for (let j = 0; j < 3; j++) {
+        let matched = false;
+        for (let k = 0; k < 3; k++) {
+          if (!used[k] && actualRanks[k] >= requiredRanks[j]) {
+            used[k] = true;
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) return false;
+      }
+      return true;
+    });
+  }
+
+  let closedApproved = 0, closedDenied = 0, skipped = 0;
+  const now = new Date().toISOString();
+
+  for (const row of result.rows) {
+    const teachingPerf = row.teaching_uapc;
+    const pubPerf = row.pub_uapc;
+    const svcPerf = row.svc_uapc;
+
+    // Only close if UAPC has actually scored all 3 categories (none are the default "In Adequate")
+    // If any category is unscored (null or default), the application stays pending for UAPC to complete
+    if (!teachingPerf || !pubPerf || !svcPerf ||
+        teachingPerf === DEFAULT_PERF || pubPerf === DEFAULT_PERF || svcPerf === DEFAULT_PERF) {
+      skipped++;
+      continue;
+    }
+
+    const criteria = Array.isArray(row.position_criteria) ? row.position_criteria : [];
+    const passes = meetsCriteria(teachingPerf, pubPerf, svcPerf, criteria);
+    const newAppStatus = passes ? 'Approved' : 'Not Approved';
+
+    // Use "Council Approved" — matches AcademicPromotionState.CouncilApproved in v2 ApproveApplication
+    await pgAcad.query(`
+      UPDATE "AcademicPromotionApplications"
+      SET "ApplicationStatus" = $1, "ReviewStatus" = 'Council Approved',
+          "IsActive" = false, "UpdatedAt" = $2, "UpdatedBy" = 'migration'
+      WHERE "Id" = $3
+    `, [newAppStatus, now, row.app_id]);
+
+    if (passes) closedApproved++;
+    else closedDenied++;
+  }
+
+  console.log(`   Closed: ${closedApproved} approved, ${closedDenied} not approved`);
+  console.log(`   Kept pending (no UAPC scores): ${skipped}`);
+}
+
 /** Phase 0: Truncate all migrated tables so the script is idempotent */
 async function phase0_clearDatabases(pgId, pgAcad) {
   console.log('\n[0] Clearing databases...');
@@ -967,7 +1226,10 @@ async function main() {
     await phase9_publications(pgAcad, db);
     await phase10_serviceRecords(pgAcad, db);
     await phase11_servicePositions(pgId, db);
-    await phase12_publicationIndicators(pgId, db);    console.log('\n\u2713 Migration complete.');
+    await phase12_publicationIndicators(pgId, db);
+    await phase13_closeCompletedPromotions(pgAcad);
+    printUploadSummary();
+    console.log('\n\u2713 Migration complete.');
   } finally {
     await pgId.end();
     await pgAcad.end();

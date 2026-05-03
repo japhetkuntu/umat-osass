@@ -32,12 +32,18 @@ export const assessmentApi = {
     academicClient.get<AssessmentDashboard>("/assessment/dashboard"),
 
   // Get pending applications for a committee
-  getPendingApplications: (committeeType: string) =>
-    academicClient.get<PagedResponse<PendingApplication>>(`/assessment/pending/${committeeType}`),
+  getPendingApplications: (committeeType: string, page = 1, pageSize = 20, search?: string) => {
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (search) params.set('search', search);
+    return academicClient.get<PagedResponse<PendingApplication>>(`/assessment/pending/${committeeType}?${params}`);
+  },
 
   // Get reviewed/completed applications history for a committee
-  getApplicationHistory: (committeeType: string) =>
-    academicClient.get<PagedResponse<PendingApplication>>(`/assessment/history/${committeeType}`),
+  getApplicationHistory: (committeeType: string, page = 1, pageSize = 20, search?: string) => {
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (search) params.set('search', search);
+    return academicClient.get<PagedResponse<PendingApplication>>(`/assessment/history/${committeeType}?${params}`);
+  },
 
   // Get application details for assessment
   getApplicationForAssessment: (applicationId: string) =>

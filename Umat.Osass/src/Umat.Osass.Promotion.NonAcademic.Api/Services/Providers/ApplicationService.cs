@@ -250,6 +250,24 @@ public async Task<IApiResponse<EligibilityForecastResponse>> GetEligibilityForec
         }
     }
 
+    public async Task<IApiResponse<ApplicationCategoryStateResponse>> StartNonAcademicPromotionApplication(AuthData auth)
+    {
+        try
+        {
+            _logger.LogInformation("[StartNonAcademicPromotionApplication] Starting application for {ApplicantId}", auth.Id);
+            var existing = await _applicationRepository.GetOneAsync(a => a.IsActive && a.ApplicantId == auth.Id);
+            if (existing != null)
+                return await ApplicationCategoryState(auth);
+            await CreateNonAcademicPromotionApplication(auth.Id);
+            return await ApplicationCategoryState(auth);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "[StartNonAcademicPromotionApplication] Failed for {ApplicantId}", auth.Id);
+            return new ApiResponse<ApplicationCategoryStateResponse>("Failed to start application", 500);
+        }
+    }
+
     public async Task<NonAcademicPromotionApplication> CreateNonAcademicPromotionApplication(string applicantId)
     {
         var staff = await _staffRepository.GetOneAsync(s => s.Id == applicantId);

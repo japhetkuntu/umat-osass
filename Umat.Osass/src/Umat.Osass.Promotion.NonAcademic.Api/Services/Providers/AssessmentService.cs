@@ -632,6 +632,7 @@ public class AssessmentService : IAssessmentService
             var positionRes = await _positionRepository.GetByIdAsync(application.PromotionPositionId);
             var knowledgeRecord = await _knowledgeRepository.GetOneAsync(r => r.PromotionApplicationId == applicationId);
             var performanceRecord = await _performanceRepository.GetOneAsync(r => r.PromotionApplicationId == applicationId);
+            var serviceRecord = await _serviceRepository.GetOneAsync(r => r.PromotionApplicationId == applicationId);
             var staff = await staffTask;
 
             var failedCriteria = new List<string>();
@@ -654,12 +655,15 @@ public class AssessmentService : IAssessmentService
                 if (!meetsJournals) failedCriteria.Add($"Insufficient journals ({journalCount} of {positionRes.MinimumNumberOfJournals} required)");
             }
 
-            if (performanceRecord != null && positionRes != null && positionRes.PerformanceCriteria.Any())
+            if (positionRes != null && positionRes.PerformanceCriteria.Any())
             {
-                var performances = new[] { performanceRecord.ApplicantPerformance, knowledgeRecord?.ApplicantPerformance ?? "Inadequate", application.PerformanceCriteria.FirstOrDefault() ?? "Inadequate" };
-                var performanceStr = string.Join(",", performances);
+                // Use the most authoritative committee performance for each section.
+                var perfPerformance = GetEffectivePerformance(performanceRecord);
+                var knowledgePerformance = GetEffectivePerformance(knowledgeRecord);
+                var svcPerformance = GetEffectivePerformance(serviceRecord);
+                var performanceStr = $"{perfPerformance},{knowledgePerformance},{svcPerformance}";
                 meetsPerformance = positionRes.PerformanceCriteria.Any(c => c.Equals(performanceStr, StringComparison.OrdinalIgnoreCase));
-                if (!meetsPerformance) failedCriteria.Add("Performance criteria not met");
+                if (!meetsPerformance) failedCriteria.Add($"Performance criteria not met (actual: {performanceStr})");
             }
 
             var isRecommended = meetsYears && meetsMaterials && meetsJournals;
@@ -1038,6 +1042,35 @@ public class AssessmentService : IAssessmentService
             });
         }
         return responses;
+    }
+
+    /// <summary>
+    /// Returns the most authoritative committee performance using nullable item-level scores
+    /// as the reliable signal (performance summary strings all default to "InAdequate").
+    /// </summary>
+    private static string GetEffectivePerformance(PerformanceAtWorkRecord? record)
+    {
+        if (record == null) return PerformanceTypes.InAdequate;
+        var cats = new[] {
+            record.AccuracyOnSchedule, record.QualityOfWork, record.PunctualityAndRegularity,
+            record.KnowledgeOfProcedures, record.AbilityToWorkOnOwn, record.AbilityToWorkUnderPressure,
+            record.AdditionalResponsibility, record.HumanRelations, record.InitiativeAndForesight,
+            record.AbilityToInspireAndMotivate
+        };
+        return cats.Any(c => c?.UapcScore != null) ? record.UapcPerformance : PerformanceTypes.InAdequate;
+    }
+
+    private static string GetEffectivePerformance(KnowledgeProfessionRecord? record)
+    {
+        if (record == null) return PerformanceTypes.InAdequate;
+        return record.Materials.Any(m => m.UapcScore.HasValue) ? record.UapcPerformance : PerformanceTypes.InAdequate;
+    }
+
+    private static string GetEffectivePerformance(NonAcademicServiceRecord? record)
+    {
+        if (record == null) return PerformanceTypes.InAdequate;
+        var all = record.ServiceToTheUniversity.Concat(record.ServiceToNationalAndInternational);
+        return all.Any(s => s.UapcScore.HasValue) ? record.UapcPerformance : PerformanceTypes.InAdequate;
     }
 
     private static string StripHtml(string input)

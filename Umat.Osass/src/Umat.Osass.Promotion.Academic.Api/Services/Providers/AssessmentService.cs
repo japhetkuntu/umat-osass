@@ -1476,10 +1476,13 @@ public class AssessmentService : IAssessmentService
                 p.PublicationTypeName.Contains("Refereed", StringComparison.OrdinalIgnoreCase) ||
                 p.PublicationTypeId.Contains("journal", StringComparison.OrdinalIgnoreCase));
 
-            // Get final (UAPC) performances - fall back to FAPSC then DAPC if UAPC not yet assessed
-            var teachingPerformance = GetFinalPerformance(teaching?.UapcPerformance, teaching?.FapcPerformance, teaching?.DapcPerformance, teaching?.ApplicantPerformance);
-            var publicationPerformance = GetFinalPerformance(publication?.UapcPerformance, publication?.FapcPerformance, publication?.DapcPerformance, publication?.ApplicantPerformance);
-            var servicePerformance = GetFinalPerformance(service?.UapcPerformance, service?.FapcPerformance, service?.DapcPerformance, service?.ApplicantPerformance);
+            // Get final (UAPC) performances using nullable item-level scores as the authoritative
+            // signal. UapcPerformance defaults to "InAdequate" on all entities, so we cannot
+            // distinguish "not yet scored" from "genuinely InAdequate" without checking the
+            // individual category scores.
+            var teachingPerformance = GetEffectivePerformance(teaching);
+            var publicationPerformance = GetEffectivePerformance(publication);
+            var servicePerformance = GetEffectivePerformance(service);
 
             var performanceCombination = $"{teachingPerformance},{publicationPerformance},{servicePerformance}";
 
@@ -1647,6 +1650,37 @@ public class AssessmentService : IAssessmentService
                 return perf;
         }
         return PerformanceTypes.InAdequate;
+    }
+
+    /// <summary>
+    /// Returns the most authoritative committee performance using nullable item-level scores
+    /// as the reliable signal (UapcPerformance / FapcPerformance / DapcPerformance all default
+    /// to "InAdequate", making it impossible to distinguish "not yet scored" from a genuine
+    /// InAdequate result without checking the individual nullable score fields).
+    /// </summary>
+    private static string GetEffectivePerformance(TeachingRecord? record)
+    {
+        if (record == null) return PerformanceTypes.InAdequate;
+        var cats = new[] {
+            record.LectureLoad, record.AbilityToAdaptToTeaching, record.RegularityAndPunctuality,
+            record.QualityOfLectureMaterial, record.PerformanceOfStudentInExam, record.AbilityToCompleteSyllabus,
+            record.QualityOfExamQuestionAndMarkingScheme, record.PunctualityInSettingExamQuestion,
+            record.SupervisionOfProjectWorkAndThesis, record.StudentReactionToAndAssessmentOfTeaching
+        };
+        return cats.Any(c => c?.UapcScore != null) ? record.UapcPerformance : PerformanceTypes.InAdequate;
+    }
+
+    private static string GetEffectivePerformance(Publication? record)
+    {
+        if (record == null) return PerformanceTypes.InAdequate;
+        return record.Publications.Any(p => p.UapcScore.HasValue) ? record.UapcPerformance : PerformanceTypes.InAdequate;
+    }
+
+    private static string GetEffectivePerformance(ServiceRecord? record)
+    {
+        if (record == null) return PerformanceTypes.InAdequate;
+        var all = record.ServiceToTheUniversity.Concat(record.ServiceToNationalAndInternational);
+        return all.Any(s => s.UapcScore.HasValue) ? record.UapcPerformance : PerformanceTypes.InAdequate;
     }
 
 

@@ -23,6 +23,8 @@ interface DocSlot {
 interface RequiredDocumentsCardProps {
   /** Application status string from the backend (e.g. "Draft", "Submitted", "Returned"). */
   applicationStatus?: string;
+  /** When true the card is fully locked (no application started yet). Skips the document fetch. */
+  locked?: boolean;
   /** Called after a successful upload so parents can refresh dependent state. */
   onUploaded?: (docs: ApplicationDocuments) => void;
 }
@@ -36,17 +38,18 @@ const formatDate = (iso: string | null) => {
   }
 };
 
-export const RequiredDocumentsCard = ({ applicationStatus, onUploaded }: RequiredDocumentsCardProps) => {
+export const RequiredDocumentsCard = ({ applicationStatus, locked = false, onUploaded }: RequiredDocumentsCardProps) => {
   const [docs, setDocs] = useState<ApplicationDocuments | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!locked);
   const [uploading, setUploading] = useState<FieldKey | null>(null);
   const cvInputRef = useRef<HTMLInputElement>(null);
   const letterInputRef = useRef<HTMLInputElement>(null);
 
   const status = (applicationStatus || "").toLowerCase();
-  const canEdit = status === "" || status === "draft" || status === "returned" || status === "not-started";
+  const canEdit = !locked && (status === "" || status === "draft" || status === "returned" || status === "not-started");
 
   useEffect(() => {
+    if (locked) return; // no application yet — skip
     let active = true;
     (async () => {
       try {
@@ -181,12 +184,17 @@ export const RequiredDocumentsCard = ({ applicationStatus, onUploaded }: Require
         </span>
       </div>
 
-      {!canEdit && (
+      {locked ? (
+        <div className="flex items-start gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          <Lock className="w-4 h-4 mt-0.5 shrink-0" />
+          Start your application above to unlock document uploads.
+        </div>
+      ) : !canEdit ? (
         <div className="flex items-start gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
           <Lock className="w-4 h-4 mt-0.5 shrink-0" />
           Your application has been submitted. Documents can no longer be changed.
         </div>
-      )}
+      ) : null}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {slots.map((slot) => {
