@@ -24,6 +24,8 @@ import NonAcademicPositionsPage from './pages/NonAcademicPositionsPage';
 import UnitsSectionsPage from './pages/UnitsSectionsPage';
 import KnowledgeMaterialTypesPage from './pages/KnowledgeMaterialTypesPage';
 import AdminsPage from './pages/AdminsPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +40,8 @@ const App = () => (
           <AuthProvider>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/schools" element={<ProtectedRoute><SchoolsPage /></ProtectedRoute>} />
               <Route path="/faculties" element={<ProtectedRoute><FacultiesPage /></ProtectedRoute>} />

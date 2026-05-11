@@ -123,6 +123,14 @@ services:
       # Email
       EmailProvider__CurrentProvider: ${EMAIL_PROVIDER:-CustomEmail}
       CustomEmailConfig__TemplatesDirectory: EmailTemplates
+      EmailConfig__SmtpHost: ${SMTP_HOST:-localhost}
+      EmailConfig__SmtpPort: ${SMTP_PORT:-1025}
+      EmailConfig__UseSsl: ${USE_SSL:-false}
+      EmailConfig__UseStartTls: ${USE_STARTTLS:-true}
+      EmailConfig__SmtpUsername: ${SMTP_USERNAME:-}
+      EmailConfig__SmtpPassword: ${SMTP_PASSWORD:-}
+      EmailConfig__DefaultSenderName: ${SMTP_SENDER_NAME:-UMaT Osass}
+      EmailConfig__DefaultSenderEmail: ${SMTP_SENDER_EMAIL:-noreply@osass.umat.edu.gh}
     volumes:
       - ./Osass/EmailTemplates:/app/EmailTemplates:ro
     depends_on:
@@ -169,6 +177,14 @@ services:
       StorageConfig__Region: ${STORAGE_REGION:-us-east-1}
       StorageConfig__Endpoint: ${STORAGE_ENDPOINT:-http://minio:9000}
       StorageConfig__CdnEndpoint: ${STORAGE_CDN_ENDPOINT:-http://minio:9000}
+      EmailConfig__SmtpHost: ${SMTP_HOST:-localhost}
+      EmailConfig__SmtpPort: ${SMTP_PORT:-1025}
+      EmailConfig__UseSsl: ${USE_SSL:-false}
+      EmailConfig__UseStartTls: ${USE_STARTTLS:-true}
+      EmailConfig__SmtpUsername: ${SMTP_USERNAME:-}
+      EmailConfig__SmtpPassword: ${SMTP_PASSWORD:-}
+      EmailConfig__DefaultSenderName: ${SMTP_SENDER_NAME:-UMaT Osass}
+      EmailConfig__DefaultSenderEmail: ${SMTP_SENDER_EMAIL:-noreply@osass.umat.edu.gh}
     depends_on:
       postgres:
         condition: service_healthy
@@ -214,6 +230,14 @@ services:
       StorageConfig__FolderName: academic
       EmailProvider__CurrentProvider: ${EMAIL_PROVIDER:-CustomEmail}
       CustomEmailConfig__TemplatesDirectory: EmailTemplates
+      EmailConfig__SmtpHost: ${SMTP_HOST:-localhost}
+      EmailConfig__SmtpPort: ${SMTP_PORT:-1025}
+      EmailConfig__UseSsl: ${USE_SSL:-false}
+      EmailConfig__UseStartTls: ${USE_STARTTLS:-true}
+      EmailConfig__SmtpUsername: ${SMTP_USERNAME:-}
+      EmailConfig__SmtpPassword: ${SMTP_PASSWORD:-}
+      EmailConfig__DefaultSenderName: ${SMTP_SENDER_NAME:-UMaT Osass}
+      EmailConfig__DefaultSenderEmail: ${SMTP_SENDER_EMAIL:-noreply@osass.umat.edu.gh}
     volumes:
       - ./Osass/EmailTemplates:/app/EmailTemplates:ro
     depends_on:
@@ -261,6 +285,14 @@ services:
       StorageConfig__FolderName: non-academic
       EmailProvider__CurrentProvider: ${EMAIL_PROVIDER:-CustomEmail}
       CustomEmailConfig__TemplatesDirectory: EmailTemplates
+      EmailConfig__SmtpHost: ${SMTP_HOST:-localhost}
+      EmailConfig__SmtpPort: ${SMTP_PORT:-1025}
+      EmailConfig__UseSsl: ${USE_SSL:-false}
+      EmailConfig__UseStartTls: ${USE_STARTTLS:-true}
+      EmailConfig__SmtpUsername: ${SMTP_USERNAME:-}
+      EmailConfig__SmtpPassword: ${SMTP_PASSWORD:-}
+      EmailConfig__DefaultSenderName: ${SMTP_SENDER_NAME:-UMaT Osass}
+      EmailConfig__DefaultSenderEmail: ${SMTP_SENDER_EMAIL:-noreply@osass.umat.edu.gh}
     volumes:
       - ./Osass/EmailTemplates:/app/EmailTemplates:ro
     depends_on:

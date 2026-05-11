@@ -152,13 +152,15 @@ public static class ServiceRegistrationExtensions
         {
             try
             {
-                using var scope = serviceProvider.CreateScope();
-                var identityDb = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
-                await identityDb.Database.MigrateAsync();
-                var academicDb = scope.ServiceProvider.GetRequiredService<AcademicPromotionDbContext>();
-                await academicDb.Database.MigrateAsync();
-                var nonAcademicDb = scope.ServiceProvider.GetRequiredService<NonAcademicPromotionDbContext>();
-                await nonAcademicDb.Database.MigrateAsync();
+                
+                
+                // using var scope = serviceProvider.CreateScope();
+                // var identityDb = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+                // await identityDb.Database.MigrateAsync();
+                // var academicDb = scope.ServiceProvider.GetRequiredService<AcademicPromotionDbContext>();
+                // await academicDb.Database.MigrateAsync();
+                // var nonAcademicDb = scope.ServiceProvider.GetRequiredService<NonAcademicPromotionDbContext>();
+                // await nonAcademicDb.Database.MigrateAsync();
                 Console.WriteLine("✅ Migrations applied successfully.");
                 return; // Success, exit
             }

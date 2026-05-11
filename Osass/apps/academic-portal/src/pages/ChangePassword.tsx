@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Header } from "@/components/layout/Header";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { authService } from "@/services/authService";
 
 const ChangePassword = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const ChangePassword = () => {
     confirm: false,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [done, setDone] = useState(false);
   const [formData, setFormData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -46,15 +48,27 @@ const ChangePassword = () => {
     }
 
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    toast({
-      title: "Password updated",
-      description: "Your password has been successfully changed.",
-    });
-
-    setIsLoading(false);
-    navigate("/dashboard");
+    try {
+      const result = await authService.changePassword(formData.currentPassword, formData.newPassword);
+      if (result.success) {
+        logout();
+        setDone(true);
+      } else {
+        toast({
+          title: "Update Failed",
+          description: result.message || "Failed to change password. Check your current password.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const togglePassword = (field: keyof typeof showPasswords) => {
@@ -82,6 +96,21 @@ const ChangePassword = () => {
         </button>
 
         <div className="card-elevated p-8 animate-fade-in">
+          {done ? (
+            <div className="text-center py-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-success-light mb-4">
+                <CheckCircle2 className="w-8 h-8 text-success" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">Password Changed Successfully</h3>
+              <p className="text-muted-foreground text-sm mb-6">
+                Your password has been updated. Please sign in with your new password.
+              </p>
+              <Button variant="hero" className="w-full" onClick={() => navigate("/login")}>
+                Go to Sign In
+              </Button>
+            </div>
+          ) : (
+          <>
           <div className="flex items-center gap-3 mb-6">
             <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10">
               <Lock className="w-6 h-6 text-primary" />
@@ -131,7 +160,7 @@ const ChangePassword = () => {
                 <Input
                   id="new"
                   type={showPasswords.new ? "text" : "password"}
-                  placeholder="Enter your new password"
+                  placeholder="Enter new password (min. 8 characters)"
                   className="pr-10"
                   value={formData.newPassword}
                   onChange={(e) =>
@@ -151,9 +180,6 @@ const ChangePassword = () => {
                   )}
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Must be at least 8 characters
-              </p>
             </div>
 
             <div className="space-y-2">
@@ -162,7 +188,7 @@ const ChangePassword = () => {
                 <Input
                   id="confirm"
                   type={showPasswords.confirm ? "text" : "password"}
-                  placeholder="Confirm your new password"
+                  placeholder="Confirm new password"
                   className="pr-10"
                   value={formData.confirmPassword}
                   onChange={(e) =>
@@ -184,29 +210,22 @@ const ChangePassword = () => {
               </div>
             </div>
 
-            <div className="flex gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => navigate("/dashboard")}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                variant="default"
-                className="flex-1"
-                disabled={isLoading}
-              >
-                {isLoading ? "Updating..." : "Update Password"}
-              </Button>
-            </div>
+            <Button
+              type="submit"
+              variant="hero"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? "Updating..." : "Update Password"}
+            </Button>
           </form>
+          </>
+          )}
         </div>
       </div>
     </div>
   );
 };
+
 
 export default ChangePassword;

@@ -96,6 +96,11 @@ export default function DashboardPage() {
                 {user?.email}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate("/change-password")} className="text-sm">
+                <KeyRound className="mr-2 h-4 w-4" />
+                Change Password
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout} className="text-destructive text-sm">
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign Out

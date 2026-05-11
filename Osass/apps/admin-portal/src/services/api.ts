@@ -504,6 +504,27 @@ export const getAdminProfile = async () => {
   return identityClient.get<AdminProfile>('/Admins/me');
 };
 
+export const adminForgotPassword = async (email: string) => {
+  return identityClient.get<{ email: string; uniqueId: string }>(`/Admins/reset-password/${encodeURIComponent(email)}`);
+};
+
+export const adminResetPassword = async (data: {
+  uniqueId: string;
+  otpCode: string;
+  password: string;
+  confirmPassword: string;
+}) => {
+  return identityClient.post('/Admins/reset-password', data);
+};
+
+export const adminChangePassword = async (data: {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}) => {
+  return identityClient.post('/Admins/change-password', data);
+};
+
 // ==================== Admin User Management (SuperAdmin only) ====================
 export const fetchAdminUsers = async (
   page = 1,

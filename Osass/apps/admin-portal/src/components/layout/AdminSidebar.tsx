@@ -23,9 +23,11 @@ import {
   Settings,
   Network,
   ShieldCheck,
+  KeyRound,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 interface NavItem {
   title: string;
@@ -84,6 +86,7 @@ function isNavGroup(item: NavItem | NavGroup): item is NavGroup {
 
 export function AdminSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const isSuperAdmin = user?.role === 'SuperAdmin';
 
@@ -208,6 +211,15 @@ export function AdminSidebar() {
               {user?.email || 'admin@university.edu'}
             </span>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 text-sidebar-foreground/70 hover:text-sidebar-foreground"
+            onClick={() => navigate('/change-password')}
+            title="Change password"
+          >
+            <KeyRound className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"

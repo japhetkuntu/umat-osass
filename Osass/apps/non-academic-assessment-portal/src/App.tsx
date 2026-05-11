@@ -10,6 +10,8 @@ import DashboardPage from "@/pages/DashboardPage";
 import PendingApplicationsPage from "@/pages/PendingApplicationsPage";
 import ApplicationHistoryPage from "@/pages/ApplicationHistoryPage";
 import ApplicationReviewPage from "@/pages/ApplicationReviewPage";
+import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
+import ChangePasswordPage from "@/pages/ChangePasswordPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,6 +29,15 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route
+              path="/change-password"
+              element={
+                <ProtectedRoute>
+                  <ChangePasswordPage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/"
               element={

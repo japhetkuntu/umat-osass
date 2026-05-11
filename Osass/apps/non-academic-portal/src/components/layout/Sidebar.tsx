@@ -13,7 +13,8 @@ import {
   Menu,
   FileText,
   TrendingUp,
-  HelpCircle
+  HelpCircle,
+  KeyRound
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -147,6 +148,15 @@ export const Sidebar = ({ userName, userRank, onLogout }: SidebarProps) => {
             <Button
               variant="ghost"
               size="sm"
+              onClick={() => navigate("/change-password")}
+              className="w-full text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent text-xs justify-start px-3"
+            >
+              <KeyRound className="w-3.5 h-3.5 mr-2 shrink-0" />
+              <span>Change Password</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onLogout}
               className="w-full text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent text-xs justify-start px-3"
             >
@@ -161,6 +171,15 @@ export const Sidebar = ({ userName, userRank, onLogout }: SidebarProps) => {
                 <span className="text-sidebar-primary font-bold text-xs">{userName ? userName[0] : '?'}</span>
               </div>
             </div>
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              onClick={() => navigate("/change-password")}
+              className="w-full text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+              title="Change Password"
+            >
+              <KeyRound className="w-4 h-4" />
+            </Button>
             <Button 
               size="icon" 
               variant="ghost" 

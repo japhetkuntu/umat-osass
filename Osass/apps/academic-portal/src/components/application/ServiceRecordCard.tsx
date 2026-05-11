@@ -177,7 +177,7 @@ export const ServiceRecordCard = ({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-[10px] uppercase tracking-[0.2em] font-black text-primary/60">Role / Position held</Label>
+                    <Label className="text-[10px] uppercase tracking-[0.2em] font-black text-primary/60">Position held</Label>
                     <div className="relative">
                       <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
                       <Input

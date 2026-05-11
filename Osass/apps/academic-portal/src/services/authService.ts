@@ -37,6 +37,27 @@ class AuthService {
         return result;
     }
 
+    async forgotPassword(email: string): Promise<ApiResponse<{ email: string; uniqueId: string }>> {
+        return await identityClient.get<{ email: string; uniqueId: string }>(`/Staffs/reset-password/${encodeURIComponent(email)}`);
+    }
+
+    async resetPassword(uniqueId: string, otpCode: string, password: string): Promise<ApiResponse<StaffTokenResponse>> {
+        return await identityClient.post<StaffTokenResponse>("/Staffs/reset-password", {
+            uniqueId,
+            otpCode,
+            password,
+            confirmPassword: password,
+        });
+    }
+
+    async changePassword(currentPassword: string, newPassword: string): Promise<ApiResponse<StaffTokenResponse>> {
+        return await identityClient.post<StaffTokenResponse>("/Staffs/change-password", {
+            currentPassword,
+            newPassword,
+            confirmNewPassword: newPassword,
+        });
+    }
+
     logout() {
         localStorage.removeItem("osass_token");
         localStorage.removeItem("osass_refresh_token");
