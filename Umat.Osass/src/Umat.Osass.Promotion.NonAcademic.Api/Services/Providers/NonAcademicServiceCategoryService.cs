@@ -164,6 +164,18 @@ public class NonAcademicServiceCategoryService : INonAcademicServiceCategoryServ
 
         foreach (var req in requestItems)
         {
+            if (string.IsNullOrWhiteSpace(req.ServiceTypeId))
+                throw new InvalidOperationException("Service type is required");
+
+            var servicePosition = await _servicePositionRepository.GetOneAsync(x => x.Id == req.ServiceTypeId);
+            if (servicePosition == null)
+                throw new InvalidOperationException($"Invalid service type {req.ServiceTypeId}");
+
+            if (servicePosition.Score < req.Score)
+                req.Score = servicePosition.Score;
+
+            var effectiveScore = req.IsActing ? req.Score * 0.5 : req.Score;
+
             var existing = existingList.FirstOrDefault(x => x.Id == req.Id);
 
             if (existing == null)
@@ -172,10 +184,11 @@ public class NonAcademicServiceCategoryService : INonAcademicServiceCategoryServ
                 var newItem = new NonAcademicServiceItem
                 {
                     ServiceTitle = req.ServiceTitle,
-                    ServiceTypeId = req.ServiceTypeId,
+                    ServiceTypeId = servicePosition.Id,
                     Role = req.Role,
                     Duration = req.Duration,
-                    ApplicantScore = req.Score,
+                    ApplicantScore = effectiveScore,
+                    SystemGeneratedScore = servicePosition.Score,
                     ApplicantRemarks = req.Remark,
                     IsActing = req.IsActing,
                     SupportingEvidence = evidence
@@ -192,10 +205,11 @@ public class NonAcademicServiceCategoryService : INonAcademicServiceCategoryServ
                     existing.SupportingEvidence = existing.SupportingEvidence.Where(x => !toRemove.Contains(x)).ToList();
                 }
                 existing.ServiceTitle = req.ServiceTitle;
-                existing.ServiceTypeId = req.ServiceTypeId;
+                existing.ServiceTypeId = servicePosition.Id;
                 existing.Role = req.Role;
                 existing.Duration = req.Duration;
-                existing.ApplicantScore = req.Score;
+                existing.ApplicantScore = effectiveScore;
+                existing.SystemGeneratedScore = servicePosition.Score;
                 existing.ApplicantRemarks = req.Remark;
                 existing.IsActing = req.IsActing;
                 existing.UpdatedAt = DateTime.UtcNow;

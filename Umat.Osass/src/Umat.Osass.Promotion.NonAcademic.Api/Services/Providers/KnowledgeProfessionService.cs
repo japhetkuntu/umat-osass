@@ -70,8 +70,19 @@ public class KnowledgeProfessionService : IKnowledgeProfessionService
 
             foreach (var req in request.Materials)
             {
+                var indicator = await _indicatorRepository.GetOneAsync(x => x.Id == req.MaterialTypeId);
+                if (indicator == null)
+                    throw new InvalidOperationException($"Invalid material type {req.MaterialTypeId}");
+
+                var isBook = indicator.Name.Contains("book", StringComparison.OrdinalIgnoreCase);
+                var presentationBonus = indicator.ScoreForPresentation > 0
+                    ? indicator.ScoreForPresentation
+                    : KnowledgeScoringService.PresentationBonus;
+
                 var systemScore = KnowledgeScoringService.ComputeMaterialScore(
-                    req.MaterialTypeId,
+                    indicator.Score,
+                    presentationBonus,
+                    isBook,
                     req.AuthorCount,
                     req.IsFirstAuthor,
                     req.IsPrincipalAuthor,
@@ -89,7 +100,7 @@ public class KnowledgeProfessionService : IKnowledgeProfessionService
                         Title = req.Title,
                         Year = req.Year,
                         MaterialTypeId = req.MaterialTypeId,
-                        MaterialTypeName = req.MaterialTypeId,
+                        MaterialTypeName = indicator.Name,
                         AuthorCount = req.AuthorCount,
                         IsFirstAuthor = req.IsFirstAuthor,
                         IsPrincipalAuthor = req.IsPrincipalAuthor,
@@ -121,7 +132,7 @@ public class KnowledgeProfessionService : IKnowledgeProfessionService
                     existing.Title = req.Title;
                     existing.Year = req.Year;
                     existing.MaterialTypeId = req.MaterialTypeId;
-                    existing.MaterialTypeName = req.MaterialTypeId;
+                    existing.MaterialTypeName = indicator.Name;
                     existing.AuthorCount = req.AuthorCount;
                     existing.IsFirstAuthor = req.IsFirstAuthor;
                     existing.IsPrincipalAuthor = req.IsPrincipalAuthor;

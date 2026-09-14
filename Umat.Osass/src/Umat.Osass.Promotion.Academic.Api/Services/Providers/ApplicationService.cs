@@ -296,8 +296,8 @@ public class ApplicationService : IApplicationService
             ApplicantSchoolId = staff.SchoolId,
             ApplicantFacultyId = staff.FacultyId,
             ApplicantDepartmentName = department?.Name ?? staff.DepartmentId,
-            ApplicantSchoolName = faculty?.Name ?? staff.FacultyId,
-            ApplicantFacultyName = school?.Name ?? staff.SchoolId,
+            ApplicantSchoolName = school?.Name ?? staff.SchoolId,
+            ApplicantFacultyName = faculty?.Name ?? staff.FacultyId,
             IsActive = true,
 
         };

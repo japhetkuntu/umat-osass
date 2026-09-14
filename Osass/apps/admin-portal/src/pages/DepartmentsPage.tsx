@@ -36,16 +36,11 @@ const emptyForm: DepartmentFormData = {
 };
 
 export default function DepartmentsPage() {
-  const { data: allDepartments = [], isLoading } = useDepartments();
+  const { data: departments = [], isLoading } = useDepartments('academic');
   const { data: faculties = [] } = useFaculties();
   const createMutation = useCreateDepartment();
   const updateMutation = useUpdateDepartment();
   const deleteMutation = useDeleteDepartment();
-
-  // Only show academic departments on this page
-  const departments = allDepartments.filter(
-    (d) => !d.departmentType || d.departmentType.toLowerCase() === 'academic',
-  );
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);

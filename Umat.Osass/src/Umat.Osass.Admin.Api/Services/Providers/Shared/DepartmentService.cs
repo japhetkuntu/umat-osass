@@ -217,6 +217,12 @@ public class DepartmentService:IDepartmentService
                 departmentQuery = departmentQuery.Where(x => x.Name.ToLower().Contains(filter.Search.ToLower()));
             }
 
+            if (!string.IsNullOrEmpty(filter.DepartmentType) &&
+                !string.Equals(filter.DepartmentType, "all", StringComparison.OrdinalIgnoreCase))
+            {
+                departmentQuery = departmentQuery.Where(x => x.DepartmentType.ToLower() == filter.DepartmentType.ToLower());
+            }
+
             var departments = await departmentQuery
                 .OrderByDescending(x => x.CreatedAt)
                 .Skip((filter.Page - 1) * filter.PageSize)

@@ -36,15 +36,11 @@ const emptyForm: DepartmentFormData = {
 };
 
 export default function UnitsSectionsPage() {
-  const { data: allDepartments = [], isLoading } = useDepartments();
+  const { data: units = [], isLoading } = useDepartments('non-academic');
   const { data: schools = [] } = useSchools();
   const createMutation = useCreateDepartment();
   const updateMutation = useUpdateDepartment();
   const deleteMutation = useDeleteDepartment();
-
-  const units = allDepartments.filter(
-    (d) => d.departmentType?.toLowerCase() === 'non-academic',
-  );
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);

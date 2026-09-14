@@ -90,7 +90,7 @@ import type {
 export const queryKeys = {
   schools: () => ['schools'],
   faculties: () => ['faculties'],
-  departments: () => ['departments'],
+  departments: (departmentType?: string) => departmentType ? ['departments', departmentType] : ['departments'],
   staff: (category?: string) => category ? ['staff', category] : ['staff'],
   academicPositions: () => ['academicPositions'],
   servicePositions: () => ['servicePositions'],
@@ -228,11 +228,11 @@ export const useDeleteFaculty = () => {
 };
 
 // ==================== DEPARTMENTS ====================
-export const useDepartments = () => {
+export const useDepartments = (departmentType?: string) => {
   return useQuery({
-    queryKey: queryKeys.departments(),
+    queryKey: queryKeys.departments(departmentType),
     queryFn: async () => {
-      const data = await fetchDepartments();
+      const data = await fetchDepartments(1, 50, undefined, departmentType);
       return data.results ?? [];
     },
     staleTime: 5 * 60 * 1000,

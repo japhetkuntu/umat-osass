@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RichTextEditor } from "@/components/common/RichTextEditor";
 import { HtmlContent } from "@/components/common/HtmlContent";
 import {
@@ -163,7 +164,11 @@ export default function ApplicationReviewPage() {
   const [publicationScores, setPublicationScores] = useState<Record<string, RecordScore>>({});
   const [serviceScores, setServiceScores] = useState<Record<string, RecordScore>>({});
   const [overallRemarks, setOverallRemarks] = useState("");
-  
+
+  // Comment state
+  const [commentText, setCommentText] = useState("");
+  const [commentCategory, setCommentCategory] = useState("Overall");
+
   // Dialog states
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const [advanceDialogOpen, setAdvanceDialogOpen] = useState(false);
@@ -277,6 +282,31 @@ export default function ApplicationReviewPage() {
     onSuccess: () => {
       toast.success("Assessment scores submitted successfully");
       // Immediately refetch to show updates in real-time
+      queryClient.invalidateQueries({ queryKey: ["application-assessment", applicationId] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const addCommentMutation = useMutation({
+    mutationFn: async () => {
+      if (!commentText.trim()) {
+        throw new Error("Comment cannot be empty");
+      }
+      const response = await assessmentApi.addComment({
+        applicationId: applicationId!,
+        category: commentCategory,
+        comment: commentText.trim(),
+      });
+      if (response.code < 200 || response.code >= 300) {
+        throw new Error(response.message || "Failed to add comment");
+      }
+      return response;
+    },
+    onSuccess: () => {
+      toast.success("Comment added");
+      setCommentText("");
       queryClient.invalidateQueries({ queryKey: ["application-assessment", applicationId] });
     },
     onError: (error: Error) => {
@@ -2240,6 +2270,44 @@ export default function ApplicationReviewPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {effectiveCommittee && (
+                  <div className="mb-4 space-y-2 rounded-lg border bg-muted/30 p-3">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Add a comment
+                      </Label>
+                    </div>
+                    <Select value={commentCategory} onValueChange={setCommentCategory}>
+                      <SelectTrigger className="h-8 w-40 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Overall">Overall</SelectItem>
+                        <SelectItem value="Teaching">Teaching</SelectItem>
+                        <SelectItem value="Publication">Publication</SelectItem>
+                        <SelectItem value="Service">Service</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Textarea
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      placeholder="Share a note visible to other committee members..."
+                      rows={2}
+                      className="text-sm"
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={() => addCommentMutation.mutate()}
+                        disabled={addCommentMutation.isPending || !commentText.trim()}
+                      >
+                        <Send className="h-3.5 w-3.5 mr-1.5" />
+                        {addCommentMutation.isPending ? "Posting..." : "Post Comment"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 <ScrollArea className="h-72">
                   <div className="space-y-4">
                     {application.activityHistory.map((activity) => (

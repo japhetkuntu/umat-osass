@@ -4,5 +4,5 @@ namespace Umat.Osass.Admin.Api.Models.Filter.Shared;
 
 public class DepartmentFilter:BaseFilter
 {
-    
+    public string? DepartmentType { get; set; }
 }

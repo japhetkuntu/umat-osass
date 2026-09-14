@@ -108,8 +108,9 @@ export const fetchDepartments = async (
   page = 1,
   pageSize = 50,
   search?: string,
+  departmentType?: string,
 ): Promise<PagedResult<Department>> => {
-  const query = buildQuery({ page, pageSize, search });
+  const query = buildQuery({ page, pageSize, search, departmentType });
   const res = await adminClient.get<PagedResult<Department>>(`/Departments${query}`);
   return res.data ?? { results: [], totalCount: 0, pageIndex: page, pageSize, count: 0, totalPages: 0, lowerBoundSize: 0, upperBoundSize: 0 };
 };
