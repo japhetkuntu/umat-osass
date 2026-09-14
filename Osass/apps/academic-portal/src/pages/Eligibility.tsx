@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { Clock, BookOpen, BarChart3, Users, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HelpTip } from "@/components/common/HelpTip";
-import { Header } from "@/components/layout/Header";
 import { useAuth } from "@/contexts/AuthContext";
 import { academicService } from "@/services/academicService";
 import { ApplicationCategoryState } from "@/types/academic";
@@ -99,14 +98,6 @@ const Eligibility = () => {
   if (loading) {
     return (
       <div className="page-container">
-        <Header
-          userName={user?.fullName}
-          onLogout={() => {
-            logout();
-            navigate("/login");
-          }}
-          onChangePassword={() => navigate("/change-password")}
-        />
         <main className="content-container">
           <div className="flex flex-col items-center justify-center py-32 space-y-4">
             <div className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
@@ -120,14 +111,6 @@ const Eligibility = () => {
   if (error) {
     return (
       <div className="page-container">
-        <Header
-          userName={user?.fullName}
-          onLogout={() => {
-            logout();
-            navigate("/login");
-          }}
-          onChangePassword={() => navigate("/change-password")}
-        />
         <main className="content-container">
           <button
             onClick={() => navigate("/dashboard")}
@@ -157,14 +140,6 @@ const Eligibility = () => {
 
   return (
     <div className="page-container">
-      <Header
-        userName={user?.fullName}
-        onLogout={() => {
-          logout();
-          navigate("/login");
-        }}
-        onChangePassword={() => navigate("/change-password")}
-      />
 
       <main className="content-container">
         <div className="mb-8 flex items-center justify-between">
@@ -409,7 +384,7 @@ const Eligibility = () => {
                 <ArrowRight className="w-4 h-4 ml-2" />
               </>
             ) : (
-              "Complete Your Profile First"
+              "Not Yet Eligible"
             )}
           </Button>
         </div>

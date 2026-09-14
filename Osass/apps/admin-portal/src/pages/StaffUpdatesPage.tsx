@@ -284,6 +284,7 @@ export default function StaffUpdatesPage() {
                         onClick={() => handleToggleVisibility(update)}
                         className="inline-flex items-center justify-center"
                         title={update.isVisible ? 'Click to hide' : 'Click to show'}
+                        aria-label={update.isVisible ? `Hide "${update.title}"` : `Show "${update.title}"`}
                       >
                         {update.isVisible ? (
                           <Eye className="h-4 w-4 text-green-600" />
@@ -297,7 +298,7 @@ export default function StaffUpdatesPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(update)} title="Edit">
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(update)} title="Edit" aria-label={`Edit "${update.title}"`}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
@@ -308,6 +309,7 @@ export default function StaffUpdatesPage() {
                             setIsDeleteOpen(true);
                           }}
                           title="Delete"
+                          aria-label={`Delete "${update.title}"`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -330,6 +332,7 @@ export default function StaffUpdatesPage() {
               <Button
                 variant="outline"
                 size="icon"
+                aria-label="First page"
                 onClick={() => setCurrentPage(1)}
                 disabled={currentPage === 1}
               >
@@ -338,6 +341,7 @@ export default function StaffUpdatesPage() {
               <Button
                 variant="outline"
                 size="icon"
+                aria-label="Previous page"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
               >
@@ -349,6 +353,7 @@ export default function StaffUpdatesPage() {
               <Button
                 variant="outline"
                 size="icon"
+                aria-label="Next page"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage >= totalPages}
               >
@@ -357,6 +362,7 @@ export default function StaffUpdatesPage() {
               <Button
                 variant="outline"
                 size="icon"
+                aria-label="Last page"
                 onClick={() => setCurrentPage(totalPages)}
                 disabled={currentPage >= totalPages}
               >

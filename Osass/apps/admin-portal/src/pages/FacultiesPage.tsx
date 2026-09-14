@@ -30,7 +30,7 @@ import {
 import type { Faculty, School, FacultyFormData } from '@/types';
 
 export default function FacultiesPage() {
-  const { data: faculties = [], isLoading } = useFaculties();
+  const { data: faculties = [], isLoading, isError, refetch } = useFaculties();
   const { data: schools = [] } = useSchools();
   const createMutation = useCreateFaculty();
   const updateMutation = useUpdateFaculty();
@@ -104,13 +104,15 @@ export default function FacultiesPage() {
         searchPlaceholder="Search faculties..."
         searchKeys={['name', 'schoolName']}
         isLoading={isLoading}
+        isError={isError}
+        onRetry={refetch}
         emptyMessage="No faculties found"
         actions={(faculty) => (
           <div className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(faculty)}>
+            <Button variant="ghost" size="icon" aria-label={`Edit ${faculty.name}`} onClick={() => handleOpenEdit(faculty)}>
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleOpenDelete(faculty)}>
+            <Button variant="ghost" size="icon" aria-label={`Delete ${faculty.name}`} onClick={() => handleOpenDelete(faculty)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>

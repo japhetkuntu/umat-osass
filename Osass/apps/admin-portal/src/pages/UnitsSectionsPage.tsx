@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTable, Column } from '@/components/common/DataTable';
@@ -36,7 +37,8 @@ const emptyForm: DepartmentFormData = {
 };
 
 export default function UnitsSectionsPage() {
-  const { data: units = [], isLoading } = useDepartments('non-academic');
+  const { toast } = useToast();
+  const { data: units = [], isLoading, isError, refetch } = useDepartments('non-academic');
   const { data: schools = [] } = useSchools();
   const createMutation = useCreateDepartment();
   const updateMutation = useUpdateDepartment();
@@ -72,7 +74,7 @@ export default function UnitsSectionsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.schoolId) {
-      alert('Please select a school.');
+      toast({ title: 'Validation', description: 'Please select a school.', variant: 'destructive' });
       return;
     }
     const payload: DepartmentFormData = { ...formData, departmentType: 'non-academic' };
@@ -114,13 +116,15 @@ export default function UnitsSectionsPage() {
         searchPlaceholder="Search units & sections..."
         searchKeys={['name', 'schoolName']}
         isLoading={isLoading}
+        isError={isError}
+        onRetry={refetch}
         emptyMessage="No units or sections found"
         actions={(unit) => (
           <div className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(unit)}>
+            <Button variant="ghost" size="icon" aria-label={`Edit ${unit.name}`} onClick={() => handleOpenEdit(unit)}>
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleOpenDelete(unit)}>
+            <Button variant="ghost" size="icon" aria-label={`Delete ${unit.name}`} onClick={() => handleOpenDelete(unit)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>

@@ -47,7 +47,7 @@ const emptyForm: NonAcademicCommitteeMemberFormData = {
 };
 
 export default function NonAcademicCommitteesPage() {
-  const { data: members = [], isLoading } = useNonAcademicCommitteeMembers();
+  const { data: members = [], isLoading, isError, refetch } = useNonAcademicCommitteeMembers();
   const { data: staffList = [] } = useStaff();
   const { data: departments = [] } = useDepartments();
   const createMutation = useCreateNonAcademicCommitteeMember();
@@ -183,13 +183,15 @@ export default function NonAcademicCommitteesPage() {
         searchPlaceholder="Search committee members..."
         searchKeys={['staffName', 'committeeType']}
         isLoading={isLoading}
+        isError={isError}
+        onRetry={refetch}
         emptyMessage="No committee members found"
         actions={(member) => (
           <div className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(member)}>
+            <Button variant="ghost" size="icon" aria-label={`Edit ${(member.staffName || getStaffName(member.staffId))}`} onClick={() => handleOpenEdit(member)}>
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleOpenDelete(member)}>
+            <Button variant="ghost" size="icon" aria-label={`Delete ${(member.staffName || getStaffName(member.staffId))}`} onClick={() => handleOpenDelete(member)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>

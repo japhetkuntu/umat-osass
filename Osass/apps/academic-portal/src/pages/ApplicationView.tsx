@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Lock, Download, GraduationCap, BookOpen, Users, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Header } from "@/components/layout/Header";
 import { ApplicationStatusBadge } from "@/components/promotion/ApplicationStatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { academicService } from "@/services/academicService";
@@ -91,14 +90,6 @@ const ApplicationView = () => {
   if (loading) {
     return (
       <div className="page-container">
-        <Header
-          userName={user?.fullName}
-          onLogout={() => {
-            logout();
-            navigate("/login");
-          }}
-          onChangePassword={() => navigate("/change-password")}
-        />
         <main className="content-container flex flex-col items-center justify-center py-32 space-y-4">
           <Loader2 className="w-10 h-10 text-primary animate-spin" />
           <p className="text-sm text-muted-foreground animate-pulse">Generating application view</p>
@@ -109,14 +100,6 @@ const ApplicationView = () => {
 
   return (
     <div className="page-container">
-      <Header
-        userName={user?.fullName}
-        onLogout={() => {
-          logout();
-          navigate("/login");
-        }}
-        onChangePassword={() => navigate("/change-password")}
-      />
 
       <main className="content-container">
         {/* Back Button */}

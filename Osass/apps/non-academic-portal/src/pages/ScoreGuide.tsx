@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { nonAcademicService } from "@/services/nonAcademicService";
 import { KnowledgeMaterialIndicator, ServicePositionIndicator } from "@/types/academic";
 
@@ -8,22 +9,28 @@ const ScoreGuide = () => {
     const [materialIndicators, setMaterialIndicators] = useState<KnowledgeMaterialIndicator[]>([]);
     const [servicePositions, setServicePositions] = useState<ServicePositionIndicator[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
+
+    const fetchData = async () => {
+        setLoading(true);
+        setLoadError(false);
+        try {
+            const [indicatorsRes, positionsRes] = await Promise.all([
+                nonAcademicService.getKnowledgeMaterialIndicators(),
+                nonAcademicService.getServicePositions(),
+            ]);
+            if (indicatorsRes.success) setMaterialIndicators(indicatorsRes.data);
+            if (positionsRes.success) setServicePositions(positionsRes.data);
+            if (!indicatorsRes.success || !positionsRes.success) setLoadError(true);
+        } catch (error) {
+            console.error("Failed to load scoring reference data:", error);
+            setLoadError(true);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [indicatorsRes, positionsRes] = await Promise.all([
-                    nonAcademicService.getKnowledgeMaterialIndicators(),
-                    nonAcademicService.getServicePositions(),
-                ]);
-                if (indicatorsRes.success) setMaterialIndicators(indicatorsRes.data);
-                if (positionsRes.success) setServicePositions(positionsRes.data);
-            } catch (error) {
-                console.error("Failed to load scoring reference data:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchData();
     }, []);
 
@@ -36,6 +43,23 @@ const ScoreGuide = () => {
                 <h1 className="text-3xl font-bold text-foreground mb-2">Promotion Criteria & Scoring Guide</h1>
                 <p className="text-muted-foreground text-base font-light">Official Guidelines for Appointment and Promotion of Non-Teaching Staff, University of Mines and Technology (UMaT)</p>
             </div>
+
+            {loadError && (
+                <div className="card-elevated p-6 border-destructive/20 bg-destructive/5">
+                    <div className="flex items-start gap-4">
+                        <X className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                        <div>
+                            <h3 className="font-semibold text-foreground mb-1">Some Reference Data Failed to Load</h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                                The Knowledge Material and/or Service scoring tables below may be incomplete.
+                            </p>
+                            <Button variant="outline" size="sm" onClick={fetchData}>
+                                Try Again
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Performance Level Overview */}
             <section className="space-y-6">

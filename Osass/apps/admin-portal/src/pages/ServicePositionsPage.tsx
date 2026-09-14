@@ -22,7 +22,7 @@ import {
 import type { ServicePosition, ServicePositionFormData } from '@/types';
 
 export default function ServicePositionsPage() {
-  const { data: positions = [], isLoading } = useServicePositions();
+  const { data: positions = [], isLoading, isError, refetch } = useServicePositions();
   const createMutation = useCreateServicePosition();
   const updateMutation = useUpdateServicePosition();
   const deleteMutation = useDeleteServicePosition();
@@ -104,13 +104,15 @@ export default function ServicePositionsPage() {
         searchPlaceholder="Search positions..."
         searchKeys={['name', 'serviceType']}
         isLoading={isLoading}
+        isError={isError}
+        onRetry={refetch}
         emptyMessage="No service positions found"
         actions={(position) => (
           <div className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(position)}>
+            <Button variant="ghost" size="icon" aria-label={`Edit ${position.name}`} onClick={() => handleOpenEdit(position)}>
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleOpenDelete(position)}>
+            <Button variant="ghost" size="icon" aria-label={`Delete ${position.name}`} onClick={() => handleOpenDelete(position)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>

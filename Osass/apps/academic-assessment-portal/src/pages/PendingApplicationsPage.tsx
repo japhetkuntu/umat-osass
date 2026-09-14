@@ -128,7 +128,7 @@ export default function PendingApplicationsPage() {
       <header className="border-b bg-card sticky top-0 z-50">
         <div className="content-container py-4">
           <div className="flex items-center gap-4 mb-4">
-            <Button variant="ghost" size="icon" asChild>
+            <Button variant="ghost" size="icon" asChild aria-label="Back to dashboard">
               <Link to="/">
                 <ArrowLeft className="h-5 w-5" />
               </Link>

@@ -1,5 +1,5 @@
 import { useState, useMemo, ReactNode } from 'react';
-import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,7 +35,10 @@ interface DataTableProps<T> {
   actions?: (item: T) => ReactNode;
   onRowClick?: (item: T) => void;
   isLoading?: boolean;
+  isError?: boolean;
+  onRetry?: () => void;
   emptyMessage?: string;
+  errorMessage?: string;
 }
 
 export function DataTable<T extends { id: string }>({
@@ -46,7 +49,10 @@ export function DataTable<T extends { id: string }>({
   actions,
   onRowClick,
   isLoading,
+  isError,
+  onRetry,
   emptyMessage = 'No data found',
+  errorMessage = 'Unable to load data. Please try again.',
 }: DataTableProps<T>) {
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -133,6 +139,20 @@ export function DataTable<T extends { id: string }>({
                   </div>
                 </TableCell>
               </TableRow>
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={columns.length + (actions ? 1 : 0)} className="h-32 text-center">
+                  <div className="flex flex-col items-center justify-center gap-2 text-destructive">
+                    <AlertCircle className="h-5 w-5" />
+                    <span className="text-sm">{errorMessage}</span>
+                    {onRetry && (
+                      <Button variant="outline" size="sm" onClick={onRetry}>
+                        Try Again
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
             ) : paginatedData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={columns.length + (actions ? 1 : 0)} className="h-32 text-center text-muted-foreground">
@@ -178,6 +198,7 @@ export function DataTable<T extends { id: string }>({
           <Button
             variant="outline"
             size="icon"
+            aria-label="First page"
             onClick={() => setCurrentPage(1)}
             disabled={currentPage === 1}
           >
@@ -186,6 +207,7 @@ export function DataTable<T extends { id: string }>({
           <Button
             variant="outline"
             size="icon"
+            aria-label="Previous page"
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={currentPage === 1}
           >
@@ -197,6 +219,7 @@ export function DataTable<T extends { id: string }>({
           <Button
             variant="outline"
             size="icon"
+            aria-label="Next page"
             onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
             disabled={currentPage >= totalPages}
           >
@@ -205,6 +228,7 @@ export function DataTable<T extends { id: string }>({
           <Button
             variant="outline"
             size="icon"
+            aria-label="Last page"
             onClick={() => setCurrentPage(totalPages)}
             disabled={currentPage >= totalPages}
           >

@@ -271,7 +271,7 @@ const ServiceSection = () => {
           className="group flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
         >
           <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-          Back to Portfolio
+          Back to Application
         </button>
 
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">

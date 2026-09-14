@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTable, Column } from '@/components/common/DataTable';
@@ -36,7 +37,8 @@ const emptyForm: DepartmentFormData = {
 };
 
 export default function DepartmentsPage() {
-  const { data: departments = [], isLoading } = useDepartments('academic');
+  const { toast } = useToast();
+  const { data: departments = [], isLoading, isError, refetch } = useDepartments('academic');
   const { data: faculties = [] } = useFaculties();
   const createMutation = useCreateDepartment();
   const updateMutation = useUpdateDepartment();
@@ -71,6 +73,10 @@ export default function DepartmentsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.facultyId) {
+      toast({ title: 'Validation', description: 'Please select a faculty.', variant: 'destructive' });
+      return;
+    }
     const payload: DepartmentFormData = { ...formData, departmentType: 'academic' };
     if (editingDepartment) {
       await updateMutation.mutateAsync({ id: editingDepartment.id, data: payload });
@@ -111,13 +117,15 @@ export default function DepartmentsPage() {
         searchPlaceholder="Search departments..."
         searchKeys={['name', 'facultyName', 'schoolName']}
         isLoading={isLoading}
+        isError={isError}
+        onRetry={refetch}
         emptyMessage="No academic departments found"
         actions={(department) => (
           <div className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(department)}>
+            <Button variant="ghost" size="icon" aria-label={`Edit ${department.name}`} onClick={() => handleOpenEdit(department)}>
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleOpenDelete(department)}>
+            <Button variant="ghost" size="icon" aria-label={`Delete ${department.name}`} onClick={() => handleOpenDelete(department)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>

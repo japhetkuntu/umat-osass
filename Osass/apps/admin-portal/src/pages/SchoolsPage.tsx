@@ -22,7 +22,7 @@ import {
 import type { School, SchoolFormData } from '@/types';
 
 export default function SchoolsPage() {
-  const { data: schools = [], isLoading } = useSchools();
+  const { data: schools = [], isLoading, isError, refetch } = useSchools();
   const createMutation = useCreateSchool();
   const updateMutation = useUpdateSchool();
   const deleteMutation = useDeleteSchool();
@@ -94,13 +94,15 @@ export default function SchoolsPage() {
         searchPlaceholder="Search schools..."
         searchKeys={['name']}
         isLoading={isLoading}
+        isError={isError}
+        onRetry={refetch}
         emptyMessage="No schools found"
         actions={(school) => (
           <div className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(school)}>
+            <Button variant="ghost" size="icon" aria-label={`Edit ${school.name}`} onClick={() => handleOpenEdit(school)}>
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleOpenDelete(school)}>
+            <Button variant="ghost" size="icon" aria-label={`Delete ${school.name}`} onClick={() => handleOpenDelete(school)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>

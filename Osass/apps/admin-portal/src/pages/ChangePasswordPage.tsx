@@ -119,6 +119,7 @@ export default function ChangePasswordPage() {
                   type="button"
                   onClick={() => toggle('current')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={showPasswords.current ? "Hide password" : "Show password"}
                 >
                   {showPasswords.current ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -141,6 +142,7 @@ export default function ChangePasswordPage() {
                   type="button"
                   onClick={() => toggle('new')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={showPasswords.new ? "Hide password" : "Show password"}
                 >
                   {showPasswords.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -163,6 +165,7 @@ export default function ChangePasswordPage() {
                   type="button"
                   onClick={() => toggle('confirm')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={showPasswords.confirm ? "Hide password" : "Show password"}
                 >
                   {showPasswords.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>

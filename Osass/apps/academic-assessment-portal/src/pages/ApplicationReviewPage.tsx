@@ -68,7 +68,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { toast } from "sonner";
 import { CategoryScore, RecordScore, PromotionValidationResponse } from "@/types/assessment";
 import { FilePreviewModal } from "@/components/common/FilePreviewModal";
@@ -97,6 +97,8 @@ const ScoreInputPanel = ({
     UAPC: { bg: 'from-emerald-500 to-emerald-600', text: 'text-emerald-600', border: 'border-emerald-200', light: 'bg-emerald-50' },
   };
   const colors = committeeColors[committeeType as keyof typeof committeeColors] || committeeColors.DAPC;
+  const scoreId = useId();
+  const remarksId = useId();
 
   return (
     <div className={`mt-4 p-4 rounded-xl border-2 ${colors.border} ${colors.light} dark:bg-opacity-20`}>
@@ -106,10 +108,10 @@ const ScoreInputPanel = ({
           {label} ({committeeType})
         </span>
       </div>
-      
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label className="text-sm font-semibold flex items-center gap-2">
+          <Label htmlFor={scoreId} className="text-sm font-semibold flex items-center gap-2">
             <span>Score</span>
             {maxScore && (
               <span className="text-xs font-normal text-muted-foreground">(max: {maxScore})</span>
@@ -117,6 +119,7 @@ const ScoreInputPanel = ({
           </Label>
           <div className="relative">
             <Input
+              id={scoreId}
               type="number"
               step="0.5"
               min="0"
@@ -138,10 +141,11 @@ const ScoreInputPanel = ({
             </div>
           </div>
         </div>
-        
+
         <div className="space-y-2">
-          <Label className="text-sm font-semibold">Remarks</Label>
+          <Label htmlFor={remarksId} className="text-sm font-semibold">Remarks</Label>
           <Input
+            id={remarksId}
             placeholder="Add assessment remarks..."
             value={remarks || ""}
             onChange={(e) => onRemarksChange(e.target.value)}
@@ -168,6 +172,7 @@ export default function ApplicationReviewPage() {
   // Comment state
   const [commentText, setCommentText] = useState("");
   const [commentCategory, setCommentCategory] = useState("Overall");
+  const commentTextId = useId();
 
   // Dialog states
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
@@ -307,6 +312,7 @@ export default function ApplicationReviewPage() {
     onSuccess: () => {
       toast.success("Comment added");
       setCommentText("");
+      setCommentCategory("Overall");
       queryClient.invalidateQueries({ queryKey: ["application-assessment", applicationId] });
     },
     onError: (error: Error) => {
@@ -757,6 +763,7 @@ export default function ApplicationReviewPage() {
                       size="icon"
                       className="h-7 w-7"
                       onClick={() => handlePreviewFile(url, fileName)}
+                      aria-label={`Preview ${fileName}`}
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -773,7 +780,7 @@ export default function ApplicationReviewPage() {
                       className="h-7 w-7"
                       asChild
                     >
-                      <a href={url} download target="_blank" rel="noopener noreferrer">
+                      <a href={url} download target="_blank" rel="noopener noreferrer" aria-label={`Download ${fileName}`}>
                         <Download className="h-4 w-4" />
                       </a>
                     </Button>
@@ -894,7 +901,7 @@ export default function ApplicationReviewPage() {
         <div className="content-container py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Go back">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
@@ -1475,7 +1482,10 @@ export default function ApplicationReviewPage() {
                     <p className="font-semibold text-amber-900 dark:text-amber-100 mb-1">Assessment Not Available</p>
                     <p className="text-sm text-amber-800 dark:text-amber-200">
                       {!isPending
-                        ? <>This application is not pending. Only submitted (pending) applications can be assessed.</>                        : <>This application is currently at <span className="font-semibold">{application?.reviewStatus}</span> stage and is not assigned to your committee.</>}
+                        ? <>This application is not pending. Only submitted (pending) applications can be assessed.</>
+                        : currentCommittee
+                          ? <>Only the <span className="font-semibold">{currentCommittee.committeeType}</span> chairperson can submit scores or take action on this application. You can still add comments below.</>
+                          : <>This application is currently at <span className="font-semibold">{application?.reviewStatus}</span> stage and is not assigned to your committee.</>}
                     </p>
                   </div>
                 </CardContent>
@@ -1665,7 +1675,10 @@ export default function ApplicationReviewPage() {
                         <p className="font-semibold text-amber-900 dark:text-amber-100 mb-1">Actions Not Available</p>
                         <p className="text-sm text-amber-800 dark:text-amber-200">
                           {!isPending
-                            ? <>Application is not pending. Only submitted (pending) applications can be acted upon.</>                            : <>Application is at <span className="font-semibold">{application?.reviewStatus}</span> stage and is not assigned to your committee.</>}
+                            ? <>Application is not pending. Only submitted (pending) applications can be acted upon.</>
+                            : currentCommittee
+                              ? <>Only the <span className="font-semibold">{currentCommittee.committeeType}</span> chairperson can take action on this application.</>
+                              : <>Application is at <span className="font-semibold">{application?.reviewStatus}</span> stage and is not assigned to your committee.</>}
                         </p>
                       </div>
                     </div>
@@ -2274,12 +2287,12 @@ export default function ApplicationReviewPage() {
                   <div className="mb-4 space-y-2 rounded-lg border bg-muted/30 p-3">
                     <div className="flex items-center gap-2">
                       <MessageSquare className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Label htmlFor={commentTextId} className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         Add a comment
                       </Label>
                     </div>
                     <Select value={commentCategory} onValueChange={setCommentCategory}>
-                      <SelectTrigger className="h-8 w-40 text-xs">
+                      <SelectTrigger className="h-8 w-40 text-xs" aria-label="Comment category">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -2290,6 +2303,7 @@ export default function ApplicationReviewPage() {
                       </SelectContent>
                     </Select>
                     <Textarea
+                      id={commentTextId}
                       value={commentText}
                       onChange={(e) => setCommentText(e.target.value)}
                       placeholder="Share a note visible to other committee members..."
@@ -2310,6 +2324,11 @@ export default function ApplicationReviewPage() {
                 )}
                 <ScrollArea className="h-72">
                   <div className="space-y-4">
+                    {application.activityHistory.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        No activity recorded yet.
+                      </p>
+                    )}
                     {application.activityHistory.map((activity) => (
                       <div key={activity.id} className="flex gap-3">
                         <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${

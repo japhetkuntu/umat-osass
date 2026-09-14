@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import {
   Building2,
   GraduationCap,
@@ -13,6 +15,7 @@ import {
   UserCheck,
   Network,
   ArrowRight,
+  X,
 } from 'lucide-react';
 import { fetchDashboardStats } from '@/services/api';
 import type { DashboardStats } from '@/types';
@@ -69,7 +72,7 @@ function StatCard({ label, value, icon: Icon, href, color, isLoading }: {
   isLoading: boolean;
 }) {
   return (
-    <a href={href} className="block group">
+    <Link to={href} className="block group">
       <Card className="transition-all duration-200 hover:shadow-md hover:border-primary/30 cursor-pointer">
         <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4">
           <CardTitle className="text-sm font-medium text-muted-foreground leading-tight">
@@ -90,19 +93,26 @@ function StatCard({ label, value, icon: Icon, href, color, isLoading }: {
           )}
         </CardContent>
       </Card>
-    </a>
+    </Link>
   );
 }
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
+  const loadStats = () => {
+    setIsLoading(true);
+    setLoadError(false);
     fetchDashboardStats()
       .then(setStats)
-      .catch(() => {})
+      .catch(() => setLoadError(true))
       .finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    loadStats();
   }, []);
 
   const totalStaff = stats ? stats.totalAcademicStaff + stats.totalNonAcademicStaff : 0;
@@ -114,6 +124,19 @@ export default function Dashboard() {
         description="Overview of university administration data"
       />
 
+      {loadError && (
+        <div className="card-elevated rounded-lg border border-destructive/20 bg-destructive/5 p-4 mb-6 flex items-start gap-3">
+          <X className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-foreground">Unable to load dashboard statistics</p>
+            <p className="text-sm text-muted-foreground">Something went wrong while fetching the latest data.</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={loadStats}>
+            Try Again
+          </Button>
+        </div>
+      )}
+
       {/* Summary totals */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         {[
@@ -122,7 +145,7 @@ export default function Dashboard() {
           { label: 'Total Departments & Units', value: (stats?.totalDepartments ?? 0) + (stats?.totalUnits ?? 0), icon: Layers, color: 'text-violet-600', href: '/departments' },
           { label: 'Total Committee Members', value: stats?.totalCommitteeMembers ?? 0, icon: UserCheck, color: 'text-emerald-600', href: '/committees' },
         ].map(({ label, value, icon: Icon, color, href }) => (
-          <a key={label} href={href} className="block group">
+          <Link key={label} to={href} className="block group">
             <Card className="border-2 transition-all duration-200 hover:shadow-md hover:border-primary/40 bg-primary/5">
               <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
                 <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
@@ -136,7 +159,7 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
-          </a>
+          </Link>
         ))}
       </div>
 

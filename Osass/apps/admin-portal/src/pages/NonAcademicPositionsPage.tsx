@@ -42,7 +42,7 @@ const emptyForm: NonAcademicPositionFormData = {
 };
 
 export default function NonAcademicPositionsPage() {
-  const { data: positions = [], isLoading } = useNonAcademicPositions();
+  const { data: positions = [], isLoading, isError, refetch } = useNonAcademicPositions();
   const createMutation = useCreateNonAcademicPosition();
   const updateMutation = useUpdateNonAcademicPosition();
   const deleteMutation = useDeleteNonAcademicPosition();
@@ -155,13 +155,15 @@ export default function NonAcademicPositionsPage() {
         searchPlaceholder="Search positions..."
         searchKeys={['name', 'previousPosition', 'unitType']}
         isLoading={isLoading}
+        isError={isError}
+        onRetry={refetch}
         emptyMessage="No non-teaching staff positions found"
         actions={(position) => (
           <div className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(position)}>
+            <Button variant="ghost" size="icon" aria-label={`Edit ${position.name}`} onClick={() => handleOpenEdit(position)}>
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleOpenDelete(position)}>
+            <Button variant="ghost" size="icon" aria-label={`Delete ${position.name}`} onClick={() => handleOpenDelete(position)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>

@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { ArrowLeft, Eye, Download, FileText, Send, Loader2, AlertCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Header } from "@/components/layout/Header";
 import { ProgressTimeline } from "@/components/promotion/ProgressTimeline";
 import { ApplicationStatusBadge } from "@/components/promotion/ApplicationStatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
@@ -117,11 +116,6 @@ const ApplicationProgress = () => {
 
   return (
     <div className="page-container">
-      <Header
-        userName={user.fullName}
-        onLogout={handleLogout}
-        onChangePassword={() => navigate("/change-password")}
-      />
 
       <main className="content-container">
         {/* Back Button */}

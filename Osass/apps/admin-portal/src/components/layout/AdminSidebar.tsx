@@ -65,7 +65,7 @@ const baseNavigationItems: (NavItem | NavGroup)[] = [
       { title: 'Teaching Staff Positions', href: '/academic-positions', icon: TrendingUp },
       { title: 'Service Positions', href: '/service-positions', icon: Briefcase },
       { title: 'Publication Indicators', href: '/publication-types', icon: BookOpen },
-      { title: 'Committees', href: '/committees', icon: UserCheck },
+      { title: 'Teaching Staff Committees', href: '/committees', icon: UserCheck },
     ],
   },
   {
@@ -75,7 +75,7 @@ const baseNavigationItems: (NavItem | NavGroup)[] = [
       { title: 'Non-Teaching Staff', href: '/non-academic-staff', icon: Users },
       { title: 'Non-Teaching Staff Positions', href: '/non-academic-positions', icon: TrendingUp },
       { title: 'Knowledge Material Types', href: '/knowledge-material-types', icon: BookOpen },
-      { title: 'Committees', href: '/non-academic-committees', icon: UserCheck },
+      { title: 'Non-Teaching Staff Committees', href: '/non-academic-committees', icon: UserCheck },
     ],
   },
 ];

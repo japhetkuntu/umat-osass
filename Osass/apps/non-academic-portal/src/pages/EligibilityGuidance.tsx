@@ -2,7 +2,6 @@ import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { ArrowLeft, BookOpen, GraduationCap, Users, Calendar, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Header } from "@/components/layout/Header";
 import { YearsProgressBar } from "@/components/promotion/YearsProgressBar";
 import { GuidanceCard } from "@/components/promotion/GuidanceCard";
 import { useAuth } from "@/contexts/AuthContext";
@@ -53,11 +52,6 @@ const EligibilityGuidance = () => {
 
   return (
     <div className="page-container">
-      <Header
-        userName={user.fullName}
-        onLogout={handleLogout}
-        onChangePassword={() => navigate("/change-password")}
-      />
 
       <main className="content-container">
         {/* Back Button */}

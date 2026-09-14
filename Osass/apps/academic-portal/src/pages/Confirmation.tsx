@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2, ArrowLeft, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Header } from "@/components/layout/Header";
 import { ProgressTimeline } from "@/components/promotion/ProgressTimeline";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -45,14 +44,6 @@ const Confirmation = () => {
 
   return (
     <div className="page-container">
-      <Header
-        userName={user?.fullName}
-        onLogout={() => {
-          logout();
-          navigate("/login");
-        }}
-        onChangePassword={() => navigate("/change-password")}
-      />
 
       <main className="content-container flex flex-col items-center justify-center min-h-[70vh]">
         {/* Success Message */}

@@ -22,7 +22,7 @@ import {
 import type { PublicationIndicator, PublicationIndicatorFormData } from '@/types';
 
 export default function PublicationTypesPage() {
-  const { data: indicators = [], isLoading } = usePublicationIndicators();
+  const { data: indicators = [], isLoading, isError, refetch } = usePublicationIndicators();
   const createMutation = useCreatePublicationIndicator();
   const updateMutation = useUpdatePublicationIndicator();
   const deleteMutation = useDeletePublicationIndicator();
@@ -109,13 +109,15 @@ export default function PublicationTypesPage() {
         searchPlaceholder="Search publication indicators..."
         searchKeys={['name']}
         isLoading={isLoading}
+        isError={isError}
+        onRetry={refetch}
         emptyMessage="No publication indicators found"
         actions={(indicator) => (
           <div className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(indicator)}>
+            <Button variant="ghost" size="icon" aria-label={`Edit ${indicator.name}`} onClick={() => handleOpenEdit(indicator)}>
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleOpenDelete(indicator)}>
+            <Button variant="ghost" size="icon" aria-label={`Delete ${indicator.name}`} onClick={() => handleOpenDelete(indicator)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>

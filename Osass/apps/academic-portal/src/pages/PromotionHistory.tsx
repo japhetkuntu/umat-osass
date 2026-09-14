@@ -21,7 +21,6 @@ import {
   Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Header } from "@/components/layout/Header";
 import { ApplicationStatusBadge } from "@/components/promotion/ApplicationStatusBadge";
 import { HtmlContent } from "@/components/common/HtmlContent";
 import { useAuth } from "@/contexts/AuthContext";
@@ -80,14 +79,6 @@ const PromotionHistory = () => {
 
   return (
     <div className="page-container min-h-screen bg-slate-50/50">
-      <Header
-        userName={user?.fullName}
-        onLogout={() => {
-          logout();
-          navigate("/login");
-        }}
-        onChangePassword={() => navigate("/change-password")}
-      />
 
       <main className="content-container py-8 max-w-5xl mx-auto">
         {/* Back Button */}

@@ -22,7 +22,7 @@ import {
 import type { KnowledgeMaterialIndicator, KnowledgeMaterialIndicatorFormData } from '@/types';
 
 export default function KnowledgeMaterialTypesPage() {
-  const { data: indicators = [], isLoading } = useKnowledgeMaterialIndicators();
+  const { data: indicators = [], isLoading, isError, refetch } = useKnowledgeMaterialIndicators();
   const createMutation = useCreateKnowledgeMaterialIndicator();
   const updateMutation = useUpdateKnowledgeMaterialIndicator();
   const deleteMutation = useDeleteKnowledgeMaterialIndicator();
@@ -109,13 +109,15 @@ export default function KnowledgeMaterialTypesPage() {
         searchPlaceholder="Search material types..."
         searchKeys={['name']}
         isLoading={isLoading}
+        isError={isError}
+        onRetry={refetch}
         emptyMessage="No knowledge material types found"
         actions={(indicator) => (
           <div className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(indicator)}>
+            <Button variant="ghost" size="icon" aria-label={`Edit ${indicator.name}`} onClick={() => handleOpenEdit(indicator)}>
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleOpenDelete(indicator)}>
+            <Button variant="ghost" size="icon" aria-label={`Delete ${indicator.name}`} onClick={() => handleOpenDelete(indicator)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>

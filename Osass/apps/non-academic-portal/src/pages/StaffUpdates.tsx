@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { Bell, Calendar, ChevronLeft, ChevronRight, ArrowLeft, ExternalLink, Megaphone, Loader2 } from "lucide-react";
+import { Bell, Calendar, ChevronLeft, ChevronRight, ArrowLeft, ExternalLink, Megaphone, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Header } from "@/components/layout/Header";
 import { nonAcademicService } from "@/services/nonAcademicService";
 import type { StaffUpdateItem, PagedResult } from "@/types/academic";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 const StaffUpdates = () => {
     const navigate = useNavigate();
@@ -14,6 +14,7 @@ const StaffUpdates = () => {
 
     const [pagedData, setPagedData] = useState<PagedResult<StaffUpdateItem> | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
     const [page, setPage] = useState(1);
     const pageSize = 10;
 
@@ -26,13 +27,16 @@ const StaffUpdates = () => {
 
     const loadUpdates = async () => {
         setIsLoading(true);
+        setLoadError(false);
         try {
             const res = await nonAcademicService.getStaffUpdates(page, pageSize);
             if (res.success && res.data) {
                 setPagedData(res.data);
+            } else {
+                setLoadError(true);
             }
         } catch {
-            // silent fail — empty state will show
+            setLoadError(true);
         } finally {
             setIsLoading(false);
         }
@@ -60,11 +64,6 @@ const StaffUpdates = () => {
     if (selectedUpdate) {
         return (
             <div className="page-container">
-                <Header
-                    userName={user?.fullName}
-                    onLogout={() => { logout(); navigate("/login"); }}
-                    onChangePassword={() => navigate("/change-password")}
-                />
                 <main className="content-container max-w-4xl">
                     <Button
                         variant="ghost"
@@ -102,11 +101,6 @@ const StaffUpdates = () => {
 
     return (
         <div className="page-container">
-            <Header
-                userName={user?.fullName}
-                onLogout={() => { logout(); navigate("/login"); }}
-                onChangePassword={() => navigate("/change-password")}
-            />
 
             <main className="content-container max-w-4xl">
                 <div className="mb-8 border-b border-border/30 pb-8">
@@ -124,6 +118,21 @@ const StaffUpdates = () => {
                 {isLoading ? (
                     <div className="flex items-center justify-center py-20">
                         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                ) : loadError ? (
+                    <div className="card-elevated p-8 border-destructive/20 bg-destructive/5 max-w-lg mx-auto">
+                        <div className="flex items-start gap-4">
+                            <X className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                            <div>
+                                <h3 className="font-semibold text-foreground mb-1">Unable to Load Updates</h3>
+                                <p className="text-sm text-muted-foreground mb-4">
+                                    Something went wrong while fetching staff updates. Please try again.
+                                </p>
+                                <Button variant="outline" onClick={loadUpdates}>
+                                    Try Again
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 ) : updates.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -200,7 +209,11 @@ const StaffUpdates = () => {
                     <p className="text-xs text-muted-foreground font-semibold uppercase tracking-widest mb-2">Institutional Resource</p>
                     <h3 className="text-2xl font-bold text-foreground mb-2">UMaT Repository</h3>
                     <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">Access the complete archive of university statutes, regulations, and non-teaching staff policies.</p>
-                    <Button variant="outline" className="gap-2">
+                    <Button
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => toast.info("The repository link isn't available yet. Please check back soon.")}
+                    >
                         Visit Portal <ExternalLink className="w-4 h-4" />
                     </Button>
                 </section>

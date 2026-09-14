@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Lock, Download, GraduationCap, BookOpen, Users, Loader2 } from "lucide-react";
+import { ArrowLeft, Lock, Download, BarChart3, BookOpen, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Header } from "@/components/layout/Header";
 import { ApplicationStatusBadge } from "@/components/promotion/ApplicationStatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { nonAcademicService } from "@/services/nonAcademicService";
@@ -90,14 +89,6 @@ const ApplicationView = () => {
   if (loading) {
     return (
       <div className="page-container">
-        <Header
-          userName={user?.fullName}
-          onLogout={() => {
-            logout();
-            navigate("/login");
-          }}
-          onChangePassword={() => navigate("/change-password")}
-        />
         <main className="content-container flex flex-col items-center justify-center py-32 space-y-4">
           <Loader2 className="w-10 h-10 text-primary animate-spin" />
           <p className="text-sm text-muted-foreground animate-pulse">Generating application view</p>
@@ -108,14 +99,6 @@ const ApplicationView = () => {
 
   return (
     <div className="page-container">
-      <Header
-        userName={user?.fullName}
-        onLogout={() => {
-          logout();
-          navigate("/login");
-        }}
-        onChangePassword={() => navigate("/change-password")}
-      />
 
       <main className="content-container">
         {/* Back Button */}
@@ -150,7 +133,7 @@ const ApplicationView = () => {
         <div className="card-elevated p-6 mb-6 animate-slide-up">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-primary" />
+              <BarChart3 className="w-5 h-5 text-primary" />
             </div>
             <div>
               <h2 className="font-semibold text-foreground">Performance at Work</h2>

@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, CheckCircle2, ChevronDown, ChevronUp, GraduationCap, BookOpen, Users, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Header } from "@/components/layout/Header";
 import { useAuth } from "@/contexts/AuthContext";
 import { academicService } from "@/services/academicService";
 import { ApplicationCategoryState, OverallReview } from "@/types/academic";
@@ -182,14 +181,6 @@ const Review = () => {
 
   return (
     <div className="page-container">
-      <Header
-        userName={user?.fullName}
-        onLogout={() => {
-          logout();
-          navigate("/login");
-        }}
-        onChangePassword={() => navigate("/change-password")}
-      />
 
       <main className="content-container">
         {/* Back Button */}

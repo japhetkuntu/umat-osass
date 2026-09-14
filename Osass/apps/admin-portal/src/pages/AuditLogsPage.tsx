@@ -255,6 +255,9 @@ export default function AuditLogsPage() {
                       key={log.id}
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => toggleRow(log.id)}
+                      role="button"
+                      aria-expanded={isOpen}
+                      aria-label={isOpen ? 'Collapse log details' : 'Expand log details'}
                     >
                       <TableCell className="py-2 pr-0">
                         {isOpen ? (
@@ -353,6 +356,7 @@ export default function AuditLogsPage() {
               size="icon"
               variant="ghost"
               className="h-8 w-8"
+              aria-label="First page"
               disabled={currentPage === 1}
               onClick={() => goToPage(1)}
             >
@@ -362,6 +366,7 @@ export default function AuditLogsPage() {
               size="icon"
               variant="ghost"
               className="h-8 w-8"
+              aria-label="Previous page"
               disabled={currentPage === 1}
               onClick={() => goToPage(currentPage - 1)}
             >
@@ -374,6 +379,7 @@ export default function AuditLogsPage() {
               size="icon"
               variant="ghost"
               className="h-8 w-8"
+              aria-label="Next page"
               disabled={currentPage === totalPages}
               onClick={() => goToPage(currentPage + 1)}
             >
@@ -383,6 +389,7 @@ export default function AuditLogsPage() {
               size="icon"
               variant="ghost"
               className="h-8 w-8"
+              aria-label="Last page"
               disabled={currentPage === totalPages}
               onClick={() => goToPage(totalPages)}
             >

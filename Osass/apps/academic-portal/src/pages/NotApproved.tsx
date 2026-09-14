@@ -2,7 +2,6 @@ import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { ArrowLeft, FileEdit, Info, ArrowRight, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Header } from "@/components/layout/Header";
 import { ApplicationStatusBadge } from "@/components/promotion/ApplicationStatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -21,11 +20,6 @@ const NotApproved = () => {
 
   return (
     <div className="page-container">
-      <Header
-        userName={user.fullName}
-        onLogout={handleLogout}
-        onChangePassword={() => navigate("/change-password")}
-      />
 
       <main className="content-container">
         {/* Back Button */}

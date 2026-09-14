@@ -50,7 +50,7 @@ const emptyForm: StaffFormData = {
 };
 
 export default function AcademicStaffPage() {
-  const { data: staff = [], isLoading } = useAcademicStaff();
+  const { data: staff = [], isLoading, isError, refetch } = useAcademicStaff();
   const { data: positions = [] } = useAcademicPositions();
   const { data: departments = [] } = useDepartments();
   const { data: faculties = [] } = useFaculties();
@@ -161,13 +161,15 @@ export default function AcademicStaffPage() {
         searchPlaceholder="Search teaching staff..."
         searchKeys={['firstName', 'lastName', 'email', 'staffId', 'position']}
         isLoading={isLoading}
+        isError={isError}
+        onRetry={refetch}
         emptyMessage="No teaching staff found"
         actions={(member) => (
           <div className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(member)}>
+            <Button variant="ghost" size="icon" aria-label={`Edit ${`${member.firstName} ${member.lastName}`}`} onClick={() => handleOpenEdit(member)}>
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleOpenDelete(member)}>
+            <Button variant="ghost" size="icon" aria-label={`Delete ${`${member.firstName} ${member.lastName}`}`} onClick={() => handleOpenDelete(member)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>

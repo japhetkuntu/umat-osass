@@ -45,7 +45,7 @@ const emptyForm: CommitteeMemberFormData = {
 };
 
 export default function CommitteesPage() {
-  const { data: members = [], isLoading } = useCommitteeMembers();
+  const { data: members = [], isLoading, isError, refetch } = useCommitteeMembers();
   const { data: staffList = [] } = useStaff();
   const { data: departments = [] } = useDepartments();
   const { data: faculties = [] } = useFaculties();
@@ -170,13 +170,15 @@ export default function CommitteesPage() {
         searchPlaceholder="Search committee members..."
         searchKeys={['staffName', 'committeeType', 'departmentName', 'facultyName']}
         isLoading={isLoading}
+        isError={isError}
+        onRetry={refetch}
         emptyMessage="No committee members found"
         actions={(member) => (
           <div className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(member)}>
+            <Button variant="ghost" size="icon" aria-label={`Edit ${member.staffName || getStaffName(member.staffId)}`} onClick={() => handleOpenEdit(member)}>
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleOpenDelete(member)}>
+            <Button variant="ghost" size="icon" aria-label={`Remove ${member.staffName || getStaffName(member.staffId)}`} onClick={() => handleOpenDelete(member)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
@@ -320,7 +322,7 @@ export default function CommitteesPage() {
         open={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
         title="Remove Committee Member"
-        description={`Are you sure you want to remove this committee member? This action cannot be undone.`}
+        description={`Are you sure you want to remove ${deletingMember ? (deletingMember.staffName || getStaffName(deletingMember.staffId)) : 'this member'} from the ${deletingMember?.committeeType || ''} committee? This action cannot be undone.`}
         confirmLabel="Remove"
         onConfirm={handleDelete}
         isDestructive

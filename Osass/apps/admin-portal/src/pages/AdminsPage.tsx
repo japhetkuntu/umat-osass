@@ -48,7 +48,7 @@ export default function AdminsPage() {
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'SuperAdmin';
 
-  const { data: admins = [], isLoading } = useAdminUsers();
+  const { data: admins = [], isLoading, isError, refetch } = useAdminUsers();
   const createMutation = useCreateAdminUser();
   const updateMutation = useUpdateAdminUser();
   const deleteMutation = useDeleteAdminUser();
@@ -140,16 +140,18 @@ export default function AdminsPage() {
         searchPlaceholder="Search admins..."
         searchKeys={['firstName', 'lastName', 'email', 'role']}
         isLoading={isLoading}
+        isError={isError}
+        onRetry={refetch}
         emptyMessage="No admins found"
         actions={
           isSuperAdmin
             ? (admin) => (
                 <div className="flex items-center justify-end gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(admin)}>
+                  <Button variant="ghost" size="icon" aria-label={`Edit ${admin.firstName} ${admin.lastName}`} onClick={() => handleOpenEdit(admin)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
                   {admin.id !== user?.id && (
-                    <Button variant="ghost" size="icon" onClick={() => handleOpenDelete(admin)}>
+                    <Button variant="ghost" size="icon" aria-label={`Delete ${admin.firstName} ${admin.lastName}`} onClick={() => handleOpenDelete(admin)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   )}

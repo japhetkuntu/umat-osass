@@ -16,6 +16,7 @@ import {
   ArrowRight,
   LogOut,
   User,
+  KeyRound,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -75,32 +76,31 @@ export default function DashboardPage() {
             <p className="text-sm text-muted-foreground">Teaching Staff Promotion Committee</p>
           </div>
           <div className="flex items-center gap-2">
-    
             <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <User className="h-4 w-4" />
-                {user?.fullName || user?.firstName}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-xs text-muted-foreground">
-                {user?.email}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate("/change-password")} className="text-sm">
-                {/* <KeyRound className="mr-2 h-4 w-4" /> */}
-                Change Password
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout} className="text-destructive text-sm">
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <User className="h-4 w-4" />
+                  {user?.fullName || user?.firstName}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-xs text-muted-foreground">
+                  {user?.email}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/change-password")} className="text-sm">
+                  <KeyRound className="mr-2 h-4 w-4" />
+                  Change Password
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="text-destructive text-sm">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
@@ -149,6 +149,11 @@ export default function DashboardPage() {
                 <h3 className="text-lg font-serif font-semibold text-foreground">Your Committees</h3>
                 <p className="text-sm text-muted-foreground">Committee assignments and access</p>
               </div>
+              {user?.committees.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  You are not currently assigned to any committee.
+                </p>
+              ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {user?.committees.map((committee) => {
                   const pendingCount = committeePendingCounts[committee.committeeType];
@@ -206,6 +211,7 @@ export default function DashboardPage() {
                   );
                 })}
               </div>
+              )}
             </section>
 
             {/* Status Overview */}

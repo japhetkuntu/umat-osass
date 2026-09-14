@@ -146,6 +146,11 @@ export default function DashboardPage() {
                 <h3 className="text-lg font-serif font-semibold text-foreground">Your Committees</h3>
                 <p className="text-sm text-muted-foreground">Committee assignments and access</p>
               </div>
+              {user?.committees.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  You are not currently assigned to any committee.
+                </p>
+              ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {user?.committees.map((committee) => {
                   const pendingCount = committeePendingCounts[committee.committeeType];
@@ -203,6 +208,7 @@ export default function DashboardPage() {
                   );
                 })}
               </div>
+              )}
             </section>
 
             {/* Status Overview */}

@@ -66,20 +66,20 @@ const Settings = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 card-elevated p-8">
                         <div className="space-y-2">
-                            <Label>Full Name</Label>
-                            <Input defaultValue={user.fullName} disabled className="bg-muted/50" />
+                            <Label htmlFor="fullName">Full Name</Label>
+                            <Input id="fullName" defaultValue={user.fullName} disabled className="bg-muted/50" />
                         </div>
                         <div className="space-y-2">
-                            <Label>Staff ID</Label>
-                            <Input defaultValue={user.staffId} disabled className="bg-muted/50" />
+                            <Label htmlFor="staffId">Staff ID</Label>
+                            <Input id="staffId" defaultValue={user.staffId} disabled className="bg-muted/50" />
                         </div>
                         <div className="space-y-2">
-                            <Label>Current Rank</Label>
-                            <Input defaultValue={eligibility?.applicantCurrentPosition || user.position} disabled className="bg-muted/50" />
+                            <Label htmlFor="currentRank">Current Rank</Label>
+                            <Input id="currentRank" defaultValue={eligibility?.applicantCurrentPosition || user.position} disabled className="bg-muted/50" />
                         </div>
                         <div className="space-y-2">
-                            <Label>Department</Label>
-                            <Input defaultValue={user.staffCategory || "—"} disabled className="bg-muted/50" />
+                            <Label htmlFor="department">Department</Label>
+                            <Input id="department" defaultValue={user.staffCategory || "—"} disabled className="bg-muted/50" />
                         </div>
                     </div>
                 </section>
