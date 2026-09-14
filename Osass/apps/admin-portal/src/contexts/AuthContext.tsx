@@ -1,5 +1,10 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { adminLogin as apiLogin, adminLogout as apiLogout, getAdminProfile } from '@/services/api';
+import {
+  adminLogin as apiLogin,
+  adminLoginWithGoogle as apiLoginWithGoogle,
+  adminLogout as apiLogout,
+  getAdminProfile,
+} from '@/services/api';
 import type { AdminProfile } from '@/types';
 
 interface AuthContextType {
@@ -7,6 +12,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
+  loginWithGoogle: (idToken: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
 }
 
@@ -63,6 +69,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: false, message: res.message || 'Login failed' };
   }, []);
 
+  const loginWithGoogle = useCallback(async (idToken: string) => {
+    const res = await apiLoginWithGoogle(idToken);
+    if (res.success && res.data?.accessToken) {
+      const profile = res.data.metaData ?? { id: '', email: '', firstName: '', lastName: '', role: '' };
+      setUser(profile);
+      return { success: true };
+    }
+    return { success: false, message: res.message || 'Google sign-in failed' };
+  }, []);
+
   const logout = useCallback(() => {
     apiLogout();
     setUser(null);
@@ -70,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );

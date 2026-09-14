@@ -94,7 +94,7 @@ export default function KnowledgeMaterialTypesPage() {
     <AdminLayout>
       <PageHeader
         title="Knowledge Material Types"
-        description="Manage knowledge material categories and scoring values for non-academic staff"
+        description="Manage knowledge material categories and scoring values for non-teaching staff"
         actions={
           <Button onClick={handleOpenCreate}>
             <Plus className="mr-2 h-4 w-4" />

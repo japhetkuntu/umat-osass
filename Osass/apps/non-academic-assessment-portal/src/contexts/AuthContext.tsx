@@ -13,6 +13,7 @@ interface AuthContextType {
   isLoading: boolean;
   user: AuthUser | null;
   login: (email: string, password: string) => Promise<boolean>;
+  loginWithGoogle: (idToken: string) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -124,6 +125,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const loginWithGoogle = async (idToken: string): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      const res = await authService.loginWithGoogle(idToken);
+      if (res.success && res.data?.accessToken) {
+        const userData = extractUserData(res.data);
+        if (!userData) {
+          toast.error("Unable to retrieve user information");
+          return false;
+        }
+
+        const committees = await fetchCommitteeInfo();
+
+        if (committees.length === 0) {
+          toast.error("You are not a member of any assessment committee");
+          authService.logout();
+          setIsLoading(false);
+          return false;
+        }
+
+        setUser({ ...userData, committees });
+        setIsAuthenticated(true);
+        setIsLoading(false);
+        return true;
+      } else {
+        toast.error(res.message || "Unable to sign in with Google");
+        setIsLoading(false);
+        return false;
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred during Google sign in");
+      setIsLoading(false);
+      return false;
+    }
+  };
+
   const logout = () => {
     authService.logout();
     setUser(null);
@@ -131,7 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isLoading, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, user, login, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );

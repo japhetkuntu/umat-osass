@@ -128,6 +128,7 @@ public class PublicationRecordAssessment
     public int Year { get; set; }
     public string? PublicationType { get; set; }
     public double SystemGeneratedScore { get; set; }
+    public double PresentationBonus { get; set; }
     public double? ApplicantScore { get; set; }
     public string? ApplicantRemarks { get; set; }
     public double? DapcScore { get; set; }

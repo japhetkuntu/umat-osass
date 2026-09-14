@@ -1,8 +1,10 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Umat.Osass.Identity.Api.Models.Requests
 {
     public class OAuthRequest
     {
-        public string AccessToken { get; set; }
-        public string AuthType { get; set; } // e.g., "Google", "Facebook"
+        [Required] public string AccessToken { get; set; }
+        [Required] public string AuthType { get; set; } // e.g., "Google", "Facebook"
     }
 }

@@ -30,7 +30,12 @@ public class EmailNotificationService : IEmailNotificationService
         {
             _logger.LogInformation("[EmailNotification] Sending application submitted notification to {RecipientEmail}", payload.RecipientEmail);
 
-            var templateId = payload.CommitteeType switch
+            // Accept both FAPC (template/business name) and FAPSC (committee role enum value)
+            var normalizedType = string.Equals(payload.CommitteeType, "FAPSC", StringComparison.OrdinalIgnoreCase)
+                ? "FAPC"
+                : payload.CommitteeType;
+
+            var templateId = normalizedType switch
             {
                 "DAPC" => _emailConfig.Templates.ApplicationSubmittedToDapc,
                 "FAPC" => _emailConfig.Templates.ApplicationSubmittedToFapc,
@@ -54,6 +59,7 @@ public class EmailNotificationService : IEmailNotificationService
                 TemplateId = templateId,
                 TemplateVariables = new
                 {
+                    recipient_name = payload.RecipientName,
                     applicant_name = payload.ApplicantName,
                     applicant_position = payload.ApplicantPosition,
                     target_position = payload.TargetPosition,
@@ -62,7 +68,9 @@ public class EmailNotificationService : IEmailNotificationService
                     faculty_name = payload.FacultyName,
                     school_name = payload.SchoolName,
                     committee_type = payload.CommitteeType,
-                    application_url = payload.ApplicationUrl
+                    application_url = payload.ApplicationUrl,
+                    date = payload.AppliedDate,
+                    action_url = payload.ApplicationUrl
                 }
             };
 
@@ -116,13 +124,21 @@ public class EmailNotificationService : IEmailNotificationService
                 TemplateId = templateId,
                 TemplateVariables = new
                 {
+                    recipient_name = payload.CommitteeMemberName,
                     committee_member_name = payload.CommitteeMemberName,
                     applicant_name = payload.ApplicantName,
                     applicant_position = payload.ApplicantPosition,
                     target_position = payload.TargetPosition,
+                    applied_date = payload.SubmissionDate,
+                    department_name = string.Empty,
+                    faculty_name = string.Empty,
+                    school_name = string.Empty,
                     committee_type = payload.CommitteeType,
+                    application_url = payload.ReviewUrl,
                     submission_date = payload.SubmissionDate,
-                    review_url = payload.ReviewUrl
+                    review_url = payload.ReviewUrl,
+                    date = payload.SubmissionDate,
+                    action_url = payload.ReviewUrl
                 }
             };
 

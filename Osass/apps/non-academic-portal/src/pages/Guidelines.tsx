@@ -101,30 +101,9 @@ const Guidelines = () => {
                             <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold">03</span>
                             Promotion Performance Matrix
                         </h2>
-                        <div className="space-y-4">
-                            <p className="text-sm text-muted-foreground leading-relaxed italic">
-                                Advancement is determined by the combination of assessment levels across Performance at Work, Knowledge &amp; Profession, and Service. Below are the minimum requirements per position:
-                            </p>
-
-                            <div className="grid grid-cols-1 gap-4">
-                                {[
-                                    { rank: "Standard Advancement", combinations: ["2 Highs + 1 Adequate", "3 Goods"] },
-                                    { rank: "Merit Advancement", combinations: ["2 Highs + 1 Good"] },
-                                    { rank: "Distinguished Advancement", combinations: ["3 Highs"] },
-                                ].map((rankItem) => (
-                                    <div key={rankItem.rank} className="border border-border rounded-lg p-6 border-l-4 border-l-primary flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                        <h3 className="text-lg font-bold text-foreground shrink-0">{rankItem.rank}</h3>
-                                        <div className="flex flex-wrap gap-2">
-                                            {rankItem.combinations.map((c, idx) => (
-                                                <span key={idx} className="bg-primary/5 text-primary text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-primary/10">
-                                                    {c}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                        <p className="text-sm text-muted-foreground leading-relaxed italic">
+                            Advancement is determined by the combination of assessment levels across Performance at Work, Knowledge &amp; Profession, and Service. Below are the minimum requirements for {requirement?.name || 'your next position'}, as configured by the administrator:
+                        </p>
 
                         {requirement?.performanceCriteria && requirement.performanceCriteria.length > 0 && (
                             <div className="mt-8 space-y-4">

@@ -139,8 +139,8 @@ export default function NonAcademicPositionsPage() {
   return (
     <AdminLayout>
       <PageHeader
-        title="Non-Academic Positions"
-        description="Manage non-academic staff promotion tracks and eligibility criteria"
+        title="Non-Teaching Staff Positions"
+        description="Manage non-teaching staff promotion tracks and eligibility criteria"
         actions={
           <Button onClick={handleOpenCreate}>
             <Plus className="mr-2 h-4 w-4" />
@@ -155,7 +155,7 @@ export default function NonAcademicPositionsPage() {
         searchPlaceholder="Search positions..."
         searchKeys={['name', 'previousPosition', 'unitType']}
         isLoading={isLoading}
-        emptyMessage="No positions found"
+        emptyMessage="No non-teaching staff positions found"
         actions={(position) => (
           <div className="flex items-center justify-end gap-2">
             <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(position)}>
@@ -172,7 +172,7 @@ export default function NonAcademicPositionsPage() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editingPosition ? 'Edit Non-Academic Position' : 'Add Non-Academic Position'}
+              {editingPosition ? 'Edit Non-Teaching Staff Position' : 'Add Non-Teaching Staff Position'}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">

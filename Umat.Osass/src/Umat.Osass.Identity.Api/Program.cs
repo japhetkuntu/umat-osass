@@ -31,16 +31,12 @@ services.AddScoped<IAuthService, AuthService>();
 //SDK services registrations
 builder.Services.AddIdentityPostgresSdk(builder.Configuration,"IdentityConnection");
 builder.Services.AddEmailServiceProvider(builder.Configuration);
-//services.AddNiaServices(builder.Configuration);
 services.AddRedisDatabase<IdentityRedisConfig>(builder.Configuration);
-
-//builder.Services.AddFluentValidationAutoValidation();
-//builder.Services.AddValidatorsFromAssemblyContaining<CustomerOnboardingRequestValidator>();
-
 
 //config registration
 services.Configure<BearerTokenConfig>(config.GetSection(nameof(BearerTokenConfig)));
 services.Configure<ExtraConfig>(config.GetSection(nameof(ExtraConfig)));
+services.Configure<GoogleAuthConfig>(config.GetSection(nameof(GoogleAuthConfig)));
 
 
 

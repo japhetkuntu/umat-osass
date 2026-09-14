@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import assessmentApi from "@/services/assessmentApi";
+import { getCommitteeDisplayName } from "@/lib/committee";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -119,15 +120,6 @@ export default function PendingApplicationsPage() {
         {performance}
       </Badge>
     );
-  };
-
-  const getCommitteeDisplayName = (type: string) => {
-    const names: Record<string, string> = {
-      DAPC: "Departmental Academic Promotion Committee",
-      FAPSC: "Faculty Academic Promotion Sub-Committee",
-      UAPC: "University Academic Promotion Committee",
-    };
-    return names[type] || type;
   };
 
   return (

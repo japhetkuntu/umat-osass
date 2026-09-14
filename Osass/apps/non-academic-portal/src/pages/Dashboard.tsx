@@ -46,7 +46,7 @@ const Dashboard = () => {
   if (!user) return null;
 
   const applicationStatus = (eligibility?.activeApplication?.applicationStatus?.toLowerCase() || "not-started") as ApplicationStatus;
-  const isEligible = eligibility?.isEligible || false;
+  const isEligible = eligibility?.isEligibleToApplyForNextPosition || false;
   const hasNextPosition = !!eligibility?.applicantNextPosition;
 
   const getActionButton = () => {
@@ -321,7 +321,7 @@ const Dashboard = () => {
             <div className="card-elevated p-6 space-y-4 border-dashed border-2">
               <div className="space-y-2">
                 <h3 className="text-sm font-serif font-semibold text-foreground">Need Help?</h3>
-                <p className="text-xs text-muted-foreground">Contact the Non-Academic Promotion Office</p>
+                <p className="text-xs text-muted-foreground">Contact the Non-Teaching Staff Promotion Office</p>
               </div>
               <Button
                 variant="outline"

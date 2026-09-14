@@ -325,21 +325,5 @@ public class TeachingCategoryService : ITeachingCategoryService
         };
     }
 
-    private string ResolvePerformanceLevel(List<double> scores)
-    {
-        if (!scores.Any())
-            return "Not assessed";
-
-        var avg = scores.Average();
-
-        return avg switch
-        {
-            >= 80 => "High",
-            >= 60 => "Good",
-            >= 50 => "Adequate",
-            _ => "Inadequate"
-        };
-    }
-
 
 }

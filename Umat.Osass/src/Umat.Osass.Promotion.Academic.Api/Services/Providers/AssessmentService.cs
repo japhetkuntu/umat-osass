@@ -133,24 +133,46 @@ public class AssessmentService : IAssessmentService
 
             var memberInfo = memberInfoRes.Data!;
             var committees = memberInfo.Committees;
+            var committeeTypes = committees.Select(c => c.CommitteeType).ToList();
+
+            // Get activities for these committees (drives in-progress/completed/returned
+            // counts below, and the recent-activity feed). ApplicationStatus never carries
+            // an "UnderReview" or "NotApproved" value in this workflow, so those states can't
+            // be used for counting - the activity log is the real signal for committee progress.
+            var committeeActivities = await _activityRepository.GetAllAsync(
+                a => committeeTypes.Contains(a.CommitteeLevel));
+
+            var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var thisMonthActivities = committeeActivities.Where(a => a.ActivityDate >= monthStart).ToList();
 
             // Count applications based on committee memberships
-            int pendingCount = 0, inProgressCount = 0, completedCount = 0, returnedCount = 0;
+            int pendingCount = 0, inProgressCount = 0;
 
             foreach (var committee in committees)
             {
                 var reviewStatus = GetReviewStatusForCommittee(committee.CommitteeType);
                 var applications = await GetApplicationsForCommittee(committee);
-                
-                pendingCount += applications.Count(a => a.ReviewStatus == reviewStatus);
-                inProgressCount += applications.Count(a => a.ReviewStatus == reviewStatus && a.ApplicationStatus == ApplicationStatusTypes.UnderReview);
+                var pendingApplications = applications.Where(a => a.ReviewStatus == reviewStatus).ToList();
+
+                pendingCount += pendingApplications.Count;
+
+                // "In progress" = pending applications this committee has already started
+                // scoring or commenting on, but hasn't advanced, returned, or approved yet.
+                var pendingIds = pendingApplications.Select(a => a.Id).ToHashSet();
+                inProgressCount += committeeActivities
+                    .Where(a => a.CommitteeLevel == committee.CommitteeType
+                        && (a.ActivityType == AssessmentActivityTypes.ScoreSubmitted || a.ActivityType == AssessmentActivityTypes.CommentAdded)
+                        && pendingIds.Contains(a.ApplicationId))
+                    .Select(a => a.ApplicationId)
+                    .Distinct()
+                    .Count();
             }
 
-            // Get recent activities
-            var recentActivities = await _activityRepository.GetAllAsync(
-                a => committees.Select(c => c.CommitteeType).Contains(a.CommitteeLevel));
-            
-            var recentActivitySummaries = recentActivities
+            int completedCount = thisMonthActivities.Count(a =>
+                a.ActivityType == AssessmentActivityTypes.ApplicationAdvanced || a.ActivityType == AssessmentActivityTypes.ApplicationApproved);
+            int returnedCount = thisMonthActivities.Count(a => a.ActivityType == AssessmentActivityTypes.ApplicationReturned);
+
+            var recentActivitySummaries = committeeActivities
                 .OrderByDescending(a => a.ActivityDate)
                 .Take(10)
                 .Select(a => new RecentActivitySummary
@@ -472,10 +494,9 @@ public class AssessmentService : IAssessmentService
             if (activeCommittee == null)
                 return new ApiResponse<bool>("This application is not at a stage you can assess", 400);
 
-            // Verify application has not reached a terminal state (returned, approved, or rejected)
+            // Verify application is not sitting with the applicant (returned) or already approved
             if (application.ApplicationStatus == ApplicationStatusTypes.Returned
-                || application.ApplicationStatus == ApplicationStatusTypes.Approved
-                || application.ApplicationStatus == ApplicationStatusTypes.NotApproved)
+                || application.ApplicationStatus == ApplicationStatusTypes.Approved)
                 return new ApiResponse<bool>("Application has already been processed and cannot be assessed", 400);
 
             var staff = await _staffRepository.GetByIdAsync(auth.Id);
@@ -625,10 +646,9 @@ public class AssessmentService : IAssessmentService
             if (activeCommittee == null)
                 return new ApiResponse<bool>("This application is not at a stage you can comment on", 400);
 
-            // Verify application has not reached a terminal state (returned, approved, or rejected)
+            // Verify application is not sitting with the applicant (returned) or already approved
             if (application.ApplicationStatus == ApplicationStatusTypes.Returned
-                || application.ApplicationStatus == ApplicationStatusTypes.Approved
-                || application.ApplicationStatus == ApplicationStatusTypes.NotApproved)
+                || application.ApplicationStatus == ApplicationStatusTypes.Approved)
                 return new ApiResponse<bool>("Application has already been processed and cannot be commented on", 400);
 
             await _activityRepository.AddAsync(new AssessmentActivity
@@ -969,7 +989,7 @@ public class AssessmentService : IAssessmentService
         }
     }
 
-    public async Task<IApiResponse<bool>> RejectApplication(AuthData auth, string applicationId, string reason)
+    public async Task<IApiResponse<bool>> ReturnApplicationForUpdate(AuthData auth, string applicationId, string reason)
     {
         try
         {
@@ -1172,6 +1192,7 @@ public class AssessmentService : IAssessmentService
                 Year = p.Year,
                 PublicationType = p.PublicationTypeName,
                 SystemGeneratedScore = p.SystemGeneratedScore,
+                PresentationBonus = p.PresentationBonus,
                 ApplicantScore = p.ApplicantScore,
                 ApplicantRemarks = p.ApplicantRemarks,
                 DapcScore = p.DapcScore,
@@ -1686,15 +1707,6 @@ public class AssessmentService : IAssessmentService
 
     private bool MatchesPerformanceCriteria(string actual, string required, double teachingScore, double publicationScore, double serviceScore)
     {
-        // Parse performance levels and check if actual meets or exceeds required
-        var performanceLevels = new Dictionary<string, int>
-        {
-            { PerformanceTypes.InAdequate, 1 },
-            { PerformanceTypes.Adequate, 2 },
-            { PerformanceTypes.Good, 3 },
-            { PerformanceTypes.High, 4 }
-        };
-
         var actualParts = actual.Split(',').Select(p => p.Trim()).ToList();
         var requiredParts = required.Split(',').Select(p => p.Trim()).ToList();
 
@@ -1702,15 +1714,20 @@ public class AssessmentService : IAssessmentService
 
         // For criteria like "High,High,High" or "Good,High,High" we treat it as category-agnostic
         // target distribution (e.g., 2 high + 1 good) instead of exact teaching/publications/service mapping.
-        var actualRanks = actualParts.Select(p => performanceLevels.GetValueOrDefault(p, 0)).OrderByDescending(x => x).ToArray();
-        var requiredRanks = requiredParts.Select(p => performanceLevels.GetValueOrDefault(p, 0)).OrderByDescending(x => x).ToArray();
+        var actualRanks = actualParts.Select(PerformanceLevelWeight).OrderByDescending(x => x).ToArray();
+        var requiredRanks = requiredParts.Select(PerformanceLevelWeight).OrderByDescending(x => x).ToArray();
 
         // Numeric teaching fallback: allow one-level shortfall if teaching score is strong enough
         if (actualRanks[0] < requiredRanks[0])
         {
-            var teachingOk =
-                (teachingScore >= 80 && requiredRanks[0] == performanceLevels[PerformanceTypes.High]) ||
-                (teachingScore >= 60 && requiredRanks[0] == performanceLevels[PerformanceTypes.Good]);
+            var requiredLevelName = requiredRanks[0] switch
+            {
+                4 => PerformanceTypes.High,
+                3 => PerformanceTypes.Good,
+                _ => null
+            };
+            // Fail closed for anything below Good - only a High/Good gap can be bridged by a strong numeric score.
+            var teachingOk = teachingScore >= TeachingThresholdForLevel(requiredLevelName, double.MaxValue);
             if (!teachingOk) return false;
         }
 
@@ -1741,30 +1758,14 @@ public class AssessmentService : IAssessmentService
         if (string.Equals(actual, required, StringComparison.OrdinalIgnoreCase))
             return true;
 
-        var performanceLevels = new Dictionary<string, int>
-        {
-            { PerformanceTypes.InAdequate, 1 },
-            { PerformanceTypes.Adequate, 2 },
-            { PerformanceTypes.Good, 3 },
-            { PerformanceTypes.High, 4 }
-        };
-
-        var actualLevel = performanceLevels.GetValueOrDefault(actual, 0);
-        var requiredLevel = performanceLevels.GetValueOrDefault(required, 0);
+        var actualLevel = PerformanceLevelWeight(actual);
+        var requiredLevel = PerformanceLevelWeight(required);
 
         if (actualLevel > 0 && requiredLevel > 0 && actualLevel >= requiredLevel)
             return true;
 
-        // Numeric thresholds matching the computation service.
-        var requiredTeachingThreshold = required switch
-        {
-            PerformanceTypes.High => 80,
-            PerformanceTypes.Good => 60,
-            PerformanceTypes.Adequate => 50,
-            _ => 0
-        };
-
-        return teachingScore >= requiredTeachingThreshold;
+        // Numeric fallback matching PerformanceComputationService.ComputePerformanceForTeaching's thresholds.
+        return teachingScore >= TeachingThresholdForLevel(required, 0);
     }
 
     private static bool MatchesPerformanceByNumericTeaching(List<string> acceptableCriteria, double teachingScore, double publicationScore, double serviceScore)
@@ -1773,6 +1774,11 @@ public class AssessmentService : IAssessmentService
         if (acceptableCriteria == null || acceptableCriteria.Count == 0)
             return true;
 
+        // Classify using each category's own thresholds (Publications: 90/70/50, Service: 100/50/30) -
+        // these differ from Teaching's 80/60/50 scale, so the two scores must not share one threshold set.
+        var publicationLevel = PerformanceComputationService.ComputePerformanceForPublications(publicationScore);
+        var serviceLevel = PerformanceComputationService.ComputeServicePerformance(serviceScore);
+
         foreach (var criteria in acceptableCriteria)
         {
             var parts = criteria.Split(',').Select(p => p.Trim()).ToList();
@@ -1780,41 +1786,40 @@ public class AssessmentService : IAssessmentService
 
             var publicationRequired = parts[1];
             var serviceRequired = parts[2];
-            if (!IsPerformanceLevelSatisfied(publicationScore, publicationRequired, PerformanceTypes.Good)) continue;
-            if (!IsPerformanceLevelSatisfied(serviceScore, serviceRequired, PerformanceTypes.Good)) continue;
+            if (PerformanceLevelWeight(publicationLevel) < PerformanceLevelWeight(publicationRequired)) continue;
+            if (PerformanceLevelWeight(serviceLevel) < PerformanceLevelWeight(serviceRequired)) continue;
 
-            // teaching numeric threshold min: 60 to be considered acceptable as numeric
-            if (teachingScore >= 60)
+            // teaching numeric threshold min: 60 (Good) to be considered acceptable as numeric
+            if (teachingScore >= TeachingThresholdForLevel(PerformanceTypes.Good, double.MaxValue))
                 return true;
         }
 
         return false;
     }
 
-    private static bool IsPerformanceLevelSatisfied(double value, string level, string minimumLevel)
+    // Shared rank weights for comparing performance levels across the criteria-matching helpers
+    // above - a single source of truth instead of the same dictionary redefined per method.
+    private static readonly Dictionary<string, int> PerformanceLevelWeights = new()
     {
-        var valueLevel = value switch
-        {
-            >= 80 => PerformanceTypes.High,
-            >= 60 => PerformanceTypes.Good,
-            >= 50 => PerformanceTypes.Adequate,
-            >= 0  => PerformanceTypes.InAdequate,
-            _ => PerformanceTypes.InAdequate
-        };
+        { PerformanceTypes.InAdequate, 1 },
+        { PerformanceTypes.Adequate, 2 },
+        { PerformanceTypes.Good, 3 },
+        { PerformanceTypes.High, 4 }
+    };
 
-        var performanceLevels = new Dictionary<string, int>
-        {
-            { PerformanceTypes.InAdequate, 1 },
-            { PerformanceTypes.Adequate, 2 },
-            { PerformanceTypes.Good, 3 },
-            { PerformanceTypes.High, 4 }
-        };
+    private static int PerformanceLevelWeight(string? level) => PerformanceLevelWeights.GetValueOrDefault(level ?? string.Empty, 0);
 
-        var valueRank = performanceLevels.GetValueOrDefault(valueLevel, 0);
-        var requiredRank = performanceLevels.GetValueOrDefault(level, 0);
-
-        return valueRank >= requiredRank;
-    }
+    // Numeric teaching-score threshold for a given level, matching
+    // PerformanceComputationService.ComputePerformanceForTeaching. Levels below Adequate (and
+    // unrecognized values) fall back to unmatchedThreshold, since callers disagree on whether
+    // that case should pass (lenient default) or fail (a level gap too wide to bridge numerically).
+    private static double TeachingThresholdForLevel(string? level, double unmatchedThreshold) => level switch
+    {
+        PerformanceTypes.High => 80,
+        PerformanceTypes.Good => 60,
+        PerformanceTypes.Adequate => 50,
+        _ => unmatchedThreshold
+    };
 
     private string FormatCriteria(string criteria)
     {

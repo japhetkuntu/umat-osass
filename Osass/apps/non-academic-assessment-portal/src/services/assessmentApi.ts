@@ -73,9 +73,9 @@ export const assessmentApi = {
   approveApplication: (applicationId: string, recommendation?: string) =>
     academicClient.post<boolean>(`/assessment/${applicationId}/approve`, { recommendation }),
 
-  // Reject application (UAPC only)
-  rejectApplication: (applicationId: string, reason: string) =>
-    academicClient.post<boolean>(`/assessment/${applicationId}/reject`, { reason }),
+  // Return application to the applicant for update (UAPC only) - not a permanent rejection
+  returnApplicationForUpdate: (applicationId: string, reason: string) =>
+    academicClient.post<boolean>(`/assessment/${applicationId}/return-for-update`, { reason }),
 
   // Validate application for promotion (UAPC only)
   validateForPromotion: (applicationId: string) =>

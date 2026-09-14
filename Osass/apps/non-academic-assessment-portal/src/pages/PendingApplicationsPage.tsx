@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import assessmentApi from "@/services/assessmentApi";
+import { getCommitteeDisplayName } from "@/lib/committee";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -86,9 +87,9 @@ export default function PendingApplicationsPage() {
         currentPosition: a.currentPosition || a.ApplicantCurrentPosition,
         unitName: a.unitName || a.departmentName || a.ApplicantDepartmentName || a.ApplicantFacultyName,
         applicantPerformance: {
-          performanceAtWorkPerformance: perf.performanceAtWorkPerformance || perf.PerformanceAtWorkPerformance || perf.teachingPerformance || perf.TeachingPerformance || a.PerformanceAtWorkPerformance || "Adequate",
-          knowledgeProfessionPerformance: perf.knowledgeProfessionPerformance || perf.KnowledgeProfessionPerformance || perf.publicationPerformance || perf.PublicationPerformance || a.KnowledgeProfessionPerformance || "Adequate",
-          servicePerformance: perf.servicePerformance || perf.ServicePerformance || a.ServicePerformance || "Adequate",
+          performanceAtWorkPerformance: perf.performanceAtWorkPerformance || perf.PerformanceAtWorkPerformance || perf.teachingPerformance || perf.TeachingPerformance || a.PerformanceAtWorkPerformance || null,
+          knowledgeProfessionPerformance: perf.knowledgeProfessionPerformance || perf.KnowledgeProfessionPerformance || perf.publicationPerformance || perf.PublicationPerformance || a.KnowledgeProfessionPerformance || null,
+          servicePerformance: perf.servicePerformance || perf.ServicePerformance || a.ServicePerformance || null,
         },
         applicationStatus: a.applicationStatus || a.ApplicationStatus || "Pending",
         submissionDate: a.submissionDate || a.SubmissionDate,
@@ -104,7 +105,15 @@ export default function PendingApplicationsPage() {
   const startItem = totalCount === 0 ? 0 : (page - 1) * 20 + 1;
   const endItem = Math.min(page * 20, totalCount);
 
-  const getPerformanceBadge = (performance: string) => {
+  const getPerformanceBadge = (performance: string | null) => {
+    if (!performance) {
+      return (
+        <Badge variant="secondary" className="inline-flex items-center gap-1 whitespace-nowrap text-xs">
+          <MinusCircle className="h-3 w-3" />
+          Not Assessed
+        </Badge>
+      );
+    }
     const variants: Record<string, { variant: "success" | "warning" | "destructive" | "secondary"; icon: React.ReactNode }> = {
       High: { variant: "success", icon: <CheckCircle2 className="h-3 w-3" /> },
       Good: { variant: "success", icon: <CheckCircle2 className="h-3 w-3" /> },
@@ -118,15 +127,6 @@ export default function PendingApplicationsPage() {
         {performance}
       </Badge>
     );
-  };
-
-  const getCommitteeDisplayName = (type: string) => {
-    const names: Record<string, string> = {
-      HOU: "Head of Unit",
-      AAPSC: "Administrative and Allied Professions Sub-Committee",
-      UAPC: "University Non-Academic Promotion Committee",
-    };
-    return names[type] || type;
   };
 
   return (

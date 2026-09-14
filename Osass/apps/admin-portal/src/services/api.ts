@@ -494,6 +494,23 @@ export const adminLogin = async (email: string, password: string) => {
   return res;
 };
 
+export const adminLoginWithGoogle = async (idToken: string) => {
+  const res = await identityClient.post<LoginResponse>('/Admins/login/google', {
+    accessToken: idToken,
+    authType: 'Google',
+  });
+  if (res.success && res.data?.accessToken) {
+    localStorage.setItem('admin_token', res.data.accessToken);
+    if (res.data.refreshToken) {
+      localStorage.setItem('admin_refresh_token', res.data.refreshToken);
+    }
+    if (res.data.metaData) {
+      localStorage.setItem('admin_user', JSON.stringify(res.data.metaData));
+    }
+  }
+  return res;
+};
+
 export const adminLogout = () => {
   localStorage.removeItem('admin_token');
   localStorage.removeItem('admin_refresh_token');

@@ -2,6 +2,7 @@ import { useQuery, useQueries } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import assessmentApi from "@/services/assessmentApi";
+import { getCommitteeDisplayName } from "@/lib/committee";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -64,15 +65,6 @@ export default function DashboardPage() {
     }
   }
 
-  const getCommitteeDisplayName = (type: string) => {
-    const names: Record<string, string> = {
-      HOU: "Head of Unit",
-      AAPSC: "Administrative and Allied Professions Sub-Committee",
-      UAPC: "University Non-Academic Promotion Committee",
-    };
-    return names[type] || type;
-  };
-
   return (
     <div className="page-container">
       {/* Header */}
@@ -80,7 +72,7 @@ export default function DashboardPage() {
         <div className="content-container flex items-center justify-between py-4">
           <div>
             <h1 className="text-2xl font-serif font-semibold text-foreground">Assessment Portal</h1>
-            <p className="text-sm text-muted-foreground">Non-Academic Promotion Committee</p>
+            <p className="text-sm text-muted-foreground">Non-Teaching Staff Promotion Committee</p>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -115,7 +107,7 @@ export default function DashboardPage() {
         <section className="section-header">
           <h2 className="section-title">Welcome, {(user?.fullName || user?.firstName || "")?.split(" ")[0]}</h2>
           <p className="section-description">
-            Review and assess non-academic promotion applications across committees
+            Review and assess non-teaching staff promotion applications across committees
           </p>
         </section>
 

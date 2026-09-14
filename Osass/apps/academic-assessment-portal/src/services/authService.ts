@@ -14,6 +14,21 @@ class AuthService {
         return result;
     }
 
+    async loginWithGoogle(idToken: string): Promise<ApiResponse<LoginResponse>> {
+        const result = await identityClient.post<LoginResponse>("/Staffs/login/google", {
+            accessToken: idToken,
+            authType: "Google",
+        });
+
+        if (result.success && result.data?.accessToken) {
+            localStorage.setItem("osass_assessment_token", result.data.accessToken);
+            if (result.data.refreshToken) {
+                localStorage.setItem("osass_assessment_refresh_token", result.data.refreshToken);
+            }
+        }
+        return result;
+    }
+
     async getProfile(): Promise<ApiResponse<StaffLoginMetaData>> {
         return await identityClient.get<StaffLoginMetaData>("/Staffs/me");
     }

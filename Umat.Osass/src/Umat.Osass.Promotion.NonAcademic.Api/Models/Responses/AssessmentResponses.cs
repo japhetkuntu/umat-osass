@@ -92,6 +92,7 @@ public class KnowledgeMaterialAssessment
     public double? ApplicantScore { get; set; }
     public string? ApplicantRemarks { get; set; }
     public double SystemGeneratedScore { get; set; }
+    public double PresentationBonus { get; set; }
     public bool IsPresented { get; set; }
     public List<string> PresentationEvidence { get; set; } = new();
     public double? HouScore { get; set; }

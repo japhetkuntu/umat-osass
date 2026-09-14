@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import assessmentApi from "@/services/assessmentApi";
+import { getCommitteeDisplayName } from "@/lib/committee";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -140,15 +141,6 @@ export default function ApplicationHistoryPage() {
       "Returned": "bg-info/10 text-info border-info/20",
     };
     return statusColors[status] || "bg-muted/50 text-muted-foreground border-muted";
-  };
-
-  const getCommitteeDisplayName = (type: string) => {
-    const names: Record<string, string> = {
-      HOU: "Head of Unit",
-      AAPSC: "Administrative and Allied Professions Sub-Committee",
-      UAPC: "University Non-Academic Promotion Committee",
-    };
-    return names[type] || type;
   };
 
   return (

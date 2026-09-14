@@ -69,7 +69,8 @@ export interface KnowledgeMaterialAssessment {
   title: string;
   year: number;
   materialTypeName?: string;
-  systemGeneratedScore: number;
+  systemGeneratedScore: number; // already includes presentationBonus when isPresented
+  presentationBonus?: number;
   applicantScore?: number;
   applicantRemarks?: string;
   houScore?: number;

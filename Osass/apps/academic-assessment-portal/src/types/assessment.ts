@@ -72,7 +72,8 @@ export interface PublicationRecordAssessment {
   title: string;
   year: number;
   publicationType?: string;
-  systemGeneratedScore: number;
+  systemGeneratedScore: number; // already includes presentationBonus when isPresented
+  presentationBonus?: number;
   applicantScore?: number;
   applicantRemarks?: string;
   dapcScore?: number;

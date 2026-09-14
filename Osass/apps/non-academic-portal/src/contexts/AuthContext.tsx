@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextType extends AuthState {
     login: (email: string, password: string) => Promise<boolean>;
+    loginWithGoogle: (idToken: string) => Promise<boolean>;
     logout: () => void;
     refreshProfile: () => Promise<void>;
 }
@@ -136,6 +137,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const loginWithGoogle = async (idToken: string): Promise<boolean> => {
+        setState((prev) => ({ ...prev, isLoading: true }));
+        try {
+            const res = await authService.loginWithGoogle(idToken);
+            if (res.success && res.data) {
+                const userData = extractUserData(res.data);
+                if (!userData) {
+                    throw new Error("Unable to extract user data from login response");
+                }
+
+                setState((prev) => ({
+                    ...prev,
+                    token: res.data.accessToken,
+                    user: userData,
+                    isAuthenticated: true,
+                }));
+                await refreshProfile();
+                return true;
+            } else {
+                toast({
+                    title: "Google Sign-In Failed",
+                    description: res.message || "Unable to sign in with Google",
+                    variant: "destructive",
+                });
+                return false;
+            }
+        } catch (error) {
+            toast({
+                title: "Login Error",
+                description: "An unexpected error occurred during Google sign in.",
+                variant: "destructive",
+            });
+            return false;
+        } finally {
+            setState((prev) => ({ ...prev, isLoading: false }));
+        }
+    };
+
     const logout = () => {
         authService.logout();
         setState({
@@ -152,6 +191,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             value={{
                 ...state,
                 login,
+                loginWithGoogle,
                 logout,
                 refreshProfile,
             }}

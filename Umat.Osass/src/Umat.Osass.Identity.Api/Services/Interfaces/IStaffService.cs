@@ -30,6 +30,14 @@ public interface IStaffService
     Task<IApiResponse<StaffTokenResponse>> AccountLoginAsync(LoginRequest request);
 
     /// <summary>
+    /// Authenticates a staff member using a Google ID token.
+    /// Verifies the token with Google, then links to an existing staff account by email.
+    /// </summary>
+    /// <param name="request">The OAuth request containing the Google ID token.</param>
+    /// <returns>An API response containing JWT tokens and staff details.</returns>
+    Task<IApiResponse<StaffTokenResponse>> GoogleLoginAsync(OAuthRequest request);
+
+    /// <summary>
     /// Refreshes an expired access token using a valid refresh token.
     /// Extends the customer session without requiring re-authentication.
     /// </summary>

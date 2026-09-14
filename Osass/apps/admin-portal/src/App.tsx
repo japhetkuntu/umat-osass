@@ -11,7 +11,6 @@ import Dashboard from "./pages/Dashboard";
 import SchoolsPage from "./pages/SchoolsPage";
 import FacultiesPage from "./pages/FacultiesPage";
 import DepartmentsPage from "./pages/DepartmentsPage";
-import StaffPage from "./pages/StaffPage";
 import AcademicStaffPage from "./pages/AcademicStaffPage";
 import NonAcademicStaffPage from "./pages/NonAcademicStaffPage";
 import AcademicPositionsPage from "./pages/AcademicPositionsPage";
@@ -46,7 +45,6 @@ const App = () => (
               <Route path="/schools" element={<ProtectedRoute><SchoolsPage /></ProtectedRoute>} />
               <Route path="/faculties" element={<ProtectedRoute><FacultiesPage /></ProtectedRoute>} />
               <Route path="/departments" element={<ProtectedRoute><DepartmentsPage /></ProtectedRoute>} />
-              <Route path="/staff" element={<ProtectedRoute><StaffPage /></ProtectedRoute>} />
               <Route path="/academic-staff" element={<ProtectedRoute><AcademicStaffPage /></ProtectedRoute>} />
               <Route path="/non-academic-staff" element={<ProtectedRoute><NonAcademicStaffPage /></ProtectedRoute>} />
               <Route path="/academic-positions" element={<ProtectedRoute><AcademicPositionsPage /></ProtectedRoute>} />
@@ -59,7 +57,7 @@ const App = () => (
               <Route path="/non-academic-positions" element={<ProtectedRoute><NonAcademicPositionsPage /></ProtectedRoute>} />
               <Route path="/units-sections" element={<ProtectedRoute><UnitsSectionsPage /></ProtectedRoute>} />
               <Route path="/knowledge-material-types" element={<ProtectedRoute><KnowledgeMaterialTypesPage /></ProtectedRoute>} />
-              <Route path="/admins" element={<ProtectedRoute><AdminsPage /></ProtectedRoute>} />
+              <Route path="/admins" element={<ProtectedRoute requiredRole="SuperAdmin"><AdminsPage /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>

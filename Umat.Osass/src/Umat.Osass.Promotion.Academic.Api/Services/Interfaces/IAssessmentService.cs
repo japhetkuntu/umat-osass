@@ -65,7 +65,7 @@ public interface IAssessmentService
     /// <summary>
     /// Final rejection (UAPC only)
     /// </summary>
-    Task<IApiResponse<bool>> RejectApplication(AuthData auth, string applicationId, string reason);
+    Task<IApiResponse<bool>> ReturnApplicationForUpdate(AuthData auth, string applicationId, string reason);
     
     /// <summary>
     /// Validate application against promotion requirements and provide recommendation (UAPC only)

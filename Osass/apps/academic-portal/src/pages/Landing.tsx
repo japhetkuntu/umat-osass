@@ -61,11 +61,11 @@ const env = (key: string, fallback: string) =>
 const PORTALS: Portal[] = [
   {
     id: "academic",
-    name: "Academic Staff Promotion Portal",
-    shortName: "Academic Portal",
-    description: "Submit and track your academic promotion application.",
+    name: "Teaching Staff Promotion Portal",
+    shortName: "Teaching Staff Portal",
+    description: "Submit and track your teaching staff promotion application.",
     longDescription:
-      "For lecturers and academic staff applying for promotion. Build your dossier, attach evidence and follow your application through every stage.",
+      "For lecturers and teaching staff applying for promotion. Build your dossier, attach evidence and follow your application through every stage.",
     audience: "Applicant",
     url: env("VITE_ACADEMIC_PORTAL_URL", "/login"),
     internal: true,
@@ -79,11 +79,11 @@ const PORTALS: Portal[] = [
   },
   {
     id: "non-academic",
-    name: "Non-Academic Staff Promotion Portal",
-    shortName: "Non-Academic Portal",
+    name: "Non-Teaching Staff Promotion Portal",
+    shortName: "Non-Teaching Staff Portal",
     description: "Promotion applications for administrative & technical staff.",
     longDescription:
-      "Designed for senior members and senior staff outside the teaching cadre. Tailored sections, criteria and evidence for non-academic promotion.",
+      "Designed for senior members and senior staff outside the teaching cadre. Tailored sections, criteria and evidence for non-teaching staff promotion.",
     audience: "Applicant",
     url: env("VITE_NON_ACADEMIC_PORTAL_URL", "http://localhost:3002"),
     icon: Users,
@@ -96,9 +96,9 @@ const PORTALS: Portal[] = [
   },
   {
     id: "academic-assessment",
-    name: "Academic Assessment Portal",
-    shortName: "Academic Assessor",
-    description: "For assessors reviewing academic promotion applications.",
+    name: "Teaching Staff Assessment Portal",
+    shortName: "Teaching Staff Assessor",
+    description: "For assessors reviewing teaching staff promotion applications.",
     longDescription:
       "Internal & external assessors score applications, leave structured feedback and submit recommendations through a secure, auditable workflow.",
     audience: "Assessor",
@@ -113,11 +113,11 @@ const PORTALS: Portal[] = [
   },
   {
     id: "non-academic-assessment",
-    name: "Non-Academic Assessment Portal",
-    shortName: "Non-Academic Assessor",
-    description: "Assessment workspace for non-academic promotion panels.",
+    name: "Non-Teaching Staff Assessment Portal",
+    shortName: "Non-Teaching Staff Assessor",
+    description: "Assessment workspace for non-teaching staff promotion panels.",
     longDescription:
-      "Panel members evaluate non-academic applications using role-specific criteria, with side-by-side evidence preview and decision capture.",
+      "Panel members evaluate non-teaching staff applications using role-specific criteria, with side-by-side evidence preview and decision capture.",
     audience: "Assessor",
     url: env("VITE_NON_ACADEMIC_ASSESSMENT_PORTAL_URL", "http://localhost:3004"),
     icon: ClipboardCheck,
@@ -839,7 +839,7 @@ const FAQ = () => {
   const items = [
     {
       q: "Which portal should I use?",
-      a: "If you are a lecturer or academic staff member applying for promotion, use the Academic Promotion Portal. Administrative and technical staff should use the Non-Academic Promotion Portal. Assessors and committee members have dedicated assessment portals, and OSASS administrators use the Admin Portal.",
+      a: "If you are a lecturer or teaching staff member applying for promotion, use the Teaching Staff Promotion Portal. Administrative and technical staff should use the Non-Teaching Staff Promotion Portal. Assessors and committee members have dedicated assessment portals, and OSASS administrators use the Admin Portal.",
     },
     {
       q: "Do I need separate accounts for each portal?",
@@ -967,7 +967,7 @@ const Support = () => (
         <div className="rounded-2xl border border-primary-foreground/15 bg-primary-foreground/5 p-8 backdrop-blur">
           <h3 className="font-serif text-2xl font-semibold">Ready to begin?</h3>
           <p className="mt-3 text-sm text-primary-foreground/75 leading-relaxed">
-            Sign in to the academic promotion portal to start a new application
+            Sign in to the Teaching Staff Promotion Portal to start a new application
             or check the status of an existing one.
           </p>
           <div className="mt-6 flex flex-col sm:flex-row gap-3">

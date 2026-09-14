@@ -14,8 +14,8 @@ public static class PerformanceComputationService
         totalScore switch
         {
             >= 80 => PerformanceRating.High,
-            >= 60 and < 90 => PerformanceRating.Good,
-            >= 50 and < 70 => PerformanceRating.Adequate,
+            >= 60 and < 80 => PerformanceRating.Good,
+            >= 50 and < 60 => PerformanceRating.Adequate,
             >= 0 and < 50 => PerformanceRating.Inadequate,
             _ => throw new ArgumentOutOfRangeException(nameof(totalScore),
                 "Total points must be between 0 and 100.")

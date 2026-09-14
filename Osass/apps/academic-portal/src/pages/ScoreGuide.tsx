@@ -1,7 +1,48 @@
+import { useEffect, useState } from "react";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { academicService } from "@/services/academicService";
+
+interface PublicationIndicator {
+    id: string;
+    name: string;
+    score: number;
+    scoreForPresentation: number;
+}
+
+interface ServicePosition {
+    id: string;
+    name: string;
+    score: number;
+    serviceType: string;
+}
 
 const ScoreGuide = () => {
+    const [publicationIndicators, setPublicationIndicators] = useState<PublicationIndicator[]>([]);
+    const [servicePositions, setServicePositions] = useState<ServicePosition[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [indicatorsRes, positionsRes] = await Promise.all([
+                    academicService.getPublicationIndicators(),
+                    academicService.getServicePositions(),
+                ]);
+                if (indicatorsRes.success) setPublicationIndicators(indicatorsRes.data);
+                if (positionsRes.success) setServicePositions(positionsRes.data);
+            } catch (error) {
+                console.error("Failed to load scoring reference data:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
+
+    const universityServices = servicePositions.filter((p) => p.serviceType === "University");
+    const nationalInternationalServices = servicePositions.filter((p) => p.serviceType !== "University");
+
     return (
         <div className="max-w-5xl mx-auto space-y-16 animate-fade-in pb-20">
             <div className="border-b border-border/30 pb-8">
@@ -153,28 +194,30 @@ const ScoreGuide = () => {
                 <div>
                     <h4 className="font-semibold text-sm mb-3 text-foreground">Publication Types</h4>
                     <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader className="bg-muted/50">
-                                <TableRow>
-                                    <TableHead>Publication Type</TableHead>
-                                    <TableHead className="text-right">Max Points</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {[
-                                    { type: "Refereed Journal Paper", points: "14" },
-                                    { type: "Conference Paper (Peer Reviewed)", points: "10 (+2 if presenter)" },
-                                    { type: "Published Book", points: "8" },
-                                    { type: "Peer Reviewed Document / Patent", points: "6" },
-                                    { type: "Book Chapter", points: "½ of full publication" },
-                                ].map((row) => (
-                                    <TableRow key={row.type} className="hover:bg-muted/30 transition-colors">
-                                        <TableCell className="font-bold text-sm">{row.type}</TableCell>
-                                        <TableCell className="text-right font-medium">{row.points}</TableCell>
+                        {loading ? (
+                            <div className="flex items-center justify-center py-8">
+                                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                            </div>
+                        ) : (
+                            <Table>
+                                <TableHeader className="bg-muted/50">
+                                    <TableRow>
+                                        <TableHead>Publication Type</TableHead>
+                                        <TableHead className="text-right">Max Points</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {publicationIndicators.map((row) => (
+                                        <TableRow key={row.id} className="hover:bg-muted/30 transition-colors">
+                                            <TableCell className="font-bold text-sm">{row.name}</TableCell>
+                                            <TableCell className="text-right font-medium">
+                                                {row.score}{row.scoreForPresentation > 0 ? ` (+${row.scoreForPresentation} if presenter)` : ""}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        )}
                     </div>
                 </div>
 
@@ -219,30 +262,30 @@ const ScoreGuide = () => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-5 border border-border/50 rounded-lg bg-background/50">
-                        <h4 className="font-semibold text-sm mb-3 text-foreground">University Service Activities</h4>
-                        <ul className="text-xs space-y-1.5 text-muted-foreground list-disc pl-5 leading-relaxed">
-                            <li>Administrative positions (Dean: 40 pts; HOD: 20–30 pts)</li>
-                            <li>Statutory committee membership (6–10 pts)</li>
-                            <li>Non-statutory committee membership (2–8 pts)</li>
-                            <li>Thesis/project assessment (1–3 pts)</li>
-                            <li>Laboratory supervision (4 pts)</li>
-                            <li>Resource mobilization (10 pts)</li>
-                        </ul>
+                {loading ? (
+                    <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                     </div>
-                    <div className="p-5 border border-border/50 rounded-lg bg-background/50">
-                        <h4 className="font-semibold text-sm mb-3 text-foreground">National & International Service</h4>
-                        <ul className="text-xs space-y-1.5 text-muted-foreground list-disc pl-5 leading-relaxed">
-                            <li>Professional body leadership (8–10 pts)</li>
-                            <li>Editorial board membership (8–10 pts)</li>
-                            <li>External examiner/assessor (10 pts)</li>
-                            <li>Journal paper review (4 pts)</li>
-                            <li>Consultancy work (4 pts)</li>
-                            <li>International recognition (4 pts)</li>
-                        </ul>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-5 border border-border/50 rounded-lg bg-background/50">
+                            <h4 className="font-semibold text-sm mb-3 text-foreground">University Service Activities</h4>
+                            <ul className="text-xs space-y-1.5 text-muted-foreground list-disc pl-5 leading-relaxed">
+                                {universityServices.map((p) => (
+                                    <li key={p.id}>{p.name} ({p.score} pts)</li>
+                                ))}
+                            </ul>
+                        </div>
+                        <div className="p-5 border border-border/50 rounded-lg bg-background/50">
+                            <h4 className="font-semibold text-sm mb-3 text-foreground">National & International Service</h4>
+                            <ul className="text-xs space-y-1.5 text-muted-foreground list-disc pl-5 leading-relaxed">
+                                {nationalInternationalServices.map((p) => (
+                                    <li key={p.id}>{p.name} ({p.score} pts)</li>
+                                ))}
+                            </ul>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 <div className="p-5 border-l-2 border-destructive/50 bg-destructive/5 rounded-lg">
                     <h4 className="font-semibold text-sm mb-3 text-foreground flex items-center gap-2"><AlertCircle className="w-4 h-4" /> Minimum Service Thresholds</h4>

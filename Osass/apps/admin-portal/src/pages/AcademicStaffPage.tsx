@@ -31,8 +31,7 @@ import {
   useDeleteStaff,
 } from '@/hooks/useAdminData';
 import type { Staff, StaffFormData } from '@/types';
-
-const TITLES = ['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.'];
+import { TITLES } from '@/lib/constants';
 
 const emptyForm: StaffFormData = {
   email: '',
@@ -146,12 +145,12 @@ export default function AcademicStaffPage() {
   return (
     <AdminLayout>
       <PageHeader
-        title="Academic Staff"
-        description="Manage academic staff members"
+        title="Teaching Staff"
+        description="Manage teaching staff members"
         actions={
           <Button onClick={handleOpenCreate}>
             <Plus className="mr-2 h-4 w-4" />
-            Add Academic Staff
+            Add Teaching Staff
           </Button>
         }
       />
@@ -159,10 +158,10 @@ export default function AcademicStaffPage() {
       <DataTable
         data={staff}
         columns={columns}
-        searchPlaceholder="Search academic staff..."
+        searchPlaceholder="Search teaching staff..."
         searchKeys={['firstName', 'lastName', 'email', 'staffId', 'position']}
         isLoading={isLoading}
-        emptyMessage="No academic staff found"
+        emptyMessage="No teaching staff found"
         actions={(member) => (
           <div className="flex items-center justify-end gap-2">
             <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(member)}>
@@ -178,7 +177,7 @@ export default function AcademicStaffPage() {
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingStaff ? 'Edit Academic Staff' : 'Add Academic Staff'}</DialogTitle>
+            <DialogTitle>{editingStaff ? 'Edit Teaching Staff' : 'Add Teaching Staff'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
@@ -345,7 +344,7 @@ export default function AcademicStaffPage() {
       <ConfirmDialog
         open={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
-        title="Delete Academic Staff"
+        title="Delete Teaching Staff"
         description={`Are you sure you want to delete "${deletingStaff?.firstName} ${deletingStaff?.lastName}"? This action cannot be undone.`}
         confirmLabel="Delete"
         onConfirm={handleDelete}

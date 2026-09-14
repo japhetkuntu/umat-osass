@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { GraduationCap, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { GoogleSignInButton } from '@/components/common/GoogleSignInButton';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [email, setEmail] = useState('');
@@ -29,6 +30,30 @@ export default function LoginPage() {
         toast({
           title: 'Login Failed',
           description: result.message || 'Invalid email or password',
+          variant: 'destructive',
+        });
+      }
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleCredential = async (idToken: string) => {
+    setIsSubmitting(true);
+    try {
+      const result = await loginWithGoogle(idToken);
+      if (result.success) {
+        navigate('/', { replace: true });
+      } else {
+        toast({
+          title: 'Google Sign-In Failed',
+          description: result.message || 'Unable to sign in with Google',
           variant: 'destructive',
         });
       }
@@ -103,6 +128,16 @@ export default function LoginPage() {
               </Link>
             </div>
           </form>
+
+          <div className="flex items-center gap-3 pt-4">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">Or</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+          <div className="pt-4">
+            <GoogleSignInButton onCredential={handleGoogleCredential} />
+          </div>
         </CardContent>
       </Card>
     </div>

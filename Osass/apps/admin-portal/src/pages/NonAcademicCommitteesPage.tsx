@@ -35,7 +35,7 @@ const COMMITTEE_TYPES = ['HOU', 'AAPSC', 'UAPC'];
 const COMMITTEE_LABELS: Record<string, string> = {
   HOU: 'Head of Unit',
   AAPSC: 'Administrative & Allied Professions Sub-Committee',
-  UAPC: 'University Academic Promotions Committee',
+  UAPC: 'University Teaching Staff Promotions Committee',
 };
 
 const emptyForm: NonAcademicCommitteeMemberFormData = {
@@ -167,8 +167,8 @@ export default function NonAcademicCommitteesPage() {
   return (
     <AdminLayout>
       <PageHeader
-        title="Non-Academic Committees"
-        description="Manage HOU, AAPSC, and UAPC committee members for non-academic staff promotions"
+        title="Non-Teaching Staff Committees"
+        description="Manage HOU, AAPSC, and UAPC committee members for non-teaching staff promotions"
         actions={
           <Button onClick={handleOpenCreate}>
             <Plus className="mr-2 h-4 w-4" />

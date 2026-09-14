@@ -181,7 +181,7 @@ export default function StaffUpdatesPage() {
     <AdminLayout>
       <PageHeader
         title="Staff Updates"
-        description="Manage announcements and updates visible on the academic portal"
+        description="Manage announcements and updates visible on the Teaching Staff Portal"
         actions={
           <Button onClick={handleOpenCreate}>
             <Plus className="mr-2 h-4 w-4" />
@@ -255,7 +255,7 @@ export default function StaffUpdatesPage() {
                       </div>
                       <h3 className="text-base font-semibold text-foreground mb-1">No updates yet</h3>
                       <p className="text-sm text-muted-foreground max-w-sm mb-4">
-                        Staff updates will appear here once created. These are shown to staff on the academic portal.
+                        Staff updates will appear here once created. These are shown to staff on the Teaching Staff Portal.
                       </p>
                       <Button size="sm" onClick={handleOpenCreate}>
                         <Plus className="mr-2 h-4 w-4" />
@@ -434,7 +434,7 @@ export default function StaffUpdatesPage() {
               <div className="space-y-0.5">
                 <Label htmlFor="visible">Visible on portal</Label>
                 <p className="text-sm text-muted-foreground">
-                  When enabled, this update is shown to staff on the academic portal
+                  When enabled, this update is shown to staff on the Teaching Staff Portal
                 </p>
               </div>
               <Switch

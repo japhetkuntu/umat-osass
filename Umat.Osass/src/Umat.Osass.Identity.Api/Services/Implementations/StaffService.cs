@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using Akka.Actor;
+using Google.Apis.Auth;
 using Mapster;
 using Microsoft.Extensions.Options;
 using Umat.Osass.Common.Sdk.Models;
@@ -33,6 +34,7 @@ public class StaffService : IStaffService
     private readonly IIdentityPgRepository<Staff> _staffRepository;
     private readonly EmailConfig _emailTemplates;
     private readonly ExtraConfig _extraConfig;
+    private readonly GoogleAuthConfig _googleAuthConfig;
     private readonly ILogger<StaffService> _logger;
     private readonly IIdentityPgRepository<Department> _departmentRepository;
     private readonly IIdentityPgRepository<Faculty> _facultyRepository;
@@ -50,6 +52,7 @@ public class StaffService : IStaffService
         IAuthService authService,
         IOptions<ExtraConfig> extraConfig,
         IOptions<EmailConfig> emailTemplates,
+        IOptions<GoogleAuthConfig> googleAuthConfig,
         IEmailNotificationService emailNotificationService,
         IIdentityPgRepository<Department> departmentRepository,
         IIdentityPgRepository<Faculty> facultyRepository,
@@ -69,6 +72,7 @@ public class StaffService : IStaffService
         _emailNotificationService = emailNotificationService;
         _extraConfig = extraConfig.Value;
         _emailTemplates = emailTemplates.Value;
+        _googleAuthConfig = googleAuthConfig.Value;
         _authService = authService;
         _actorSystem = actorSystem;
 
@@ -671,6 +675,83 @@ public class StaffService : IStaffService
         {
             _logger.LogError(e, "[CustomLoginAsync] Failed to login Staff");
             return new ApiResponse<StaffTokenResponse>("Failed to login Staff", 500);
+        }
+    }
+    public async Task<IApiResponse<StaffTokenResponse>> GoogleLoginAsync(OAuthRequest request)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(request.AccessToken))
+            {
+                return new ApiResponse<StaffTokenResponse>("Google credential is missing", 400);
+            }
+
+            GoogleJsonWebSignature.Payload payload;
+            try
+            {
+                payload = await GoogleJsonWebSignature.ValidateAsync(request.AccessToken,
+                    new GoogleJsonWebSignature.ValidationSettings
+                    {
+                        Audience = new[] { _googleAuthConfig.ClientId }
+                    });
+            }
+            catch (InvalidJwtException e)
+            {
+                _logger.LogWarning(e, "[GoogleLoginAsync] Invalid or expired Google token");
+                return new ApiResponse<StaffTokenResponse>("Invalid or expired Google sign-in token", 401);
+            }
+
+            if (!payload.EmailVerified)
+            {
+                return new ApiResponse<StaffTokenResponse>("Google account email is not verified", 401);
+            }
+
+            var email = payload.Email.ToLower();
+            var staff = await _staffRepository.GetOneAsync(x => x.Email.Equals(email));
+            if (staff == null)
+            {
+                return new ApiResponse<StaffTokenResponse>(
+                    "No account found for this Google email. Please contact an administrator to have your account set up.",
+                    404);
+            }
+
+            var accessToken = _authService.GenerateJwtToken(new AuthClaimData
+            {
+                Id = staff.Id,
+                Email = staff.Email,
+                FirstName = staff.FirstName!,
+                LastName = staff.LastName!,
+                SigningKey = _bearerTokenConfig.ApplicantSigningKey,
+                Issuer = _bearerTokenConfig.Issuer,
+                Audience = _bearerTokenConfig.Audience,
+                DurationInHours = _bearerTokenConfig.AccessTokenLifetime
+            });
+
+            var refreshToken = await GenerateCacheRefreshToken(staff.Id);
+            var response = new StaffTokenResponse()
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                MetaData = new StaffLoginMetaData
+                {
+                    Id = staff.Id,
+                    Email = staff.Email,
+                    FirstName = staff.FirstName!,
+                    LastName = staff.LastName!,
+                    Position = staff.Position,
+                    Title = staff.Title!,
+                    StaffCategory = staff.StaffCategory!,
+                    UniversityRole = staff.UniversityRole!,
+                    StaffId = staff.Id,
+                }
+            };
+
+            return response.ToOkApiResponse("Login successful");
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "[GoogleLoginAsync] Failed to login Staff via Google");
+            return new ApiResponse<StaffTokenResponse>("Failed to sign in with Google", 500);
         }
     }
     private string GetRefreshTokenKey(string staffId)

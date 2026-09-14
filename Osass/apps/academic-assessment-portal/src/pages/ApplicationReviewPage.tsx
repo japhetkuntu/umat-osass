@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import assessmentApi from "@/services/assessmentApi";
-import { getEffectivePublicationScore } from "@/lib/publicationScoring";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -381,9 +380,9 @@ export default function ApplicationReviewPage() {
     mutationFn: async () => {
       // Validate application status before submission
       if (!isPending) {
-        throw new Error("Application is not pending and cannot be rejected");
+        throw new Error("Application is not pending and cannot be returned");
       }
-      const response = await assessmentApi.rejectApplication(applicationId!, uapcReturnRemarks);
+      const response = await assessmentApi.returnApplicationForUpdate(applicationId!, uapcReturnRemarks);
       if (response.code < 200 || response.code >= 300) {
         throw new Error(response.message || "Failed to return application");
       }
@@ -431,8 +430,9 @@ export default function ApplicationReviewPage() {
     const records = application?.publications?.records || [];
     return {
       self: records.reduce((sum, r) => {
-        // Use applicant score if provided, otherwise use system score with presentation bonus
-        const score = r.applicantScore ?? getEffectivePublicationScore(r.systemGeneratedScore, r.isPresented);
+        // Use applicant score if provided, otherwise use the system score
+        // (already includes the presentation bonus when applicable)
+        const score = r.applicantScore ?? r.systemGeneratedScore;
         return sum + (score || 0);
       }, 0),
       dapc: records.reduce((sum, r) => sum + (r.dapcScore || 0), 0),
@@ -1091,7 +1091,7 @@ export default function ApplicationReviewPage() {
                               </div>
                               <ScoreBreakdown
                                 applicantScore={pub.applicantScore}
-                                systemScore={getEffectivePublicationScore(pub.systemGeneratedScore, pub.isPresented)}
+                                systemScore={pub.systemGeneratedScore}
                                 dapcScore={pub.dapcScore}
                                 dapcRemarks={pub.dapcRemarks}
                                 fapcScore={pub.fapcScore}
@@ -1136,11 +1136,11 @@ export default function ApplicationReviewPage() {
                                 <div className="flex items-center justify-between">
                                   <p className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">Presented at Conference / Forum</p>
                                   <div className="flex items-center gap-2 bg-white px-2.5 py-1 rounded-md">
-                                    <span className="text-[10px] text-emerald-700 font-semibold">Base: {pub.systemGeneratedScore}</span>
+                                    <span className="text-[10px] text-emerald-700 font-semibold">Base: {pub.systemGeneratedScore - (pub.presentationBonus || 0)}</span>
                                     <span className="text-emerald-300">+</span>
-                                    <span className="text-[10px] text-emerald-700 font-bold">2 Bonus</span>
+                                    <span className="text-[10px] text-emerald-700 font-bold">{pub.presentationBonus || 0} Bonus</span>
                                     <span className="text-emerald-300">=</span>
-                                    <span className="text-sm font-bold text-emerald-800">{getEffectivePublicationScore(pub.systemGeneratedScore, true)}</span>
+                                    <span className="text-sm font-bold text-emerald-800">{pub.systemGeneratedScore}</span>
                                   </div>
                                 </div>
                                 {pub.presentationEvidence && pub.presentationEvidence.length > 0 ? (

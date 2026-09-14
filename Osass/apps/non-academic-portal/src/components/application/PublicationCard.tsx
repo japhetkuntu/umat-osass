@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FilePreviewModal } from "../common/FilePreviewModal";
-import { getEffectivePublicationScore, calculatePublicationScore } from "@/lib/publicationScoring";
 
 export interface PublicationData {
   id: string;
@@ -15,6 +14,7 @@ export interface PublicationData {
   publicationTypeId: string;
   score: number; // Baseline / system-generated
   applicantScore: number | null;
+  presentationBonus?: number;
   remark: string | null;
   evidence: string[];
   newFiles?: File[];
@@ -112,9 +112,26 @@ export const PublicationCard = ({
       indicator?.name?.toLowerCase().includes("conference");
   };
 
+  // The selected indicator is the live, admin-configured source of truth for both
+  // the base score and the presentation bonus. Fall back to the persisted
+  // per-record values (set by the backend when the record was last saved) if the
+  // indicator list hasn't loaded or the indicator was since removed.
+  const getPresentationBonus = () => {
+    const indicator = indicators.find(i => i.id === publication.publicationTypeId);
+    return indicator?.scoreForPresentation ?? publication.presentationBonus ?? 0;
+  };
+
+  const getBaseScore = () => {
+    const indicator = indicators.find(i => i.id === publication.publicationTypeId);
+    if (indicator) return indicator.score;
+    return publication.isPresented
+      ? publication.score - (publication.presentationBonus || 0)
+      : publication.score;
+  };
+
   const getAdjustedBaseline = () => {
-    const base = publication.score;
-    return publication.isPresented ? base + 2 : base;
+    const base = getBaseScore();
+    return publication.isPresented ? base + getPresentationBonus() : base;
   };
 
   const handleRemoveDocument = (index: number, isNew: boolean) => {
@@ -250,13 +267,13 @@ export const PublicationCard = ({
                     <div className="flex items-center gap-2">
                       <TrendingUp className="w-3 h-3 text-secondary" />
                       <span className="text-[10px] font-bold text-secondary-dark italic">
-                        Guideline Baseline: {publication.score}
-                        {publication.isPresented && (
+                        Guideline Baseline: {getBaseScore()}
+                        {publication.isPresented && getPresentationBonus() > 0 && (
                           <>
                             <span className="text-primary/50 mx-1">+</span>
-                            <span>2 Bonus</span>
+                            <span>{getPresentationBonus()} Bonus</span>
                             <span className="text-primary/50 mx-1">=</span>
-                            <span className="font-bold text-secondary">{getEffectivePublicationScore(publication.score, true)}</span>
+                            <span className="font-bold text-secondary">{getAdjustedBaseline()}</span>
                           </>
                         )}
                       </span>
@@ -268,7 +285,7 @@ export const PublicationCard = ({
                       <div className="flex items-center justify-between p-3 bg-white/50 rounded-xl border border-primary/10">
                         <div className="space-y-0.5">
                           <Label className="text-xs font-bold text-foreground">Presented at Conference/Forum?</Label>
-                          <p className="text-[9px] text-muted-foreground italic">Grants +2 points bonus (Evidence required)</p>
+                          <p className="text-[9px] text-muted-foreground italic">Grants +{getPresentationBonus()} points bonus (Evidence required)</p>
                         </div>
                         <input
                           type="checkbox"
@@ -284,7 +301,7 @@ export const PublicationCard = ({
                             <TrendingUp className="w-3.5 h-3.5 text-secondary shrink-0" />
                             <div className="text-[10px] font-semibold text-secondary-dark flex items-center gap-1">
                               <span>Score impact:</span>
-                              <span className="bg-white px-1.5 py-0.5 rounded font-bold">{publication.applicantScore ?? 0} + 2 = {(publication.applicantScore ?? 0) + 2}</span>
+                              <span className="bg-white px-1.5 py-0.5 rounded font-bold">{publication.applicantScore ?? 0} + {getPresentationBonus()} = {(publication.applicantScore ?? 0) + getPresentationBonus()}</span>
                             </div>
                           </div>
                           <div className="space-y-2">
@@ -388,7 +405,7 @@ export const PublicationCard = ({
                           scoreDifference > 0 ? "text-secondary-dark" : "text-muted-foreground"
                         )}>
                           {scoreDifference > 0
-                            ? `This proposal exceeds the baseline by ${scoreDifference} pts. ${publication.isPresented ? "Bonus +2 from presentation included." : ""} Ensure the narrative justifies high impact.`
+                            ? `This proposal exceeds the baseline by ${scoreDifference} pts. ${publication.isPresented ? `Bonus +${getPresentationBonus()} from presentation included.` : ""} Ensure the narrative justifies high impact.`
                             : `Proposed value is ${Math.abs(scoreDifference)} pts below benchmark.`
                           }
                         </p>

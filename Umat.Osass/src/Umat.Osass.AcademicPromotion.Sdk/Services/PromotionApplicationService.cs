@@ -31,24 +31,6 @@ public static class PromotionApplicationService
     }
 
     /// <summary>
-    /// True when the applicant's current rank is below the minimum entry rank for academic promotion.
-    /// Used to surface a clear, accurate message to the user instead of a generic "top of ladder" notice.
-    /// </summary>
-    public static bool IsBelowEntryRank(string? currentPosition)
-    {
-        if (string.IsNullOrWhiteSpace(currentPosition)) return false;
-
-        return currentPosition.Trim().ToLowerInvariant() switch
-        {
-            "assistant lecturer"
-                or "teaching assistant"
-                or "tutor"
-                or "research assistant" => true,
-            _ => false
-        };
-    }
-
-    /// <summary>
     /// Human-readable message explaining why the applicant cannot promote.
     /// Returns a tailored message for below-entry ranks; otherwise the generic top-of-ladder message.
     /// </summary>

@@ -158,8 +158,8 @@ export default function AuditLogsPage() {
               <SelectContent>
                 <SelectItem value="all">All Platforms</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="academic">Academic</SelectItem>
-                <SelectItem value="non-academic">Non-Academic</SelectItem>
+                <SelectItem value="academic">Teaching Staff</SelectItem>
+                <SelectItem value="non-academic">Non-Teaching Staff</SelectItem>
               </SelectContent>
             </Select>
           </div>

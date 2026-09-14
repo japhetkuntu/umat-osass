@@ -11,7 +11,9 @@ public class RegisterRequest
     [Required]    public string LastName { get; set; }
 
     [Required]  public string Password { get; set; }
-    [Required]  public string ConfirmPassword { get; set; }
+    [Required]
+    [Compare("Password", ErrorMessage = "Passwords do not match.")]
+    public string ConfirmPassword { get; set; }
    [Required] public string Title { get; set; }
    [Required] public string Rank { get; set; }
    public string StaffCategory { get; set; } // Academic, Non-Academic

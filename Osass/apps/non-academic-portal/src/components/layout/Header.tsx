@@ -26,7 +26,7 @@ export const Header = ({ userName = "Dr. Kwame Mensah", onLogout, onChangePasswo
             </div>
             <div className="hidden sm:block">
               <h1 className="text-lg font-semibold text-foreground">UMaT</h1>
-              <p className="text-xs text-muted-foreground">Non-Academic Promotions</p>
+              <p className="text-xs text-muted-foreground">Non-Teaching Staff Promotions</p>
             </div>
           </div>
 

@@ -12,6 +12,7 @@
         <PackageReference Include="Akka.Cluster.Tools" Version="1.5.52" />
         <PackageReference Include="Akka.DependencyInjection" Version="1.5.52" />
         <PackageReference Include="ClosedXML" Version="0.105.0" />
+        <PackageReference Include="Google.Apis.Auth" Version="1.75.0" />
         <PackageReference Include="Mapster.DependencyInjection" Version="1.0.1" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.16" />
         <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />

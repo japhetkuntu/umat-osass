@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { GoogleSignInButton } from "@/components/common/GoogleSignInButton";
 
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -43,8 +44,17 @@ const Login = () => {
     setIsLoading(false);
   };
 
-  const handleScenarioClick = (email: string) => {
-    setFormData({ email, password: "demo123" });
+  const handleGoogleCredential = async (idToken: string) => {
+    setIsLoading(true);
+    const success = await loginWithGoogle(idToken);
+    if (success) {
+      toast({
+        title: "Welcome back!",
+        description: "You have successfully signed in with Google.",
+      });
+      navigate("/dashboard");
+    }
+    setIsLoading(false);
   };
 
   return (
@@ -67,7 +77,7 @@ const Login = () => {
               Staff Promotion Portal
             </h2>
             <p className="text-primary-foreground/70 text-base leading-relaxed">
-              Submit and track non-academic promotion applications for the University of Mines and Technology, Tarkwa.
+              Submit and track non-teaching staff promotion applications for the University of Mines and Technology, Tarkwa.
             </p>
           </div>
 
@@ -160,6 +170,14 @@ const Login = () => {
                   )}
                 </Button>
               </form>
+
+              <div className="flex items-center gap-3 pt-2">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">Or</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <GoogleSignInButton onCredential={handleGoogleCredential} />
             </div>
           </div>
 

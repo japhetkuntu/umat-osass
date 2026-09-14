@@ -115,8 +115,8 @@ export default function AcademicPositionsPage() {
   return (
     <AdminLayout>
       <PageHeader
-        title="Academic Positions"
-        description="Manage academic promotion positions and requirements"
+        title="Teaching Staff Positions"
+        description="Manage teaching staff promotion positions and requirements"
         actions={
           <Button onClick={handleOpenCreate}>
             <Plus className="mr-2 h-4 w-4" />
@@ -131,7 +131,7 @@ export default function AcademicPositionsPage() {
         searchPlaceholder="Search positions..."
         searchKeys={['name', 'previousPosition']}
         isLoading={isLoading}
-        emptyMessage="No academic positions found"
+        emptyMessage="No teaching staff positions found"
         actions={(position) => (
           <div className="flex items-center justify-end gap-2">
             <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(position)}>
@@ -148,7 +148,7 @@ export default function AcademicPositionsPage() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editingPosition ? 'Edit Academic Position' : 'Add Academic Position'}
+              {editingPosition ? 'Edit Teaching Staff Position' : 'Add Teaching Staff Position'}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">

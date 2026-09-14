@@ -49,6 +49,17 @@ class ApiClient {
 
         try {
             let response = await fetch(url, interceptedConfig);
+
+            if (response.status === 401) {
+                const newToken = await refreshAccessToken();
+                if (newToken) {
+                    const retryHeaders = new Headers(interceptedConfig.headers);
+                    retryHeaders.set("Authorization", `Bearer ${newToken}`);
+                    interceptedConfig = { ...interceptedConfig, headers: retryHeaders };
+                    response = await fetch(url, interceptedConfig);
+                }
+            }
+
             response = await this.applyResponseInterceptors(response);
 
             const text = await response.text();
@@ -123,69 +134,52 @@ const authInterceptor: RequestInterceptor = (config) => {
 identityClient.addRequestInterceptor(authInterceptor);
 nonAcademicClient.addRequestInterceptor(authInterceptor);
 
-// Standard Response Interceptor: Handle 401 Unauthorized with token refresh
-let isRefreshing = false;
-let refreshSubscribers: Array<(token: string) => void> = [];
+// Token refresh: shared across both clients so a 401 from either API triggers
+// at most one in-flight refresh call, and every request waiting on it is
+// retried with the new token once the refresh resolves (see request() above).
+let refreshPromise: Promise<string | null> | null = null;
 
-const onRefreshed = (token: string) => {
-    refreshSubscribers.forEach(callback => callback(token));
-    refreshSubscribers = [];
-};
+const performRefresh = async (): Promise<string | null> => {
+    const refreshToken = localStorage.getItem("osass_refresh_token");
+    const accessToken = localStorage.getItem("osass_token");
 
-const addRefreshSubscriber = (callback: (token: string) => void) => {
-    refreshSubscribers.push(callback);
-};
-
-const unauthorizedInterceptor: ResponseInterceptor = async (response) => {
-    if (response.status === 401) {
-        const refreshToken = localStorage.getItem("osass_refresh_token");
-        const accessToken = localStorage.getItem("osass_token");
-
-        if (refreshToken && accessToken && !isRefreshing) {
-            isRefreshing = true;
-
-            try {
-                // Attempt to refresh the token
-                const refreshResponse = await fetch(`${IDENTITY_API_URL}/Staffs/refreshtoken`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ accessToken, refreshToken })
-                });
-
-                if (refreshResponse.ok) {
-                    const data = await refreshResponse.json();
-                    if (data.success && data.data?.accessToken) {
-                        localStorage.setItem("osass_token", data.data.accessToken);
-                        if (data.data.refreshToken) {
-                            localStorage.setItem("osass_refresh_token", data.data.refreshToken);
-                        }
-                        onRefreshed(data.data.accessToken);
-                        isRefreshing = false;
-                        return response;
-                    }
-                }
-            } catch (error) {
-                console.error("Token refresh failed:", error);
-            }
-
-            // Refresh failed - logout user
-            isRefreshing = false;
-            localStorage.removeItem("osass_token");
-            localStorage.removeItem("osass_refresh_token");
-            window.location.href = "/login";
-        } else if (refreshToken && !isRefreshing) {
-            // Already refreshing or no token, queue the request
-            return new Promise(resolve => {
-                addRefreshSubscriber((token: string) => {
-                    const headers = new Headers(response.headers);
-                    headers.set("Authorization", `Bearer ${token}`);
-                    resolve(response);
-                });
-            });
-        }
+    if (!refreshToken || !accessToken) {
+        return null;
     }
-    return response;
+
+    try {
+        const refreshResponse = await fetch(`${IDENTITY_API_URL}/Staffs/refreshtoken`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ accessToken, refreshToken })
+        });
+
+        if (refreshResponse.ok) {
+            const data = await refreshResponse.json();
+            if (data.success && data.data?.accessToken) {
+                localStorage.setItem("osass_token", data.data.accessToken);
+                if (data.data.refreshToken) {
+                    localStorage.setItem("osass_refresh_token", data.data.refreshToken);
+                }
+                return data.data.accessToken;
+            }
+        }
+    } catch (error) {
+        console.error("Token refresh failed:", error);
+    }
+
+    // Refresh failed - logout user
+    localStorage.removeItem("osass_token");
+    localStorage.removeItem("osass_refresh_token");
+    window.location.href = "/login";
+    return null;
 };
 
-identityClient.addResponseInterceptor(unauthorizedInterceptor);
-nonAcademicClient.addResponseInterceptor(unauthorizedInterceptor);
+const refreshAccessToken = (): Promise<string | null> => {
+    if (!refreshPromise) {
+        refreshPromise = performRefresh().finally(() => {
+            refreshPromise = null;
+        });
+    }
+    return refreshPromise;
+};

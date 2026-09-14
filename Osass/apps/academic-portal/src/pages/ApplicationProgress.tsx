@@ -60,13 +60,13 @@ const ApplicationProgress = () => {
 
       if (index < currentStageIndex) {
         status = "completed";
-        if (stage.id === "submitted") {
-          date = "January 23, 2026"; // Mock date
+        if (stage.id === "submitted" && activeApp?.applicationStartDate) {
+          date = new Date(activeApp.applicationStartDate).toLocaleDateString();
         }
       } else if (index === currentStageIndex) {
         status = "current";
-        if (stage.id === "submitted") {
-          date = "January 23, 2026";
+        if (stage.id === "submitted" && activeApp?.applicationStartDate) {
+          date = new Date(activeApp.applicationStartDate).toLocaleDateString();
         }
       }
 
@@ -82,8 +82,7 @@ const ApplicationProgress = () => {
   const timelineSteps = getTimelineSteps();
 
   const handleDownloadPDF = () => {
-    // In real app, this would trigger PDF download
-    console.log("Downloading PDF...");
+    toast.info("PDF download isn't available yet. Please check back soon.");
   };
 
   const handleLogout = () => {

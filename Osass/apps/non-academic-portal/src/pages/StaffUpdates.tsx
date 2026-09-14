@@ -199,7 +199,7 @@ const StaffUpdates = () => {
                 <section className="mt-12 bg-muted/30 p-8 rounded-xl border border-dashed border-border/50 text-center">
                     <p className="text-xs text-muted-foreground font-semibold uppercase tracking-widest mb-2">Institutional Resource</p>
                     <h3 className="text-2xl font-bold text-foreground mb-2">UMaT Repository</h3>
-                    <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">Access the complete archive of university statutes, regulations, and non-academic staff policies.</p>
+                    <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">Access the complete archive of university statutes, regulations, and non-teaching staff policies.</p>
                     <Button variant="outline" className="gap-2">
                         Visit Portal <ExternalLink className="w-4 h-4" />
                     </Button>

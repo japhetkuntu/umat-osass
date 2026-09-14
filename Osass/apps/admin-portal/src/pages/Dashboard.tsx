@@ -41,20 +41,20 @@ const statGroups: StatGroup[] = [
     ],
   },
   {
-    title: 'Academic',
+    title: 'Teaching Staff',
     cards: [
-      { key: 'totalAcademicStaff', label: 'Academic Staff', icon: Users, href: '/academic-staff', color: 'text-emerald-600' },
-      { key: 'totalAcademicPositions', label: 'Academic Positions', icon: TrendingUp, href: '/academic-positions', color: 'text-teal-600' },
+      { key: 'totalAcademicStaff', label: 'Teaching Staff', icon: Users, href: '/academic-staff', color: 'text-emerald-600' },
+      { key: 'totalAcademicPositions', label: 'Teaching Staff Positions', icon: TrendingUp, href: '/academic-positions', color: 'text-teal-600' },
       { key: 'totalServicePositions', label: 'Service Positions', icon: Briefcase, href: '/service-positions', color: 'text-cyan-600' },
       { key: 'totalPublicationIndicators', label: 'Publication Indicators', icon: BookOpen, href: '/publication-types', color: 'text-sky-600' },
       { key: 'totalAcademicCommitteeMembers', label: 'Committee Members', icon: UserCheck, href: '/committees', color: 'text-blue-500' },
     ],
   },
   {
-    title: 'Non-Academic',
+    title: 'Non-Teaching Staff',
     cards: [
-      { key: 'totalNonAcademicStaff', label: 'Non-Academic Staff', icon: Users, href: '/non-academic-staff', color: 'text-orange-600' },
-      { key: 'totalNonAcademicPositions', label: 'Positions', icon: TrendingUp, href: '/non-academic-positions', color: 'text-amber-600' },
+      { key: 'totalNonAcademicStaff', label: 'Non-Teaching Staff', icon: Users, href: '/non-academic-staff', color: 'text-orange-600' },
+      { key: 'totalNonAcademicPositions', label: 'Non-Teaching Staff Positions', icon: TrendingUp, href: '/non-academic-positions', color: 'text-amber-600' },
       { key: 'totalNonAcademicCommitteeMembers', label: 'Committee Members', icon: UserCheck, href: '/non-academic-committees', color: 'text-yellow-600' },
     ],
   },

@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/Header";
 import { ApplicationStatusBadge } from "@/components/promotion/ApplicationStatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { academicService } from "@/services/academicService";
+import { toast } from "sonner";
 
 const ApplicationView = () => {
   const navigate = useNavigate();
@@ -84,7 +85,7 @@ const ApplicationView = () => {
   const applicationStatus = (activeApp?.applicationStatus || "submitted") as any;
 
   const handleDownloadPDF = () => {
-    console.log("Downloading PDF...");
+    toast.info("PDF download isn't available yet. Please check back soon.");
   };
 
   if (loading) {

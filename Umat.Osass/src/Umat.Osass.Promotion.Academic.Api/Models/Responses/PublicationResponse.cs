@@ -14,6 +14,7 @@ public class PublicationResponseData
     public int Year { get; set; }
     public double Score { get; set; }
     public double ApplicantScore { get; set; }
+    public double PresentationBonus { get; set; }
     public string PublicationTypeId { get; set; } = string.Empty;
     public string? Remark { get; set; }
     public bool IsPresented { get; set; } = false;

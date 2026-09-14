@@ -271,6 +271,7 @@ public class PublicationCategoryService : IPublicationCategoryService
             Year = data.Year,
             Score = data.SystemGeneratedScore,
             ApplicantScore = data.ApplicantScore ?? 0,
+            PresentationBonus = data.PresentationBonus,
             PublicationTypeId = data.PublicationTypeId,
             Remark = data.ApplicantRemarks,
             IsPresented = data.IsPresented,

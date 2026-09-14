@@ -9,11 +9,11 @@ const Guide = () => {
       <section className="flex items-center justify-between border-b border-border pb-6 print:hidden">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
-            Academic Staff Portal
+            Teaching Staff Portal
           </p>
           <h1 className="text-3xl font-serif font-semibold text-foreground">User Guide</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            A complete walkthrough of the OSASS Academic Staff Portal features.
+            A complete walkthrough of the OSASS Teaching Staff Portal features.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-2 shrink-0">
@@ -24,7 +24,7 @@ const Guide = () => {
 
       {/* Print-only header */}
       <div className="hidden print:block mb-6">
-        <h1 className="text-2xl font-bold">OSASS — Academic Staff Portal: User Guide</h1>
+        <h1 className="text-2xl font-bold">OSASS — Teaching Staff Portal: User Guide</h1>
         <p className="text-sm text-gray-500">University of Mines and Technology (UMaT)</p>
         <hr className="my-4" />
       </div>
@@ -58,7 +58,7 @@ const Guide = () => {
         title="Overview"
       >
         <p>
-          The OSASS Academic Staff Portal is your self-service platform for applying for academic
+          The OSASS Teaching Staff Portal is your self-service platform for applying for teaching staff
           promotion at UMaT. It guides you through every step — from assessing your eligibility,
           building your application with evidence, to tracking your submission through the
           committee review process.
@@ -226,7 +226,7 @@ const Guide = () => {
       <div className="border-t border-border pt-6 text-xs text-muted-foreground">
         <p>
           For technical support, contact the OSASS system administrator. For promotion policy
-          queries, contact your Faculty Academic Promotions Sub-Committee (FAPSC) coordinator.
+          queries, contact your Faculty Teaching Staff Promotions Sub-Committee (FAPSC) coordinator.
         </p>
       </div>
 

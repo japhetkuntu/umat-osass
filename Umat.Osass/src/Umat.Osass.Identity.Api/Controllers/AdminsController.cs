@@ -60,6 +60,29 @@ namespace Umat.Osass.Identity.Api.Controllers
         }
 
         /// <summary>
+        /// Authenticates an admin user using a Google ID token.
+        /// </summary>
+        /// <remarks>
+        /// Endpoint: POST /api/v1/admins/login/google
+        /// Verifies the Google ID token and links it to an existing admin account by email.
+        /// </remarks>
+        /// <param name="request">The OAuth request containing the Google ID token.</param>
+        /// <returns>Admin token response with admin authentication details.</returns>
+        /// <response code="200">Login successful.</response>
+        /// <response code="401">Invalid Google token or unverified email.</response>
+        /// <response code="404">No admin account found for this Google email.</response>
+        /// <response code="500">Internal server error.</response>
+        [HttpPost("login/google")]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ApiResponse<AdminTokenResponse>))]
+        [AllowAnonymous]
+        public async Task<IActionResult> LoginGoogle([FromBody] OAuthRequest request)
+        {
+            var response = await _adminService.GoogleLoginAsync(request);
+            return StatusCode(response.Code, response);
+        }
+
+        /// <summary>
         /// Refreshes the admin access token using refresh token.
         /// </summary>
         /// <remarks>

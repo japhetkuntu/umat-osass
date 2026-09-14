@@ -92,7 +92,21 @@ public class ApplicationService : IApplicationService
             if (staffRes == null)
                 return new ApiResponse<EligibilityResponse>("Sorry you're not authorized to access this platform", 400);
 
-            var nextPosition = PromotionApplicationService.GetNextPosition(staffRes.Position);
+            // Position chain is driven from the DB PreviousPosition field first (admin-configurable);
+            // the hardcoded ladder only covers cross-track convergence cases (e.g. Senior Research
+            // Fellow -> Associate Professor) where the DB's single PreviousPosition field on the
+            // target position can't represent multiple incoming tracks.
+            var positionRes = await _positionRepository.GetOneAsync(p =>
+                p.PreviousPosition != null && p.PreviousPosition.ToLower() == staffRes.Position.ToLower());
+
+            var nextPosition = positionRes?.Name;
+            if (positionRes == null)
+            {
+                nextPosition = PromotionApplicationService.GetNextPosition(staffRes.Position);
+                if (nextPosition != null)
+                    positionRes = await _positionRepository.GetOneAsync(p => p.Name.ToLower() == nextPosition.ToLower());
+            }
+
             if (nextPosition == null)
                 return new EligibilityResponse
                 {
@@ -101,7 +115,6 @@ public class ApplicationService : IApplicationService
                     ActiveApplication = activeApplication
                 }.ToOkApiResponse(PromotionApplicationService.IneligibilityMessage(staffRes.Position));
 
-            var positionRes = await _positionRepository.GetOneAsync(p => p.Name.ToLower() == nextPosition.ToLower());
             if (positionRes == null)
                 return new EligibilityResponse
                 {
@@ -256,10 +269,19 @@ public class ApplicationService : IApplicationService
         var department = await _departmentRepository.GetByIdAsync(staff.DepartmentId);
         var faculty = await _facultyRepository.GetByIdAsync(staff.FacultyId);
         var school = await _schoolRepository.GetByIdAsync(staff.SchoolId);
-        var nextPosition = PromotionApplicationService.GetNextPosition(staff.Position) ?? string.Empty;
-        if (string.IsNullOrEmpty(nextPosition))
-            throw new InvalidOperationException(PromotionApplicationService.IneligibilityMessage(staff.Position));
-        var positionRes = await _positionRepository.GetOneAsync(p => p.Name.ToLower() == nextPosition.ToLower());
+        // Position chain is driven from the DB PreviousPosition field first (admin-configurable);
+        // the hardcoded ladder only covers cross-track convergence cases (e.g. Senior Research
+        // Fellow -> Associate Professor) where the DB's single PreviousPosition field on the
+        // target position can't represent multiple incoming tracks.
+        var positionRes = await _positionRepository.GetOneAsync(p =>
+            p.PreviousPosition != null && p.PreviousPosition.ToLower() == staff.Position.ToLower());
+        if (positionRes == null)
+        {
+            var nextPosition = PromotionApplicationService.GetNextPosition(staff.Position);
+            if (string.IsNullOrEmpty(nextPosition))
+                throw new InvalidOperationException(PromotionApplicationService.IneligibilityMessage(staff.Position));
+            positionRes = await _positionRepository.GetOneAsync(p => p.Name.ToLower() == nextPosition.ToLower());
+        }
 
         var academicApplication = new AcademicPromotionApplication
         {

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Akka.Actor;
+using Google.Apis.Auth;
 using Mapster;
 using Microsoft.Extensions.Options;
 using Umat.Osass.Common.Sdk.Models;
@@ -33,9 +34,10 @@ public class AdminService : IAdminService
     private readonly EmailConfig _emailTemplates;
     private readonly IEmailNotificationService _emailNotificationService;
     private readonly ExtraConfig _extraConfig;
+    private readonly GoogleAuthConfig _googleAuthConfig;
     private readonly ILogger<AdminService> _logger;
     private readonly ActorSystem _actorSystem;
-  
+
     private readonly IRedisService<IdentityRedisConfig> _redisService;
 
     public AdminService(ILogger<AdminService> logger,
@@ -45,9 +47,10 @@ public class AdminService : IAdminService
         IAuthService authService,
         IOptions<ExtraConfig> extraConfig,
         IOptions<EmailConfig> emailTemplates,
+        IOptions<GoogleAuthConfig> googleAuthConfig,
         IEmailNotificationService emailNotificationService,
         ActorSystem actorSystem
-    
+
     )
     {
         _logger = logger;
@@ -57,6 +60,7 @@ public class AdminService : IAdminService
         _authService = authService;
         _extraConfig = extraConfig.Value;
         _emailTemplates = emailTemplates.Value;
+        _googleAuthConfig = googleAuthConfig.Value;
         _emailNotificationService = emailNotificationService;
         _authService = authService;
         _actorSystem = actorSystem;
@@ -393,6 +397,81 @@ public class AdminService : IAdminService
         {
             _logger.LogError(e, "[CustomLoginAsync] Failed to login Admin");
             return new ApiResponse<AdminTokenResponse>("Failed to login Admin", 500);
+        }
+    }
+
+    public async Task<IApiResponse<AdminTokenResponse>> GoogleLoginAsync(OAuthRequest request)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(request.AccessToken))
+            {
+                return new ApiResponse<AdminTokenResponse>("Google credential is missing", 400);
+            }
+
+            GoogleJsonWebSignature.Payload payload;
+            try
+            {
+                payload = await GoogleJsonWebSignature.ValidateAsync(request.AccessToken,
+                    new GoogleJsonWebSignature.ValidationSettings
+                    {
+                        Audience = new[] { _googleAuthConfig.ClientId }
+                    });
+            }
+            catch (InvalidJwtException e)
+            {
+                _logger.LogWarning(e, "[GoogleLoginAsync] Invalid or expired Google token");
+                return new ApiResponse<AdminTokenResponse>("Invalid or expired Google sign-in token", 401);
+            }
+
+            if (!payload.EmailVerified)
+            {
+                return new ApiResponse<AdminTokenResponse>("Google account email is not verified", 401);
+            }
+
+            var email = payload.Email.ToLower();
+            var admin = await _adminRepository.GetOneAsync(x => x.Email.Equals(email));
+            if (admin == null)
+            {
+                return new ApiResponse<AdminTokenResponse>(
+                    "No admin account found for this Google email. Please contact an administrator to have your account set up.",
+                    404);
+            }
+
+            var accessToken = _authService.GenerateJwtToken(new AuthClaimData
+            {
+                Id = admin.Id,
+                Email = admin.Email,
+                FirstName = admin.FirstName!,
+                LastName = admin.LastName!,
+                SigningKey = _bearerTokenConfig.AdminSigningKey,
+                Issuer = _bearerTokenConfig.Issuer,
+                Audience = _bearerTokenConfig.Audience,
+                DurationInHours = _bearerTokenConfig.AccessTokenLifetime,
+                Role = admin.Role,
+            });
+
+            var refreshToken = await GenerateCacheRefreshToken(admin.Id);
+            var response = new AdminTokenResponse()
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                MetaData = new AdminLoginMetaData()
+                {
+                    Id = admin.Id,
+                    Email = admin.Email,
+                    FirstName = admin.FirstName!,
+                    LastName = admin.LastName!,
+                    Role = admin.Role,
+                }
+            };
+
+            return response.ToOkApiResponse("Login successful");
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "[GoogleLoginAsync] Failed to login Admin via Google");
+            return new ApiResponse<AdminTokenResponse>("Failed to sign in with Google", 500);
         }
     }
     public async Task<IApiResponse<PagedResult<AdminProfileResponse>>> GetAllAdminsAsync(int page, int pageSize, string? search)

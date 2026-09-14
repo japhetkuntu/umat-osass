@@ -30,8 +30,7 @@ import {
   useDeleteStaff,
 } from '@/hooks/useAdminData';
 import type { Staff, StaffFormData } from '@/types';
-
-const TITLES = ['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.'];
+import { TITLES } from '@/lib/constants';
 
 const emptyForm: StaffFormData = {
   email: '',
@@ -146,12 +145,12 @@ export default function NonAcademicStaffPage() {
   return (
     <AdminLayout>
       <PageHeader
-        title="Non-Academic Staff"
-        description="Manage non-academic staff members"
+        title="Non-Teaching Staff"
+        description="Manage non-teaching staff members"
         actions={
           <Button onClick={handleOpenCreate}>
             <Plus className="mr-2 h-4 w-4" />
-            Add Non-Academic Staff
+            Add Non-Teaching Staff
           </Button>
         }
       />
@@ -159,10 +158,10 @@ export default function NonAcademicStaffPage() {
       <DataTable
         data={staff}
         columns={columns}
-        searchPlaceholder="Search non-academic staff..."
+        searchPlaceholder="Search non-teaching staff..."
         searchKeys={['firstName', 'lastName', 'email', 'staffId', 'position']}
         isLoading={isLoading}
-        emptyMessage="No non-academic staff found"
+        emptyMessage="No non-teaching staff found"
         actions={(member) => (
           <div className="flex items-center justify-end gap-2">
             <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(member)}>
@@ -178,7 +177,7 @@ export default function NonAcademicStaffPage() {
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingStaff ? 'Edit Non-Academic Staff' : 'Add Non-Academic Staff'}</DialogTitle>
+            <DialogTitle>{editingStaff ? 'Edit Non-Teaching Staff' : 'Add Non-Teaching Staff'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
@@ -338,7 +337,7 @@ export default function NonAcademicStaffPage() {
       <ConfirmDialog
         open={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
-        title="Delete Non-Academic Staff"
+        title="Delete Non-Teaching Staff"
         description={`Are you sure you want to delete "${deletingStaff?.firstName} ${deletingStaff?.lastName}"? This action cannot be undone.`}
         confirmLabel="Delete"
         onConfirm={handleDelete}

@@ -63,7 +63,7 @@ export default function ChangePasswordPage() {
             <ClipboardCheck className="w-7 h-7 text-primary" />
           </div>
           <h1 className="text-3xl font-serif font-semibold text-foreground">Assessment Portal</h1>
-          <p className="text-sm text-muted-foreground">Academic Promotion Committee Review System</p>
+          <p className="text-sm text-muted-foreground">Teaching Staff Promotion Committee Review System</p>
         </div>
 
         {/* Card */}
@@ -184,7 +184,7 @@ export default function ChangePasswordPage() {
 
         <p className="text-center text-xs text-muted-foreground">
           <div>University of Mines and Technology (UMaT)</div>
-          <div>Academic Promotion Assessment System</div>
+          <div>Teaching Staff Promotion Assessment System</div>
         </p>
       </div>
     </div>

@@ -61,8 +61,9 @@ export interface PublicationResponseData {
     id: string;
     title: string;
     year: number;
-    score: number; // Baseline
+    score: number; // Baseline (already includes presentationBonus when presented)
     applicantScore: number;
+    presentationBonus: number;
     publicationTypeId: string;
     remark: string | null;
     evidence: string[];

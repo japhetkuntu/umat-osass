@@ -98,19 +98,45 @@ public class AssessmentService : IAssessmentService
                 return new ApiResponse<AssessmentDashboardResponse>(memberInfoRes.Message, memberInfoRes.Code);
 
             var memberInfo = memberInfoRes.Data!;
-            int pendingCount = 0;
+            var committeeTypes = memberInfo.Committees.Select(c => c.CommitteeType).ToList();
+
+            // Get activities for these committees (drives in-progress/completed/returned
+            // counts below, and the recent-activity feed) - there's no "under review" or
+            // "not approved" application status in this workflow, so the activity log is
+            // the real signal for committee progress.
+            var committeeActivities = await _activityRepository.GetAllAsync(
+                a => committeeTypes.Contains(a.CommitteeLevel));
+
+            var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var thisMonthActivities = committeeActivities.Where(a => a.ActivityDate >= monthStart).ToList();
+
+            int pendingCount = 0, inProgressCount = 0;
 
             foreach (var committee in memberInfo.Committees)
             {
                 var reviewStatus = GetReviewStatusForCommittee(committee.CommitteeType);
                 var applications = await GetApplicationsForCommittee(committee);
-                pendingCount += applications.Count(a => a.ReviewStatus == reviewStatus);
+                var pendingApplications = applications.Where(a => a.ReviewStatus == reviewStatus).ToList();
+
+                pendingCount += pendingApplications.Count;
+
+                // "In progress" = pending applications this committee has already started
+                // scoring or commenting on, but hasn't advanced, returned, or approved yet.
+                var pendingIds = pendingApplications.Select(a => a.Id).ToHashSet();
+                inProgressCount += committeeActivities
+                    .Where(a => a.CommitteeLevel == committee.CommitteeType
+                        && (a.ActivityType == NonAcademicAssessmentActivityTypes.ScoreSubmitted || a.ActivityType == NonAcademicAssessmentActivityTypes.CommentAdded)
+                        && pendingIds.Contains(a.ApplicationId))
+                    .Select(a => a.ApplicationId)
+                    .Distinct()
+                    .Count();
             }
 
-            var recentActivities = await _activityRepository.GetAllAsync(a =>
-                memberInfo.Committees.Select(c => c.CommitteeType).Contains(a.CommitteeLevel));
+            int completedCount = thisMonthActivities.Count(a =>
+                a.ActivityType == NonAcademicAssessmentActivityTypes.ApplicationAdvanced || a.ActivityType == NonAcademicAssessmentActivityTypes.ApplicationApproved);
+            int returnedCount = thisMonthActivities.Count(a => a.ActivityType == NonAcademicAssessmentActivityTypes.ApplicationReturned);
 
-            var recentSummaries = recentActivities
+            var recentSummaries = committeeActivities
                 .OrderByDescending(a => a.ActivityDate)
                 .Take(10)
                 .Select(a => new RecentActivitySummary
@@ -126,6 +152,9 @@ public class AssessmentService : IAssessmentService
             {
                 MemberInfo = memberInfo,
                 PendingApplicationsCount = pendingCount,
+                InProgressCount = inProgressCount,
+                CompletedThisMonthCount = completedCount,
+                ReturnedCount = returnedCount,
                 RecentActivities = recentSummaries
             }.ToOkApiResponse();
         }
@@ -295,10 +324,9 @@ public class AssessmentService : IAssessmentService
             if (committeeType == null)
                 return new ApiResponse<bool>("This application is not currently in an active review stage", 400);
 
-            // Verify application has not reached a terminal state (returned, approved, or rejected)
+            // Verify application is not sitting with the applicant (returned) or already approved
             if (application.ApplicationStatus == ApplicationStatusTypes.Returned
-                || application.ApplicationStatus == ApplicationStatusTypes.Approved
-                || application.ApplicationStatus == ApplicationStatusTypes.NotApproved)
+                || application.ApplicationStatus == ApplicationStatusTypes.Approved)
                 return new ApiResponse<bool>("Application has already been processed and cannot be assessed", 400);
 
             var committee = await _committeeRepository.GetOneAsync(c => c.StaffId == auth.Id && c.CommitteeType == committeeType);
@@ -363,10 +391,9 @@ public class AssessmentService : IAssessmentService
             if (committeeType == null)
                 return new ApiResponse<bool>("This application is not currently in an active review stage", 400);
 
-            // Verify application has not reached a terminal state (returned, approved, or rejected)
+            // Verify application is not sitting with the applicant (returned) or already approved
             if (application.ApplicationStatus == ApplicationStatusTypes.Returned
-                || application.ApplicationStatus == ApplicationStatusTypes.Approved
-                || application.ApplicationStatus == ApplicationStatusTypes.NotApproved)
+                || application.ApplicationStatus == ApplicationStatusTypes.Approved)
                 return new ApiResponse<bool>("Application has already been processed and cannot be commented on", 400);
 
             var committee = await _committeeRepository.GetOneAsync(c => c.StaffId == auth.Id && c.CommitteeType == committeeType);
@@ -581,7 +608,7 @@ public class AssessmentService : IAssessmentService
         }
     }
 
-    public async Task<IApiResponse<bool>> RejectApplication(AuthData auth, string applicationId, string reason)
+    public async Task<IApiResponse<bool>> ReturnApplicationForUpdate(AuthData auth, string applicationId, string reason)
     {
         try
         {
@@ -954,6 +981,7 @@ public class AssessmentService : IAssessmentService
                 Id = m.Id, Title = m.Title, Year = m.Year, MaterialTypeName = m.MaterialTypeName,
                 ApplicantScore = m.ApplicantScore, ApplicantRemarks = m.ApplicantRemarks,
                 SystemGeneratedScore = m.SystemGeneratedScore,
+                PresentationBonus = m.PresentationBonus,
                 IsPresented = m.IsPresented,
                 PresentationEvidence = m.PresentationEvidence.Select(x => _storageService.GetFileUrl(x)).ToList(),
                 HouScore = m.HouScore, HouRemarks = m.HouRemarks,

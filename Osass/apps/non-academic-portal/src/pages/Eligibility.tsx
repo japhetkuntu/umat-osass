@@ -71,22 +71,16 @@ const Eligibility = () => {
     const t = getPerformanceLevel(appState?.performanceAtWorkPerformance);
     const p = getPerformanceLevel(appState?.knowledgeProfessionPerformance);
     const s = getPerformanceLevel(appState?.servicePerformance);
-    const levels = [t, p, s].sort((a, b) => b - a);
 
-    if (nextRank.includes("Senior Lecturer")) {
-      if (levels[0] >= 3 && levels[1] >= 3 && levels[2] >= 1) return true;
-      if (levels[0] >= 2 && levels[1] >= 2 && levels[2] >= 2) return true;
-      return false;
-    }
-    if (nextRank.includes("Associate Professor")) {
-      if (levels[0] >= 3 && levels[1] >= 3 && levels[2] >= 2) return true;
-      return false;
-    }
-    if (nextRank.includes("Professor")) {
-      if (levels[0] >= 3 && levels[1] >= 3 && levels[2] >= 3) return true;
-      return false;
-    }
-    return false;
+    const criteria = eligibility?.applicationRequirment?.performanceCriteria || [];
+    if (criteria.length === 0) return false;
+
+    // Each entry is "PerformanceAtWork,KnowledgeAndProfession,Service" — the applicant
+    // meets the requirement if they clear any one of the admin-configured combinations.
+    return criteria.some((combo) => {
+      const [reqT, reqP, reqS] = combo.split(",").map((label) => getPerformanceLevel(label));
+      return t >= reqT && p >= reqP && s >= reqS;
+    });
   };
 
   const isOutOfTurnEligible = () => {
@@ -339,15 +333,17 @@ const Eligibility = () => {
               </div>
 
               <div className="bg-info/5 border border-info/20 rounded p-3 mt-4">
-                <p className="text-xs text-foreground font-medium">{nextRank} requires:</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {nextRank.includes("Senior Lecturer") && 
-                    "Two High levels + one Adequate level OR three Good levels"}
-                  {nextRank.includes("Associate Professor") && 
-                    "Two High levels + one Good level"}
-                  {nextRank.includes("Professor") && 
-                    "Three High levels"}
-                </p>
+                <p className="text-xs text-foreground font-medium">{nextRank} requires one of the following combinations:</p>
+                <div className="mt-1 space-y-0.5">
+                  {(eligibility?.applicationRequirment?.performanceCriteria || []).map((combo, i) => {
+                    const [t, p, s] = combo.split(",");
+                    return (
+                      <p key={i} className="text-xs text-muted-foreground">
+                        Performance at Work: {t} + Knowledge &amp; Profession: {p} + Service: {s}
+                      </p>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 

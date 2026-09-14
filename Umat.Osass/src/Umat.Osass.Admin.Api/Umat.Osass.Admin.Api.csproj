@@ -40,7 +40,6 @@
       <ProjectReference Include="..\Umat.Osass.PostgresDb.Sdk\Umat.Osass.PostgresDb.Sdk.csproj" />
       <ProjectReference Include="..\Umat.Osass.Redis.Sdk\Umat.Osass.Redis.Sdk.csproj" />
       <ProjectReference Include="..\Umat.Osass.Storage.Sdk\Umat.Osass.Storage.Sdk.csproj" />
-      <ProjectReference Include="..\Umat.Osass.WhatsApp.Sdk\Umat.Osass.WhatsApp.Sdk.csproj" />
     </ItemGroup>
 
 </Project>

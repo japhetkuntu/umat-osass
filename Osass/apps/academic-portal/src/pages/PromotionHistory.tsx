@@ -294,7 +294,7 @@ const PromotionHistory = () => {
                               Promotion Approved!
                             </h4>
                             <p className="text-emerald-700 font-medium mb-3">
-                              Congratulations! Your promotion to <strong>{app.promotionPosition}</strong> has been approved by the University Academic Promotion Committee (UAPC).
+                              Congratulations! Your promotion to <strong>{app.promotionPosition}</strong> has been approved by the University Teaching Staff Promotion Committee (UAPC).
                             </p>
                             <div className="flex flex-wrap items-center gap-4 text-xs">
                               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">

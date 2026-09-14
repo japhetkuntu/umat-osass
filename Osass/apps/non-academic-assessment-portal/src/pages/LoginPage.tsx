@@ -7,13 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ClipboardCheck, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { GoogleSignInButton } from "@/components/common/GoogleSignInButton";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,6 +33,16 @@ export default function LoginPage() {
     setIsLoading(false);
   };
 
+  const handleGoogleCredential = async (idToken: string) => {
+    setIsLoading(true);
+    const success = await loginWithGoogle(idToken);
+    if (success) {
+      toast.success("Welcome to Assessment Portal");
+      navigate("/");
+    }
+    setIsLoading(false);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-8">
@@ -42,7 +53,7 @@ export default function LoginPage() {
           </div>
           <h1 className="text-3xl font-serif font-semibold text-foreground">Assessment Portal</h1>
           <p className="text-sm text-muted-foreground">
-            Non-Academic Promotion Committee Review System
+            Non-Teaching Staff Promotion Committee Review System
           </p>
         </div>
 
@@ -124,6 +135,14 @@ export default function LoginPage() {
             </div>
           </form>
 
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">Or</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+          <GoogleSignInButton onCredential={handleGoogleCredential} />
+
           <p className="text-xs text-muted-foreground text-center">
             Only committee members can access this portal
           </p>
@@ -132,7 +151,7 @@ export default function LoginPage() {
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground space-y-1">
           <div>University of Mines and Technology (UMaT)</div>
-          <div>Non-Academic Promotion Assessment System</div>
+          <div>Non-Teaching Staff Promotion Assessment System</div>
         </p>
       </div>
     </div>

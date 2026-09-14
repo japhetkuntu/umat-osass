@@ -148,13 +148,17 @@ public class AssessmentController : DefaultController
         return StatusCode(response.Code, response);
     }
 
-    [HttpPost("{applicationId}/reject")]
+    /// <summary>
+    /// Return application to the applicant for update (UAPC chairperson only).
+    /// This does not permanently reject the application - the applicant can edit and resubmit.
+    /// </summary>
+    [HttpPost("{applicationId}/return-for-update")]
     [Produces(MediaTypeNames.Application.Json)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ApiResponse<bool>))]
-    public async Task<IActionResult> RejectApplication(string applicationId, [FromBody] RejectApplicationRequest request)
+    public async Task<IActionResult> ReturnApplicationForUpdate(string applicationId, [FromBody] ReturnApplicationForUpdateRequest request)
     {
         var account = User.GetAccount();
-        var response = await _assessmentService.RejectApplication(account, applicationId, request.Reason);
+        var response = await _assessmentService.ReturnApplicationForUpdate(account, applicationId, request.Reason);
         return StatusCode(response.Code, response);
     }
 
@@ -174,7 +178,7 @@ public record ApproveApplicationRequest
     public string? Recommendation { get; init; }
 }
 
-public record RejectApplicationRequest
+public record ReturnApplicationForUpdateRequest
 {
     public required string Reason { get; init; }
 }

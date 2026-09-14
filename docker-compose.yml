@@ -120,9 +120,11 @@ services:
       BearerTokenConfig__Audience: ${JWT_AUDIENCE:-https://osass.umat.edu.gh}
       BearerTokenConfig__ApplicantSigningKey: ${JWT_APPLICANT_KEY:-zYxWvUtSrqPoNmLkJiHgFeDcBa987654}
       BearerTokenConfig__AdminSigningKey: ${JWT_ADMIN_KEY:-98765UtSrqPoNmLkJiHgFeDcBa987654}
+      # Google Sign-In (used to verify Google ID tokens server-side)
+      GoogleAuthConfig__ClientId: ${GOOGLE_CLIENT_ID:-}
       # Email
       EmailProvider__CurrentProvider: ${EMAIL_PROVIDER:-CustomEmail}
-      CustomEmailConfig__TemplatesDirectory: EmailTemplates
+      EmailConfig__TemplateDirectory: EmailTemplates
       EmailConfig__SmtpHost: ${SMTP_HOST:-localhost}
       EmailConfig__SmtpPort: ${SMTP_PORT:-1025}
       EmailConfig__UseSsl: ${USE_SSL:-false}
@@ -177,6 +179,8 @@ services:
       StorageConfig__Region: ${STORAGE_REGION:-us-east-1}
       StorageConfig__Endpoint: ${STORAGE_ENDPOINT:-http://minio:9000}
       StorageConfig__CdnEndpoint: ${STORAGE_CDN_ENDPOINT:-http://minio:9000}
+      EmailProvider__CurrentProvider: ${EMAIL_PROVIDER:-CustomEmail}
+      EmailConfig__TemplateDirectory: EmailTemplates
       EmailConfig__SmtpHost: ${SMTP_HOST:-localhost}
       EmailConfig__SmtpPort: ${SMTP_PORT:-1025}
       EmailConfig__UseSsl: ${USE_SSL:-false}
@@ -185,6 +189,8 @@ services:
       EmailConfig__SmtpPassword: ${SMTP_PASSWORD:-}
       EmailConfig__DefaultSenderName: ${SMTP_SENDER_NAME:-UMaT Osass}
       EmailConfig__DefaultSenderEmail: ${SMTP_SENDER_EMAIL:-noreply@osass.umat.edu.gh}
+    volumes:
+      - ./Osass/EmailTemplates:/app/EmailTemplates:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -229,7 +235,7 @@ services:
       StorageConfig__CdnEndpoint: ${STORAGE_CDN_ENDPOINT:-http://minio:9000}
       StorageConfig__FolderName: academic
       EmailProvider__CurrentProvider: ${EMAIL_PROVIDER:-CustomEmail}
-      CustomEmailConfig__TemplatesDirectory: EmailTemplates
+      EmailConfig__TemplateDirectory: EmailTemplates
       EmailConfig__SmtpHost: ${SMTP_HOST:-localhost}
       EmailConfig__SmtpPort: ${SMTP_PORT:-1025}
       EmailConfig__UseSsl: ${USE_SSL:-false}
@@ -284,7 +290,7 @@ services:
       StorageConfig__CdnEndpoint: ${STORAGE_CDN_ENDPOINT:-http://minio:9000}
       StorageConfig__FolderName: non-academic
       EmailProvider__CurrentProvider: ${EMAIL_PROVIDER:-CustomEmail}
-      CustomEmailConfig__TemplatesDirectory: EmailTemplates
+      EmailConfig__TemplateDirectory: EmailTemplates
       EmailConfig__SmtpHost: ${SMTP_HOST:-localhost}
       EmailConfig__SmtpPort: ${SMTP_PORT:-1025}
       EmailConfig__UseSsl: ${USE_SSL:-false}
@@ -322,6 +328,7 @@ services:
         VITE_ACADEMIC_ASSESSMENT_PORTAL_URL: ${VITE_ACADEMIC_ASSESSMENT_PORTAL_URL:-http://localhost:3003}
         VITE_NON_ACADEMIC_ASSESSMENT_PORTAL_URL: ${VITE_NON_ACADEMIC_ASSESSMENT_PORTAL_URL:-http://localhost:3004}
         VITE_ADMIN_PORTAL_URL: ${VITE_ADMIN_PORTAL_URL:-http://localhost:3001}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     image: osass/academic-portal:local
     container_name: osass-academic-portal
     restart: unless-stopped
@@ -336,6 +343,7 @@ services:
       args:
         VITE_IDENTITY_API_URL: ${VITE_IDENTITY_API_URL:-http://localhost:5001/api/v1}
         VITE_ADMIN_API_URL: ${VITE_ADMIN_API_URL:-http://localhost:5003/api/v1}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     image: osass/admin-portal:local
     container_name: osass-admin-portal
     restart: unless-stopped
@@ -350,6 +358,7 @@ services:
       args:
         VITE_IDENTITY_API_URL: ${VITE_IDENTITY_API_URL:-http://localhost:5001/api/v1}
         VITE_NON_ACADEMIC_API_URL: ${VITE_NON_ACADEMIC_API_URL:-http://localhost:5006/api/v1}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     image: osass/non-academic-portal:local
     container_name: osass-non-academic-portal
     restart: unless-stopped
@@ -364,6 +373,7 @@ services:
       args:
         VITE_IDENTITY_API_URL: ${VITE_IDENTITY_API_URL:-http://localhost:5001/api/v1}
         VITE_ACADEMIC_API_URL: ${VITE_ACADEMIC_API_URL:-http://localhost:5004/api/v1}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     image: osass/academic-assessment-portal:local
     container_name: osass-academic-assessment-portal
     restart: unless-stopped
@@ -378,6 +388,7 @@ services:
       args:
         VITE_IDENTITY_API_URL: ${VITE_IDENTITY_API_URL:-http://localhost:5001/api/v1}
         VITE_NON_ACADEMIC_API_URL: ${VITE_NON_ACADEMIC_API_URL:-http://localhost:5006/api/v1}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     image: osass/non-academic-assessment-portal:local
     container_name: osass-non-academic-assessment-portal
     restart: unless-stopped

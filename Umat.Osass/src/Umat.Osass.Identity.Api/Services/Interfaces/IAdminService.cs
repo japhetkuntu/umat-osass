@@ -63,6 +63,14 @@ public interface IAdminService
     Task<IApiResponse<AdminTokenResponse>> AccountLoginAsync(LoginRequest request);
 
     /// <summary>
+    /// Authenticates an admin using a Google ID token.
+    /// Verifies the token with Google, then links to an existing admin account by email.
+    /// </summary>
+    /// <param name="request">The OAuth request containing the Google ID token.</param>
+    /// <returns>An API response containing JWT tokens and admin details.</returns>
+    Task<IApiResponse<AdminTokenResponse>> GoogleLoginAsync(OAuthRequest request);
+
+    /// <summary>
     /// Retrieves a paged list of all admin accounts.
     /// </summary>
     Task<IApiResponse<PagedResult<AdminProfileResponse>>> GetAllAdminsAsync(int page, int pageSize, string? search);

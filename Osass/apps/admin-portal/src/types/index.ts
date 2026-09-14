@@ -108,7 +108,7 @@ export interface CommitteeMember extends BaseEntity {
   staffId: string;
   staffName?: string;
   staffEmail?: string;
-  committeeType: string; // "DAPC" | "FAPC" | "UAPC"
+  committeeType: string; // "DAPC" | "FAPSC" | "UAPC"
   canSubmitReviewedApplication: boolean;
   isChairperson: boolean;
   departmentId?: string;

@@ -18,6 +18,6 @@ public interface IAssessmentService
     Task<IApiResponse<bool>> AdvanceApplication(AuthData auth, AdvanceApplicationRequest request);
     Task<IApiResponse<List<ActivityHistoryItem>>> GetActivityHistory(AuthData auth, string applicationId);
     Task<IApiResponse<bool>> ApproveApplication(AuthData auth, string applicationId, string? recommendation);
-    Task<IApiResponse<bool>> RejectApplication(AuthData auth, string applicationId, string reason);
+    Task<IApiResponse<bool>> ReturnApplicationForUpdate(AuthData auth, string applicationId, string reason);
     Task<IApiResponse<PromotionValidationResponse>> ValidateForPromotion(AuthData auth, string applicationId);
 }

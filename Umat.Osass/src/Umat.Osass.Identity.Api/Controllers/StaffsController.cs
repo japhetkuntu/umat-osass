@@ -103,6 +103,59 @@ namespace Umat.Osass.Identity.Api.Controllers
         }
 
         /// <summary>
+        /// Authenticates a staff member using a Google ID token.
+        /// </summary>
+        [HttpPost("login/google")]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ApiResponse<StaffTokenResponse>))]
+        [AllowAnonymous]
+        public async Task<IActionResult> LoginGoogle([FromBody] OAuthRequest request)
+        {
+            var response = await _staffService.GoogleLoginAsync(request);
+            return StatusCode(response.Code, response);
+        }
+
+        /// <summary>
+        /// Authenticates an academic staff member using a Google ID token. Non-academic staff are denied access.
+        /// </summary>
+        [HttpPost("login/academic/google")]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ApiResponse<StaffTokenResponse>))]
+        [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ApiResponse<object>))]
+        [AllowAnonymous]
+        public async Task<IActionResult> LoginAcademicGoogle([FromBody] OAuthRequest request)
+        {
+            var response = await _staffService.GoogleLoginAsync(request);
+            if (response.Code == StatusCodes.Status200OK &&
+                !string.Equals(response.Data?.MetaData?.StaffCategory, "Academic", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    new { message = "Access denied. This portal is for academic staff only." });
+            }
+            return StatusCode(response.Code, response);
+        }
+
+        /// <summary>
+        /// Authenticates a non-academic staff member using a Google ID token. Academic staff are denied access.
+        /// </summary>
+        [HttpPost("login/non-academic/google")]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ApiResponse<StaffTokenResponse>))]
+        [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ApiResponse<object>))]
+        [AllowAnonymous]
+        public async Task<IActionResult> LoginNonAcademicGoogle([FromBody] OAuthRequest request)
+        {
+            var response = await _staffService.GoogleLoginAsync(request);
+            if (response.Code == StatusCodes.Status200OK &&
+                !string.Equals(response.Data?.MetaData?.StaffCategory, "Non-Academic", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    new { message = "Access denied. This portal is for non-academic staff only." });
+            }
+            return StatusCode(response.Code, response);
+        }
+
+        /// <summary>
         /// Registers a new customer account.
         /// </summary>
         /// <remarks>
