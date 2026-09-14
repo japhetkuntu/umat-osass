@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { format } from "date-fns";
 import { ArrowLeft, Eye, Download, FileText, Send, Loader2, AlertCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/layout/Header";
@@ -54,6 +55,10 @@ const ApplicationProgress = () => {
       (s) => s.id === currentReviewStage
     );
 
+    const submittedDate = activeApp?.applicationStartDate
+      ? format(new Date(activeApp.applicationStartDate), "MMMM d, yyyy")
+      : undefined;
+
     return stages.map((stage, index) => {
       let status: "completed" | "current" | "upcoming" = "upcoming";
       let date: string | undefined;
@@ -61,12 +66,12 @@ const ApplicationProgress = () => {
       if (index < currentStageIndex) {
         status = "completed";
         if (stage.id === "submitted") {
-          date = "January 23, 2026"; // Mock date
+          date = submittedDate;
         }
       } else if (index === currentStageIndex) {
         status = "current";
         if (stage.id === "submitted") {
-          date = "January 23, 2026";
+          date = submittedDate;
         }
       }
 
@@ -82,8 +87,7 @@ const ApplicationProgress = () => {
   const timelineSteps = getTimelineSteps();
 
   const handleDownloadPDF = () => {
-    // In real app, this would trigger PDF download
-    console.log("Downloading PDF...");
+    toast.info("PDF download isn't available yet. Please check back soon.");
   };
 
   const handleLogout = () => {

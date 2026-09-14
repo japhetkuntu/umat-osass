@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Lock, Download, GraduationCap, BookOpen, Users, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/layout/Header";
 import { ApplicationStatusBadge } from "@/components/promotion/ApplicationStatusBadge";
@@ -83,7 +84,7 @@ const ApplicationView = () => {
   const applicationStatus = (activeApp?.applicationStatus || "submitted") as any;
 
   const handleDownloadPDF = () => {
-    console.log("Downloading PDF...");
+    toast.info("PDF download isn't available yet. Please check back soon.");
   };
 
   if (loading) {

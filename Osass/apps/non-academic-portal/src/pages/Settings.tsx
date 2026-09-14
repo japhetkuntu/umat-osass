@@ -1,18 +1,50 @@
-import { User, Bell, Shield, Smartphone } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { User, Bell, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+
+interface NotificationPreferences {
+    emailNotifications: boolean;
+    systemAnnouncements: boolean;
+}
+
+const DEFAULT_PREFERENCES: NotificationPreferences = {
+    emailNotifications: true,
+    systemAnnouncements: true,
+};
+
+const getPreferencesKey = (userId: string) => `osass_notification_prefs_${userId}`;
 
 const Settings = () => {
     const { user, eligibility } = useAuth();
     const { toast } = useToast();
+    const navigate = useNavigate();
+    const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_PREFERENCES);
+
+    useEffect(() => {
+        if (!user) return;
+        try {
+            const stored = localStorage.getItem(getPreferencesKey(user.id));
+            if (stored) {
+                setPreferences(JSON.parse(stored));
+            }
+        } catch {
+            // fall back to defaults if stored value is corrupted
+        }
+    }, [user]);
 
     const handleSave = () => {
+        if (user) {
+            localStorage.setItem(getPreferencesKey(user.id), JSON.stringify(preferences));
+        }
         toast({
             title: "Settings saved",
-            description: "Your profile preferences have been updated.",
+            description: "Your notification preferences have been updated.",
         });
     };
 
@@ -64,18 +96,24 @@ const Settings = () => {
                                 <p className="font-bold">Email Notifications</p>
                                 <p className="text-sm text-muted-foreground">Receive updates about your promotion application status.</p>
                             </div>
-                            <div className="w-12 h-6 bg-primary rounded-full relative">
-                                <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full" />
-                            </div>
+                            <Switch
+                                checked={preferences.emailNotifications}
+                                onCheckedChange={(checked) =>
+                                    setPreferences((prev) => ({ ...prev, emailNotifications: checked }))
+                                }
+                            />
                         </div>
                         <div className="flex items-center justify-between py-2">
                             <div>
                                 <p className="font-bold">System Announcements</p>
                                 <p className="text-sm text-muted-foreground">Stay informed about institutional policy changes.</p>
                             </div>
-                            <div className="w-12 h-6 bg-primary rounded-full relative">
-                                <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full" />
-                            </div>
+                            <Switch
+                                checked={preferences.systemAnnouncements}
+                                onCheckedChange={(checked) =>
+                                    setPreferences((prev) => ({ ...prev, systemAnnouncements: checked }))
+                                }
+                            />
                         </div>
                     </div>
                 </section>
@@ -87,7 +125,11 @@ const Settings = () => {
                     </div>
 
                     <div className="card-elevated p-8">
-                        <Button variant="outline" className="border-primary text-primary hover:bg-primary/5">
+                        <Button
+                            variant="outline"
+                            className="border-primary text-primary hover:bg-primary/5"
+                            onClick={() => navigate("/change-password")}
+                        >
                             Change System Password
                         </Button>
                     </div>

@@ -224,6 +224,12 @@ public class StaffService : IStaffService
             }
             var newStaff = staff.Adapt<Staff>();
             newStaff.UpdatedAt = DateTime.UtcNow;
+            // Self-registration doesn't collect an org unit yet; an admin assigns
+            // Department/School later. These columns are NOT NULL, so backfill blanks.
+            newStaff.SchoolId ??= "";
+            newStaff.DepartmentId ??= "";
+            newStaff.Position ??= "";
+            newStaff.PreviousPosition ??= "";
             var addedResult = await _staffRepository.AddAsync(newStaff);
             if (addedResult < 1)
                 return new ApiResponse<StaffTokenResponse>("Failed to verify Email", 500);
@@ -252,10 +258,15 @@ public class StaffService : IStaffService
                 RefreshToken = refreshToken,
                 MetaData = new StaffLoginMetaData
                 {
-                    Id = staff.Id,
-                    Email = staff.Email,
-                    FirstName = staff.FirstName!,
-                    LastName = staff.LastName!
+                    Id = newStaff.Id,
+                    Email = newStaff.Email,
+                    FirstName = newStaff.FirstName!,
+                    LastName = newStaff.LastName!,
+                    Position = newStaff.Position,
+                    Title = newStaff.Title!,
+                    StaffCategory = newStaff.StaffCategory!,
+                    UniversityRole = newStaff.UniversityRole!,
+                    StaffId = newStaff.Id,
                 }
             };
 
