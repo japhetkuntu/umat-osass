@@ -63,6 +63,7 @@ const baseNavigationItems: (NavItem | NavGroup)[] = [
     items: [
       { title: 'Teaching Staff', href: '/academic-staff', icon: Users },
       { title: 'Teaching Staff Positions', href: '/academic-positions', icon: TrendingUp },
+      { title: 'Service Categories', href: '/service-categories', icon: Layers },
       { title: 'Service Positions', href: '/service-positions', icon: Briefcase },
       { title: 'Publication Indicators', href: '/publication-types', icon: BookOpen },
       { title: 'Teaching Staff Committees', href: '/committees', icon: UserCheck },

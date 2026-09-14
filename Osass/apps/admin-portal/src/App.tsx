@@ -14,6 +14,7 @@ import DepartmentsPage from "./pages/DepartmentsPage";
 import AcademicStaffPage from "./pages/AcademicStaffPage";
 import NonAcademicStaffPage from "./pages/NonAcademicStaffPage";
 import AcademicPositionsPage from "./pages/AcademicPositionsPage";
+import ServiceCategoriesPage from "./pages/ServiceCategoriesPage";
 import ServicePositionsPage from "./pages/ServicePositionsPage";
 import PublicationTypesPage from "./pages/PublicationTypesPage";
 import CommitteesPage from "./pages/CommitteesPage";
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/academic-staff" element={<ProtectedRoute><AcademicStaffPage /></ProtectedRoute>} />
               <Route path="/non-academic-staff" element={<ProtectedRoute><NonAcademicStaffPage /></ProtectedRoute>} />
               <Route path="/academic-positions" element={<ProtectedRoute><AcademicPositionsPage /></ProtectedRoute>} />
+              <Route path="/service-categories" element={<ProtectedRoute><ServiceCategoriesPage /></ProtectedRoute>} />
               <Route path="/service-positions" element={<ProtectedRoute><ServicePositionsPage /></ProtectedRoute>} />
               <Route path="/publication-types" element={<ProtectedRoute><PublicationTypesPage /></ProtectedRoute>} />
               <Route path="/committees" element={<ProtectedRoute><CommitteesPage /></ProtectedRoute>} />

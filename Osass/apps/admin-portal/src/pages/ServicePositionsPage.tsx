@@ -14,7 +14,15 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   useServicePositions,
+  useServiceCategories,
   useCreateServicePosition,
   useUpdateServicePosition,
   useDeleteServicePosition,
@@ -23,6 +31,7 @@ import type { ServicePosition, ServicePositionFormData } from '@/types';
 
 export default function ServicePositionsPage() {
   const { data: positions = [], isLoading, isError, refetch } = useServicePositions();
+  const { data: categories = [] } = useServiceCategories();
   const createMutation = useCreateServicePosition();
   const updateMutation = useUpdateServicePosition();
   const deleteMutation = useDeleteServicePosition();
@@ -34,12 +43,12 @@ export default function ServicePositionsPage() {
   const [formData, setFormData] = useState<ServicePositionFormData>({
     name: '',
     score: 0,
-    serviceType: '',
+    categoryId: '',
   });
 
   const handleOpenCreate = () => {
     setEditingPosition(null);
-    setFormData({ name: '', score: 0, serviceType: '' });
+    setFormData({ name: '', score: 0, categoryId: '' });
     setIsFormOpen(true);
   };
 
@@ -48,7 +57,7 @@ export default function ServicePositionsPage() {
     setFormData({
       name: position.name,
       score: position.score,
-      serviceType: position.serviceType,
+      categoryId: position.categoryId,
     });
     setIsFormOpen(true);
   };
@@ -76,7 +85,7 @@ export default function ServicePositionsPage() {
 
   const columns: Column<ServicePosition>[] = [
     { key: 'name', header: 'Name', className: 'font-medium' },
-    { key: 'serviceType', header: 'Service Type' },
+    { key: 'categoryName', header: 'Category' },
     {
       key: 'score',
       header: 'Score',
@@ -102,7 +111,7 @@ export default function ServicePositionsPage() {
         data={positions}
         columns={columns}
         searchPlaceholder="Search positions..."
-        searchKeys={['name', 'serviceType']}
+        searchKeys={['name', 'categoryName']}
         isLoading={isLoading}
         isError={isError}
         onRetry={refetch}
@@ -137,14 +146,20 @@ export default function ServicePositionsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="serviceType">Service Type</Label>
-                <Input
-                  id="serviceType"
-                  value={formData.serviceType}
-                  onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
-                  placeholder="e.g., Administrative"
-                  required
-                />
+                <Label htmlFor="categoryId">Category</Label>
+                <Select
+                  value={formData.categoryId}
+                  onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+                >
+                  <SelectTrigger id="categoryId">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="score">Score</Label>
@@ -163,7 +178,7 @@ export default function ServicePositionsPage() {
               <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">{editingPosition ? 'Update' : 'Create'}</Button>
+              <Button type="submit" disabled={!formData.categoryId}>{editingPosition ? 'Update' : 'Create'}</Button>
             </div>
           </form>
         </DialogContent>

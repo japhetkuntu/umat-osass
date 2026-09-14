@@ -26,6 +26,5 @@ public class ServiceOverview
 {
     public string Performance { get; set; } = string.Empty;
     public int TotalRecords { get; set; }
-    public double UniversityCommunityScore { get; set; }
-    public double NationalInternationalScore { get; set; }
+    public double TotalScore { get; set; }
 }

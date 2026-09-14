@@ -11,18 +11,17 @@ public class ServiceRecord:PerformanceWithBaseEntity
     public string ApplicantSchoolId { get; set; }
     public string ApplicantFacultyId { get; set; }
     public string Status { get; set; }
-    [Column(TypeName = "jsonb")] public List<ServiceRecordsData> ServiceToTheUniversity{ get; set; } = [];
-    [Column(TypeName = "jsonb")]   public  List<ServiceRecordsData>  ServiceToNationalAndInternational { get; set; } = [];
-    
+    [Column(TypeName = "jsonb")] public List<ServiceRecordItem> Services { get; set; } = [];
 }
 
 
-public class ServiceRecordsData:ScoreAndRemark
+public class ServiceRecordItem:ScoreAndRemark
 {
-        public string ServiceTitle { get; set; }
-        public string? Role { get; set; }
-        public string? Duration { get; set; }
-        public string? ServiceTypeId { get; set; }
-        public double? SystemGeneratedScore { get; set; }
-        public bool IsActing { get; set; } = false;
+        public string ServicePositionId { get; set; }
+        public string CategoryId { get; set; }
+        public string CategoryName { get; set; }
+        public string PositionName { get; set; }
+        public string? CommitteeName { get; set; }
+        public bool? IsActing { get; set; }
+        public double SystemGeneratedScore { get; set; }
 }

@@ -47,7 +47,7 @@ public class ServicesController : DefaultController
     [Produces(MediaTypeNames.Application.Json)]
     public async Task<IActionResult> GetServicePositions()
     {
-        var response = await _serviceService.GetServicePositions();
+        var response = await _serviceService.GetServiceCategoriesWithPositions();
         return StatusCode(response.Code, response);
     }
 }

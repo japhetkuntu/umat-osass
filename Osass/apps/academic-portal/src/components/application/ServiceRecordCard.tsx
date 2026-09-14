@@ -1,30 +1,29 @@
 import { useState } from "react";
-import { Upload, ChevronDown, ChevronUp, FileText, X, Trash2, Briefcase, Calendar, Award, Info, Users } from "lucide-react";
+import { Upload, ChevronDown, ChevronUp, FileText, X, Trash2, Briefcase, Award, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FilePreviewModal } from "../common/FilePreviewModal";
+import { ServiceCategoryOption } from "@/types/academic";
 
 export interface ServiceRecordData {
   id: string;
-  serviceTitle: string;
-  serviceTypeId: string;
-  role: string | null;
-  duration: string | null;
-  score: number; // Institutional weight / system-generated
-  applicantScore: number | null;
+  categoryId: string;
+  servicePositionId: string;
+  committeeName: string | null;
+  score: number; // System-computed, read-only
   remark: string | null;
   evidence: string[];
   newFiles?: File[];
   removedDocuments?: string[];
-  isActing?: boolean;
+  isActing: boolean | null;
 }
 
 interface ServiceRecordCardProps {
   record: ServiceRecordData;
-  positions: any[];
+  category: ServiceCategoryOption;
   onUpdate: (record: ServiceRecordData) => void;
   onDelete: (id: string) => void;
   isReadOnly?: boolean;
@@ -32,21 +31,27 @@ interface ServiceRecordCardProps {
 
 export const ServiceRecordCard = ({
   record,
-  positions,
+  category,
   onUpdate,
   onDelete,
   isReadOnly = false,
 }: ServiceRecordCardProps) => {
-  const [isExpanded, setIsExpanded] = useState(!record.serviceTitle);
+  const [isExpanded, setIsExpanded] = useState(!record.servicePositionId);
   const [previewFile, setPreviewFile] = useState<{ url: string; name: string } | null>(null);
+
+  const selectedPosition = category.positions.find(p => p.id === record.servicePositionId);
 
   const handleFieldChange = (field: keyof ServiceRecordData, value: any) => {
     const updated = { ...record, [field]: value };
-    if (field === "serviceTypeId") {
-      const position = positions.find(p => p.id === value);
-      if (position) {
-        updated.score = position.score;
-      }
+    const position = field === "servicePositionId"
+      ? category.positions.find(p => p.id === value)
+      : selectedPosition;
+
+    if (position) {
+      const multiplier = category.requiresDesignation
+        ? (updated.isActing ? category.actingScoreMultiplier : category.fullTimeScoreMultiplier)
+        : 1;
+      updated.score = position.score * multiplier;
     }
     onUpdate(updated);
   };
@@ -75,6 +80,10 @@ export const ServiceRecordCard = ({
     }
   };
 
+  const cardTitle = category.requiresCommitteeName
+    ? (record.committeeName || "Untitled Committee")
+    : (selectedPosition?.name || "Untitled Position");
+
   return (
     <div className={cn(
       "group transition-all duration-500 rounded-2xl border bg-card/40 backdrop-blur-sm overflow-hidden",
@@ -88,7 +97,7 @@ export const ServiceRecordCard = ({
                 "px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border",
                 isExpanded ? "bg-primary/10 border-primary/20 text-primary" : "bg-muted border-border text-muted-foreground"
               )}>
-                {positions.find(p => p.id === record.serviceTypeId)?.serviceType || "Service"}
+                {category.name}
               </div>
               <div className="w-1 h-1 rounded-full bg-border" />
               <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">
@@ -99,19 +108,18 @@ export const ServiceRecordCard = ({
               "text-xl font-bold transition-all truncate",
               isExpanded ? "text-primary translate-x-1" : "text-foreground group-hover:text-primary"
             )}>
-              {record.serviceTitle || "Untitled Service Contribution"}
+              {cardTitle}
             </h3>
             <div className="flex items-center gap-4 text-xs font-light text-muted-foreground">
               <span className="flex items-center gap-1.5 font-medium">
                 <Briefcase className="w-3.5 h-3.5 text-primary/60" />
-                {positions.find(p => p.id === record.serviceTypeId)?.name || "Select Role"}
+                {selectedPosition?.name || "Select Position"}
               </span>
-              {record.duration && (
+              {category.requiresDesignation && record.isActing !== null && (
                 <>
                   <div className="w-1 h-1 rounded-full bg-border" />
                   <span className="flex items-center gap-1.5 font-medium">
-                    <Calendar className="w-3.5 h-3.5 text-primary/60" />
-                    {record.duration}
+                    {record.isActing ? "Acting" : "Full-time"}
                   </span>
                 </>
               )}
@@ -120,14 +128,14 @@ export const ServiceRecordCard = ({
 
           <div className="flex items-center gap-6">
             <div className="flex flex-col items-end">
-              <span className="text-[9px] uppercase font-black tracking-[0.2em] text-muted-foreground/60 mb-1">Impact Value</span>
+              <span className="text-[9px] uppercase font-black tracking-[0.2em] text-muted-foreground/60 mb-1">Score</span>
               <div className={cn(
                 "px-4 py-1.5 rounded-xl border font-bold text-xl min-w-[60px] text-center transition-all shadow-sm",
-                record.applicantScore !== null
+                selectedPosition
                   ? "bg-primary/5 border-primary/30 text-primary scale-105"
                   : "bg-muted/50 border-border/50 text-muted-foreground"
               )}>
-                {record.applicantScore !== null ? record.applicantScore : "—"}
+                {selectedPosition ? record.score : "—"}
               </div>
             </div>
             <button
@@ -149,63 +157,36 @@ export const ServiceRecordCard = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Left: Detail Inputs */}
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label className="text-[10px] uppercase tracking-[0.2em] font-black text-primary/60">Activity / Initiative Title</Label>
-                  <Input
-                    placeholder="e.g. Chairperson, University ICT Committee"
-                    value={record.serviceTitle || ""}
-                    onChange={(e) => handleFieldChange("serviceTitle", e.target.value)}
-                    disabled={isReadOnly}
-                    className="bg-background/50 border-border/50 focus:border-primary focus:ring-primary/10 transition-all text-lg disabled:opacity-70 disabled:cursor-not-allowed"
-                  />
-                </div>
+                {category.requiresCommitteeName && (
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase tracking-[0.2em] font-black text-primary/60">Committee Name / Title</Label>
+                    <Input
+                      placeholder="e.g. University ICT Committee"
+                      value={record.committeeName || ""}
+                      onChange={(e) => handleFieldChange("committeeName", e.target.value)}
+                      disabled={isReadOnly}
+                      className="bg-background/50 border-border/50 focus:border-primary focus:ring-primary/10 transition-all text-lg disabled:opacity-70 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] uppercase tracking-[0.2em] font-black text-primary/60">Your Official Role / Position</Label>
+                  <Label className="text-[10px] uppercase tracking-[0.2em] font-black text-primary/60">Position</Label>
                   <select
-                    value={record.serviceTypeId || ""}
-                    onChange={(e) => handleFieldChange("serviceTypeId", e.target.value)}
+                    value={record.servicePositionId || ""}
+                    onChange={(e) => handleFieldChange("servicePositionId", e.target.value)}
                     disabled={isReadOnly}
                     className="flex h-10 w-full rounded-md border border-border/50 bg-background/50 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-light disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    <option value="">Select a role benchmark</option>
-                    {positions.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
+                    <option value="">Select a position</option>
+                    {category.positions.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} ({p.score} pts)</option>
                     ))}
                   </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] uppercase tracking-[0.2em] font-black text-primary/60">Position held</Label>
-                    <div className="relative">
-                      <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-                      <Input
-                        placeholder="e.g. Chairperson"
-                        value={record.role || ""}
-                        onChange={(e) => handleFieldChange("role", e.target.value)}
-                        disabled={isReadOnly}
-                        className="pl-10 bg-background/50 border-border/50 focus:border-primary focus:ring-primary/10 transition-all font-light disabled:opacity-70 disabled:cursor-not-allowed"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] uppercase tracking-[0.2em] font-black text-primary/60">Duration / Period</Label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-                      <Input
-                        placeholder="e.g. 2020 - 2022"
-                        value={record.duration || ""}
-                        onChange={(e) => handleFieldChange("duration", e.target.value)}
-                        disabled={isReadOnly}
-                        className="pl-10 bg-background/50 border-border/50 focus:border-primary focus:ring-primary/10 transition-all font-light disabled:opacity-70 disabled:cursor-not-allowed"
-                      />
-                    </div>
-                  </div>
-                </div>
-
                 <div className="space-y-2">
-                  <Label className="text-[10px] uppercase tracking-[0.2em] font-black text-primary/60">Impact & Contributions Narrative</Label>
+                  <Label className="text-[10px] uppercase tracking-[0.2em] font-black text-primary/60">Comments</Label>
                   <Textarea
                     placeholder="Describe the institutional or community impact of your service..."
                     value={record.remark || ""}
@@ -223,61 +204,70 @@ export const ServiceRecordCard = ({
                     <Award className="w-20 h-20 text-primary" />
                   </div>
                   <div className="flex items-center justify-between relative z-10">
-                    <Label className="text-[10px] uppercase tracking-[0.2em] font-black text-primary/60">Institutional Weight</Label>
-                    <div className="flex items-center gap-2">
-                      <Award className="w-3 h-3 text-secondary" />
-                      <span className="text-[10px] font-bold text-secondary-dark italic">Benchmark: {record.score} Max</span>
-                    </div>
+                    <Label className="text-[10px] uppercase tracking-[0.2em] font-black text-primary/60">System-Computed Score</Label>
                   </div>
 
                   <div className="space-y-6 relative z-10">
-                    <div className="flex items-center justify-between p-3 bg-white/50 rounded-xl border border-amber-200/60">
-                      <div className="space-y-0.5">
-                        <Label className="text-xs font-bold text-foreground">Acting / Temporary Position?</Label>
-                        <p className="text-[9px] text-amber-700 italic">Acting positions receive 50% of the stated score</p>
+                    {category.requiresDesignation && (
+                      <div className="p-3 bg-white/50 rounded-xl border border-amber-200/60 space-y-3">
+                        <Label className="text-xs font-bold text-foreground">Designation</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            disabled={isReadOnly}
+                            onClick={() => handleFieldChange("isActing", false)}
+                            className={cn(
+                              "px-3 py-2 rounded-lg border text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed",
+                              record.isActing === false
+                                ? "bg-primary text-white border-primary"
+                                : "bg-white border-border/50 text-muted-foreground hover:border-primary/40"
+                            )}
+                          >
+                            Full-time
+                            {selectedPosition && (
+                              <span className="block text-[9px] font-normal opacity-80 mt-0.5">
+                                {selectedPosition.score * category.fullTimeScoreMultiplier} pts
+                              </span>
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isReadOnly}
+                            onClick={() => handleFieldChange("isActing", true)}
+                            className={cn(
+                              "px-3 py-2 rounded-lg border text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed",
+                              record.isActing === true
+                                ? "bg-amber-500 text-white border-amber-500"
+                                : "bg-white border-border/50 text-muted-foreground hover:border-amber-400"
+                            )}
+                          >
+                            Acting
+                            {selectedPosition && (
+                              <span className="block text-[9px] font-normal opacity-80 mt-0.5">
+                                {selectedPosition.score * category.actingScoreMultiplier} pts
+                              </span>
+                            )}
+                          </button>
+                        </div>
+                        <p className="text-[9px] text-amber-700 italic">
+                          Acting positions receive {Math.round(category.actingScoreMultiplier * 100)}% of the position's score; full-time receives {Math.round(category.fullTimeScoreMultiplier * 100)}%.
+                        </p>
                       </div>
-                      <input
-                        type="checkbox"
-                        checked={record.isActing || false}
-                        disabled={isReadOnly}
-                        onChange={(e) => handleFieldChange("isActing", e.target.checked)}
-                        className="w-4 h-4 rounded border-amber-400 text-amber-600 focus:ring-amber-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                      />
-                    </div>
+                    )}
 
-                    <div className="flex items-center gap-6">
-                      <input
-                        type="range"
-                        min="0"
-                        max="50"
-                        step="0.5"
-                        value={record.applicantScore || 0}
-                        onChange={(e) => handleFieldChange("applicantScore", parseFloat(e.target.value))}
-                        disabled={isReadOnly}
-                        className="flex-1 accent-primary h-1.5 rounded-full appearance-none bg-border/50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      />
-                      <div className="w-16 h-16 rounded-2xl bg-white shadow-xl border-2 border-primary/20 flex flex-col items-center justify-center shrink-0 group/score transition-transform hover:scale-110">
+                    <div className="flex items-center justify-center">
+                      <div className="w-24 h-24 rounded-2xl bg-white shadow-xl border-2 border-primary/20 flex flex-col items-center justify-center shrink-0">
                         <span className="text-[8px] font-black text-muted-foreground uppercase leading-none mb-1">Score</span>
-                        <span className="text-2xl font-bold text-primary leading-none">{record.applicantScore || 0}</span>
+                        <span className="text-3xl font-bold text-primary leading-none">{selectedPosition ? record.score : "—"}</span>
                       </div>
                     </div>
 
-                    {(record.applicantScore || 0) > 40 && (
-                      <div className="flex gap-2 p-4 bg-white/80 backdrop-blur-md rounded-xl border border-secondary/20 shadow-sm animate-in zoom-in-95 duration-300">
-                        <Info className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
-                        <p className="text-[10px] leading-relaxed text-secondary-foreground font-medium italic">
-                          High-weighted service requires proof of leadership, policy impact, or significant institutional outcomes.
-                        </p>
-                      </div>
-                    )}
-                    {record.isActing && record.applicantScore !== null && record.applicantScore > 0 && (
-                      <div className="flex gap-2 p-3 bg-amber-50 rounded-xl border border-amber-200 shadow-sm animate-in zoom-in-95 duration-300">
-                        <Info className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                        <p className="text-[10px] leading-relaxed text-amber-800 font-medium italic">
-                          Acting position — effective score will be <strong>{((record.applicantScore || 0) * 0.5).toFixed(1)}</strong> (50% of {record.applicantScore}).
-                        </p>
-                      </div>
-                    )}
+                    <div className="flex gap-2 p-3 bg-muted/40 rounded-xl border border-border/30">
+                      <Info className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                      <p className="text-[10px] leading-relaxed text-muted-foreground font-medium italic">
+                        Scores are computed automatically based on the position you select. You don't need to enter a score yourself.
+                      </p>
+                    </div>
                   </div>
                 </div>
 

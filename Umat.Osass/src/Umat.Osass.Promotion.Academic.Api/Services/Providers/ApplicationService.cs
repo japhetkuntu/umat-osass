@@ -205,8 +205,7 @@ public class ApplicationService : IApplicationService
                 ServiceCategoryStatus = serviceRes?.Status ?? string.Empty,
                 NumberOfRecordsForTeaching = teachingRes?.TotalCategoriesAssessed ?? 0,
                 NumberOfRecordsForPublication = publicationRes?.Publications.Count ?? 0,
-                NumberOfRecordsForService = (serviceRes?.ServiceToTheUniversity.Count ?? 0) + 
-                                            (serviceRes?.ServiceToNationalAndInternational.Count ?? 0),
+                NumberOfRecordsForService = serviceRes?.Services.Count ?? 0,
                 TeachingPerformance =  teachingRes?.ApplicantPerformance?? PerformanceTypes.InAdequate,
                 ServicePerformance = serviceRes?.ApplicantPerformance?? PerformanceTypes.InAdequate,
                 PublicationPerformance = publicationRes?.ApplicantPerformance ?? PerformanceTypes.InAdequate,
@@ -365,13 +364,8 @@ public class ApplicationService : IApplicationService
                     : new ServiceOverview
                     {
                         Performance = service.ApplicantPerformance,
-                        TotalRecords =
-                            service.ServiceToTheUniversity.Count +
-                            service.ServiceToNationalAndInternational.Count,
-                        UniversityCommunityScore =
-                            service.ServiceToTheUniversity.Sum(x => x.ApplicantScore ?? 0),
-                        NationalInternationalScore =
-                            service.ServiceToNationalAndInternational.Sum(x => x.ApplicantScore ?? 0)
+                        TotalRecords = service.Services.Count,
+                        TotalScore = service.Services.Sum(x => x.ApplicantScore ?? 0)
                     }
             };
 
@@ -491,25 +485,14 @@ public class ApplicationService : IApplicationService
                     ? null
                     : new ServiceApplicationResponse
                     {
-                        TotalNumberOfServicesRecorded =
-                            service.ServiceToTheUniversity.Count +
-                            service.ServiceToNationalAndInternational.Count,
+                        TotalNumberOfServicesRecorded = service.Services.Count,
 
-                        ServiceToUniversityApplicationData =
-                            service.ServiceToTheUniversity
+                        ServiceApplicationData =
+                            service.Services
                                 .Select(s => new ServiceApplicationData
                                 {
-                                    Title = s.ServiceTitle,
-                                    Remark = s.ApplicantRemarks,
-                                    Score = s.ApplicantScore ?? 0
-                                })
-                                .ToList(),
-
-                        ServiceToNationalInternationApplicationData =
-                            service.ServiceToNationalAndInternational
-                                .Select(s => new ServiceApplicationData
-                                {
-                                    Title = s.ServiceTitle,
+                                    Title = s.CommitteeName ?? s.PositionName,
+                                    CategoryName = s.CategoryName,
                                     Remark = s.ApplicantRemarks,
                                     Score = s.ApplicantScore ?? 0
                                 })
@@ -586,7 +569,7 @@ public class ApplicationService : IApplicationService
             if (publication == null || !publication.Publications.Any())
                 return false.ToBadRequestApiResponse("Please add at least one publication before submitting");
 
-            if (service == null || (service.ServiceToTheUniversity.Count == 0 && service.ServiceToNationalAndInternational.Count == 0))
+            if (service == null || service.Services.Count == 0)
                 return false.ToBadRequestApiResponse("Please add at least one service record before submitting");
 
             // Required documents must be uploaded before final submission
@@ -881,14 +864,12 @@ public class ApplicationService : IApplicationService
     private double CalculateTotalServiceScore(ServiceRecord? service)
     {
         if (service == null) return 0;
-        
-        var universityTotal = service.ServiceToTheUniversity?.Sum(s => 
-            s.UapcScore ?? s.FapcScore ?? s.DapcScore ?? s.ApplicantScore ?? s.SystemGeneratedScore ?? 0) ?? 0;
-        var nationalTotal = service.ServiceToNationalAndInternational?.Sum(s => 
-            s.UapcScore ?? s.FapcScore ?? s.DapcScore ?? s.ApplicantScore ?? s.SystemGeneratedScore ?? 0) ?? 0;
-        
+
+        var total = service.Services?.Sum(s =>
+            s.UapcScore ?? s.FapcScore ?? s.DapcScore ?? s.ApplicantScore ?? s.SystemGeneratedScore) ?? 0;
+
         // Normalize to 10-point scale
-        return Math.Min((universityTotal + nationalTotal) / 5, 10);
+        return Math.Min(total / 5, 10);
     }
 
     private string GetFinalPerformance(params string?[] performances)

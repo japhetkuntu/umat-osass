@@ -1,58 +1,51 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, Plus, Building, Globe, Info, Loader2, Save } from "lucide-react";
+import { ArrowLeft, Users, Plus, Info, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ServiceRecordCard, ServiceRecordData } from "@/components/application/ServiceRecordCard";
 import { academicService } from "@/services/academicService";
+import { ServiceCategoryOption, ServiceResponseData } from "@/types/academic";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
-type ServiceCategory = "university" | "national-international";
+const mapToRecord = (s: ServiceResponseData): ServiceRecordData => ({
+  id: s.id,
+  categoryId: s.categoryId,
+  servicePositionId: s.servicePositionId,
+  committeeName: s.committeeName,
+  score: s.systemGeneratedScore || 0,
+  remark: s.remark || "",
+  evidence: s.evidence || [],
+  newFiles: [],
+  removedDocuments: [],
+  isActing: s.isActing,
+});
 
 const ServiceSection = () => {
   const navigate = useNavigate();
   const { eligibility } = useAuth();
-  const [activeTab, setActiveTab] = useState<ServiceCategory>("university");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [universityRecords, setUniversityRecords] = useState<ServiceRecordData[]>([]);
-  const [nationalInternationalRecords, setNationalInternationalRecords] = useState<ServiceRecordData[]>([]);
-  const [positions, setPositions] = useState<any[]>([]);
+  const [categories, setCategories] = useState<ServiceCategoryOption[]>([]);
+  const [records, setRecords] = useState<ServiceRecordData[]>([]);
   const [isReadOnly, setIsReadOnly] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [positionsRes, stateRes, appStateRes] = await Promise.all([
-          academicService.getServicePositions(),
+        const [categoriesRes, stateRes, appStateRes] = await Promise.all([
+          academicService.getServiceCategories(),
           academicService.getServiceState(),
           academicService.getApplicationCategoryState()
         ]);
 
-        if (positionsRes.success) {
-          setPositions(positionsRes.data);
+        if (categoriesRes.success && categoriesRes.data) {
+          setCategories(categoriesRes.data);
         }
 
         if (stateRes.success && stateRes.data) {
-          const mapToRecord = (s: any): ServiceRecordData => ({
-            id: s.id,
-            serviceTitle: s.serviceTitle,
-            serviceTypeId: s.serviceTypeId,
-            role: s.role,
-            duration: s.duration,
-            score: s.systemGeneratedScore || 0,
-            applicantScore: s.score,
-            remark: s.remark || "",
-            evidence: s.evidence || [],
-            newFiles: [],
-            removedDocuments: [],
-            isActing: s.isActing || false
-          });
-
-          setUniversityRecords((stateRes.data.universityCommunity || []).map(mapToRecord));
-          setNationalInternationalRecords((stateRes.data.nationalInternationalCommunity || []).map(mapToRecord));
+          setRecords((stateRes.data.services || []).map(mapToRecord));
         }
 
         if (appStateRes.success && appStateRes.data) {
@@ -72,47 +65,33 @@ const ServiceSection = () => {
     fetchData();
   }, []);
 
-  const handleAddRecord = (category: ServiceCategory) => {
-    const defaultPos = positions.find(p =>
-      category === "university" ? p.serviceType === "University" : p.serviceType !== "University"
-    );
+  const handleAddRecord = (category: ServiceCategoryOption) => {
+    const defaultPos = category.positions[0];
 
     const newRecord: ServiceRecordData = {
       id: `new-${Math.random().toString(36).substr(2, 9)}`,
-      serviceTitle: "",
-      serviceTypeId: defaultPos?.id || "",
-      role: "",
-      duration: "",
-      score: defaultPos?.score || 0,
-      applicantScore: defaultPos?.score || 0,
+      categoryId: category.id,
+      servicePositionId: defaultPos?.id || "",
+      committeeName: "",
+      score: defaultPos
+        ? defaultPos.score * (category.requiresDesignation ? category.fullTimeScoreMultiplier : 1)
+        : 0,
       remark: "",
       evidence: [],
       newFiles: [],
       removedDocuments: [],
-      isActing: false
+      isActing: category.requiresDesignation ? false : null,
     };
 
-    if (category === "university") {
-      setUniversityRecords((prev) => [newRecord, ...prev]);
-    } else {
-      setNationalInternationalRecords((prev) => [newRecord, ...prev]);
-    }
+    setRecords((prev) => [newRecord, ...prev]);
   };
 
-  const handleUpdateRecord = (updated: ServiceRecordData, category: ServiceCategory) => {
-    if (category === "university") {
-      setUniversityRecords((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
-    } else {
-      setNationalInternationalRecords((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
-    }
+  const handleUpdateRecord = (updated: ServiceRecordData) => {
+    setRecords((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
   };
 
-  const handleDeleteRecord = (id: string, category: ServiceCategory) => {
-    if (category === "university") {
-      setUniversityRecords((prev) => prev.filter((r) => r.id !== id));
-    } else {
-      setNationalInternationalRecords((prev) => prev.filter((r) => r.id !== id));
-    }
+  const handleDeleteRecord = (id: string) => {
+    setRecords((prev) => prev.filter((r) => r.id !== id));
   };
 
   const handleSaveAll = async () => {
@@ -120,48 +99,26 @@ const ServiceSection = () => {
     try {
       const formData = new FormData();
 
-      universityRecords.forEach((rec, index) => {
-        formData.append(`UniversityCommunity[${index}].Id`, rec.id.startsWith('new-') ? "" : rec.id);
-        formData.append(`UniversityCommunity[${index}].ServiceTitle`, rec.serviceTitle);
-        formData.append(`UniversityCommunity[${index}].ServiceTypeId`, rec.serviceTypeId);
-        formData.append(`UniversityCommunity[${index}].Role`, rec.role || "");
-        formData.append(`UniversityCommunity[${index}].Duration`, rec.duration || "");
-        formData.append(`UniversityCommunity[${index}].Score`, (rec.applicantScore || 0).toString());
-        formData.append(`UniversityCommunity[${index}].Remark`, rec.remark || "");
-        formData.append(`UniversityCommunity[${index}].IsActing`, (rec.isActing || false).toString());
+      records.forEach((rec, index) => {
+        formData.append(`Services[${index}].Id`, rec.id.startsWith('new-') ? "" : rec.id);
+        formData.append(`Services[${index}].ServicePositionId`, rec.servicePositionId);
+        if (rec.committeeName) {
+          formData.append(`Services[${index}].CommitteeName`, rec.committeeName);
+        }
+        if (rec.isActing !== null && rec.isActing !== undefined) {
+          formData.append(`Services[${index}].IsActing`, rec.isActing.toString());
+        }
+        formData.append(`Services[${index}].Remark`, rec.remark || "");
 
         if (rec.newFiles) {
           rec.newFiles.forEach((file) => {
-            formData.append(`UniversityCommunity[${index}].Evidence`, file);
+            formData.append(`Services[${index}].Evidence`, file);
           });
         }
 
         if (rec.removedDocuments) {
           rec.removedDocuments.forEach(key => {
-            formData.append(`UniversityCommunity[${index}].RemovedEvidence`, key);
-          });
-        }
-      });
-
-      nationalInternationalRecords.forEach((rec, index) => {
-        formData.append(`NationalInternationalCommunity[${index}].Id`, rec.id.startsWith('new-') ? "" : rec.id);
-        formData.append(`NationalInternationalCommunity[${index}].ServiceTitle`, rec.serviceTitle);
-        formData.append(`NationalInternationalCommunity[${index}].ServiceTypeId`, rec.serviceTypeId);
-        formData.append(`NationalInternationalCommunity[${index}].Role`, rec.role || "");
-        formData.append(`NationalInternationalCommunity[${index}].Duration`, rec.duration || "");
-        formData.append(`NationalInternationalCommunity[${index}].Score`, (rec.applicantScore || 0).toString());
-        formData.append(`NationalInternationalCommunity[${index}].Remark`, rec.remark || "");
-        formData.append(`NationalInternationalCommunity[${index}].IsActing`, (rec.isActing || false).toString());
-
-        if (rec.newFiles) {
-          rec.newFiles.forEach((file) => {
-            formData.append(`NationalInternationalCommunity[${index}].Evidence`, file);
-          });
-        }
-
-        if (rec.removedDocuments) {
-          rec.removedDocuments.forEach(key => {
-            formData.append(`NationalInternationalCommunity[${index}].RemovedEvidence`, key);
+            formData.append(`Services[${index}].RemovedEvidence`, key);
           });
         }
       });
@@ -171,23 +128,7 @@ const ServiceSection = () => {
         toast.success("Service records updated successfully");
         const stateRes = await academicService.getServiceState();
         if (stateRes.success && stateRes.data) {
-          const mapToRecord = (s: any): ServiceRecordData => ({
-            id: s.id,
-            serviceTitle: s.serviceTitle,
-            serviceTypeId: s.serviceTypeId,
-            role: s.role,
-            duration: s.duration,
-            score: s.systemGeneratedScore || 0,
-            applicantScore: s.score,
-            remark: s.remark || "",
-            evidence: s.evidence || [],
-            newFiles: [],
-            removedDocuments: [],
-            isActing: s.isActing || false
-          });
-
-          setUniversityRecords((stateRes.data.universityCommunity || []).map(mapToRecord));
-          setNationalInternationalRecords((stateRes.data.nationalInternationalCommunity || []).map(mapToRecord));
+          setRecords((stateRes.data.services || []).map(mapToRecord));
         }
       } else {
         toast.error(response.message || "Failed to update service records");
@@ -200,59 +141,16 @@ const ServiceSection = () => {
     }
   };
 
-  const universityScore = universityRecords.reduce((sum, r) => sum + (r.applicantScore || 0), 0);
-  const nationalScore = nationalInternationalRecords.reduce((sum, r) => sum + (r.applicantScore || 0), 0);
-  const totalScore = universityScore + nationalScore;
+  const totalScore = records.reduce((sum, r) => sum + (r.score || 0), 0);
 
   const getPerformanceLevel = (score: number) => {
-    if (score >= 40) return { label: "Excellent", className: "text-secondary", bg: "bg-secondary/10" };
-    if (score >= 25) return { label: "Good", className: "text-primary", bg: "bg-primary/10" };
-    return { label: "Developing", className: "text-muted-foreground", bg: "bg-muted/10" };
+    if (score >= 100) return { label: "High", className: "text-secondary", bg: "bg-secondary/10" };
+    if (score >= 50) return { label: "Good", className: "text-primary", bg: "bg-primary/10" };
+    if (score >= 30) return { label: "Adequate", className: "text-primary", bg: "bg-primary/10" };
+    return { label: "Inadequate", className: "text-muted-foreground", bg: "bg-muted/10" };
   };
 
   const perf = getPerformanceLevel(totalScore);
-
-  const renderRecordsList = (
-    records: ServiceRecordData[],
-    category: ServiceCategory,
-    icon: React.ReactNode,
-    emptyTitle: string
-  ) => (
-    <div className="space-y-6">
-      {!isReadOnly && (
-        <Button
-          onClick={() => handleAddRecord(category)}
-          className="w-full h-16 rounded-2xl border-2 border-dashed border-border/50 bg-background/50 hover:bg-primary/5 hover:border-primary/30 text-muted-foreground hover:text-primary group transition-all"
-        >
-          <Plus className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-          <span className="font-bold uppercase tracking-widest text-xs">Add {category === "university" ? "Internal" : "External"} Record</span>
-        </Button>
-      )}
-
-      {records.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-muted/20 rounded-3xl border border-dashed border-border">
-          <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-6">
-            {icon}
-          </div>
-          <h3 className="text-xl font-bold text-foreground/50">{emptyTitle}</h3>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {records.map((record, index) => (
-            <div key={record.id} className="animate-slide-up" style={{ animationDelay: `${index * 100}ms` }}>
-              <ServiceRecordCard
-                record={record}
-                positions={positions}
-                onUpdate={(updated) => handleUpdateRecord(updated, category)}
-                onDelete={(id) => handleDeleteRecord(id, category)}
-                isReadOnly={isReadOnly}
-              />
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 
   if (loading) {
     return (
@@ -284,7 +182,7 @@ const ServiceSection = () => {
             </div>
             <h1 className="text-3xl font-bold text-foreground">Service</h1>
             <p className="text-muted-foreground text-sm max-w-2xl">
-              Record your contributions to the university and external communities.
+              Record your administrative experience, committee service, and contributions to the university and external communities.
             </p>
           </div>
 
@@ -305,43 +203,53 @@ const ServiceSection = () => {
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        <div className="lg:col-span-8 space-y-8">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ServiceCategory)} className="w-full">
-            <TabsList className="w-full grid grid-cols-2 h-14 bg-muted/30 p-1 rounded-2xl border border-border/50">
-              <TabsTrigger
-                value="university"
-                className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all font-bold text-xs uppercase tracking-widest"
-              >
-                <Building className="w-4 h-4 mr-2" />
-                Institutional
-              </TabsTrigger>
-              <TabsTrigger
-                value="national-international"
-                className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all font-bold text-xs uppercase tracking-widest"
-              >
-                <Globe className="w-4 h-4 mr-2" />
-                Global & National
-              </TabsTrigger>
-            </TabsList>
+        <div className="lg:col-span-8 space-y-10">
+          {categories.map((category) => {
+            const categoryRecords = records.filter((r) => r.categoryId === category.id);
+            return (
+              <section key={category.id} className="space-y-4">
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">{category.name}</h2>
+                  {category.description && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{category.description}</p>
+                  )}
+                </div>
 
-            <TabsContent value="university" className="mt-8 animate-in fade-in slide-in-from-left-4 duration-500">
-              {renderRecordsList(
-                universityRecords,
-                "university",
-                <Building className="w-8 h-8 text-muted-foreground/30" />,
-                "No internal records documented"
-              )}
-            </TabsContent>
+                {!isReadOnly && category.positions.length > 0 && (
+                  <Button
+                    onClick={() => handleAddRecord(category)}
+                    className="w-full h-16 rounded-2xl border-2 border-dashed border-border/50 bg-background/50 hover:bg-primary/5 hover:border-primary/30 text-muted-foreground hover:text-primary group transition-all"
+                  >
+                    <Plus className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
+                    <span className="font-bold uppercase tracking-widest text-xs">Add {category.name} Record</span>
+                  </Button>
+                )}
 
-            <TabsContent value="national-international" className="mt-8 animate-in fade-in slide-in-from-right-4 duration-500">
-              {renderRecordsList(
-                nationalInternationalRecords,
-                "national-international",
-                <Globe className="w-8 h-8 text-muted-foreground/30" />,
-                "No external records documented"
-              )}
-            </TabsContent>
-          </Tabs>
+                {categoryRecords.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 bg-muted/20 rounded-3xl border border-dashed border-border">
+                    <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
+                      <Users className="w-6 h-6 text-muted-foreground/30" />
+                    </div>
+                    <h3 className="text-sm font-bold text-foreground/50">No records documented</h3>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {categoryRecords.map((record, index) => (
+                      <div key={record.id} className="animate-slide-up" style={{ animationDelay: `${index * 100}ms` }}>
+                        <ServiceRecordCard
+                          record={record}
+                          category={category}
+                          onUpdate={handleUpdateRecord}
+                          onDelete={handleDeleteRecord}
+                          isReadOnly={isReadOnly}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })}
         </div>
 
         {/* Sidebar Summary */}
@@ -351,23 +259,15 @@ const ServiceSection = () => {
               <h3 className="font-bold text-lg border-b border-border pb-3">Summary</h3>
 
               <div className="space-y-4">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Institutional Roles</span>
-                  <span className="font-bold">{universityRecords.length}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">National & International</span>
-                  <span className="font-bold">{nationalInternationalRecords.length}</span>
-                </div>
+                {categories.map((category) => (
+                  <div key={category.id} className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">{category.name}</span>
+                    <span className="font-bold">{records.filter((r) => r.categoryId === category.id).length}</span>
+                  </div>
+                ))}
                 <div className="flex justify-between items-center text-sm pt-2 border-t border-border/50">
-                  <span className="text-muted-foreground">Your Proposed Score</span>
-                  <span className="font-black text-primary text-lg">{totalScore} / 50 pts</span>
-                </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all duration-1000 shadow-[0_0_10px_rgba(var(--primary),0.3)]"
-                    style={{ width: `${Math.min(100, (totalScore / 50) * 100)}%` }}
-                  />
+                  <span className="text-muted-foreground">Total Score</span>
+                  <span className="font-black text-primary text-lg">{totalScore} pts</span>
                 </div>
               </div>
 
@@ -405,15 +305,15 @@ const ServiceSection = () => {
               <ul className="space-y-3 font-light text-xs text-muted-foreground leading-relaxed">
                 <li className="flex gap-2">
                   <div className="w-1 h-1 rounded-full bg-primary/40 mt-1.5 shrink-0" />
-                  Highlight roles that led to policy changes or new department initiatives.
+                  Scores are computed automatically from the position you select — you never need to enter a score.
                 </li>
                 <li className="flex gap-2">
                   <div className="w-1 h-1 rounded-full bg-primary/40 mt-1.5 shrink-0" />
-                  National service requires appointment letters from recognized state bodies.
+                  Acting/temporary roles receive a reduced share of the position's score — select the correct designation.
                 </li>
                 <li className="flex gap-2">
                   <div className="w-1 h-1 rounded-full bg-primary/40 mt-1.5 shrink-0" />
-                  Service to professional bodies count as global outreach if international.
+                  Attach evidence such as appointment letters for every record you add.
                 </li>
               </ul>
             </div>

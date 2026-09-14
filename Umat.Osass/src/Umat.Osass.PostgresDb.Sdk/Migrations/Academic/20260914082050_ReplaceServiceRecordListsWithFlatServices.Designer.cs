@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Umat.Osass.PostgresDb.Sdk.ApplicationContexts;
@@ -11,9 +12,11 @@ using Umat.Osass.PostgresDb.Sdk.ApplicationContexts;
 namespace Umat.Osass.PostgresDb.Sdk.Migrations.Academic
 {
     [DbContext(typeof(AcademicPromotionDbContext))]
-    partial class AcademicPromotionDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260914082050_ReplaceServiceRecordListsWithFlatServices")]
+    partial class ReplaceServiceRecordListsWithFlatServices
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

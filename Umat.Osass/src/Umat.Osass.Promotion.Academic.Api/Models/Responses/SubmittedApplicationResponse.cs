@@ -39,13 +39,13 @@ public class PublicationApplicationData
 public class ServiceApplicationResponse
 {
     public int TotalNumberOfServicesRecorded { get; set; }
-    public List<ServiceApplicationData> ServiceToUniversityApplicationData { get; set; } = [];
-    public List<ServiceApplicationData> ServiceToNationalInternationApplicationData { get; set; } = [];
+    public List<ServiceApplicationData> ServiceApplicationData { get; set; } = [];
 }
 
 public class ServiceApplicationData
 {
     public string Title { get; set; } = string.Empty;
+    public string CategoryName { get; set; } = string.Empty;
     public string? Remark { get; set; }
     public double Score { get; set; }
 }

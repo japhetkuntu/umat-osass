@@ -89,11 +89,33 @@ export interface AcademicPosition extends BaseEntity {
   minimumNumberOfRefereedJournal: number;
 }
 
+// Service Categories
+export interface ServiceCategory extends BaseEntity {
+  name: string;
+  description?: string;
+  requiresDesignation: boolean;
+  requiresCommitteeName: boolean;
+  actingScoreMultiplier: number;
+  fullTimeScoreMultiplier: number;
+  displayOrder: number;
+}
+
+export interface ServiceCategoryFormData {
+  name: string;
+  description?: string;
+  requiresDesignation: boolean;
+  requiresCommitteeName: boolean;
+  actingScoreMultiplier: number;
+  fullTimeScoreMultiplier: number;
+  displayOrder: number;
+}
+
 // Service Positions
 export interface ServicePosition extends BaseEntity {
   name: string;
   score: number;
-  serviceType: string;
+  categoryId: string;
+  categoryName?: string;
 }
 
 // Publication Indicators
@@ -187,7 +209,7 @@ export interface AcademicPositionFormData {
 export interface ServicePositionFormData {
   name: string;
   score: number;
-  serviceType: string;
+  categoryId: string;
 }
 
 export interface PublicationIndicatorFormData {

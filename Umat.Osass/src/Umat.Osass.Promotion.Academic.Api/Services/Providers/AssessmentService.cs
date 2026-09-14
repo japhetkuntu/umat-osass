@@ -1121,10 +1121,7 @@ public class AssessmentService : IAssessmentService
 
     private double CalculateServiceScore(ServiceRecord? service)
     {
-        if (service == null) return 0;
-        var universityScore = service.ServiceToTheUniversity?.Sum(s => s.ApplicantScore ?? 0) ?? 0;
-        var nationalScore = service.ServiceToNationalAndInternational?.Sum(s => s.ApplicantScore ?? 0) ?? 0;
-        return universityScore + nationalScore;
+        return service?.Services?.Sum(s => s.ApplicantScore ?? 0) ?? 0;
     }
 
     private TeachingAssessmentData MapTeachingData(TeachingRecord? teaching)
@@ -1210,10 +1207,9 @@ public class AssessmentService : IAssessmentService
 
     private ServiceAssessmentData MapServiceData(ServiceRecord? service)
     {
-        if (service == null) return new ServiceAssessmentData 
-        { 
-            UniversityService = new List<ServiceRecordAssessment>(),
-            NationalInternationalService = new List<ServiceRecordAssessment>()
+        if (service == null) return new ServiceAssessmentData
+        {
+            Records = new List<ServiceRecordAssessment>()
         };
 
         return new ServiceAssessmentData
@@ -1222,22 +1218,22 @@ public class AssessmentService : IAssessmentService
             DapcPerformance = service.DapcPerformance,
             FapcPerformance = service.FapcPerformance,
             UapcPerformance = service.UapcPerformance,
-            TotalServiceRecords = (service.ServiceToTheUniversity?.Count ?? 0) + (service.ServiceToNationalAndInternational?.Count ?? 0),
-            UniversityService = service.ServiceToTheUniversity?.Select(s => MapServiceRecord(s, "University")).ToList() ?? new List<ServiceRecordAssessment>(),
-            NationalInternationalService = service.ServiceToNationalAndInternational?.Select(s => MapServiceRecord(s, "National/International")).ToList() ?? new List<ServiceRecordAssessment>()
+            TotalServiceRecords = service.Services?.Count ?? 0,
+            Records = service.Services?.Select(MapServiceRecord).ToList() ?? new List<ServiceRecordAssessment>()
         };
     }
 
-    private ServiceRecordAssessment MapServiceRecord(ServiceRecordsData data, string serviceType)
+    private ServiceRecordAssessment MapServiceRecord(ServiceRecordItem data)
     {
         return new ServiceRecordAssessment
         {
             Id = data.Id,
-            ServiceTitle = data.ServiceTitle,
-            Role = data.Role,
-            Duration = data.Duration,
-            ServiceType = serviceType,
-            SystemGeneratedScore = data.SystemGeneratedScore ?? 0,
+            CategoryId = data.CategoryId,
+            CategoryName = data.CategoryName,
+            PositionName = data.PositionName,
+            CommitteeName = data.CommitteeName,
+            IsActing = data.IsActing,
+            SystemGeneratedScore = data.SystemGeneratedScore,
             ApplicantScore = data.ApplicantScore,
             ApplicantRemarks = data.ApplicantRemarks,
             DapcScore = data.DapcScore,
@@ -1399,10 +1395,8 @@ public class AssessmentService : IAssessmentService
     {
         foreach (var score in scores)
         {
-            var universityRecord = service.ServiceToTheUniversity?.FirstOrDefault(s => s.Id == score.RecordId);
-            var nationalRecord = service.ServiceToNationalAndInternational?.FirstOrDefault(s => s.Id == score.RecordId);
-            var record = universityRecord ?? nationalRecord;
-            
+            var record = service.Services?.FirstOrDefault(s => s.Id == score.RecordId);
+
             if (record == null) continue;
 
             switch (committeeType)
@@ -1423,7 +1417,7 @@ public class AssessmentService : IAssessmentService
         }
 
         // Calculate total committee score for performance computation
-        double GetCommitteeScore(ServiceRecordsData? data) => committeeType switch
+        double GetCommitteeScore(ServiceRecordItem? data) => committeeType switch
         {
             AcademicPromotionApplicationRoles.DAPC => data?.DapcScore ?? data?.ApplicantScore ?? data?.SystemGeneratedScore ?? 0,
             AcademicPromotionApplicationRoles.FAPSC => data?.FapcScore ?? data?.ApplicantScore ?? data?.SystemGeneratedScore ?? 0,
@@ -1431,9 +1425,7 @@ public class AssessmentService : IAssessmentService
             _ => 0
         };
 
-        var universityTotal = service.ServiceToTheUniversity?.Sum(s => GetCommitteeScore(s)) ?? 0;
-        var nationalTotal = service.ServiceToNationalAndInternational?.Sum(s => GetCommitteeScore(s)) ?? 0;
-        var totalScore = universityTotal + nationalTotal;
+        var totalScore = service.Services?.Sum(s => GetCommitteeScore(s)) ?? 0;
 
         var performance = PerformanceComputationService.ComputeServicePerformance(totalScore);
 
@@ -1700,8 +1692,7 @@ public class AssessmentService : IAssessmentService
     private static string GetEffectivePerformance(ServiceRecord? record)
     {
         if (record == null) return PerformanceTypes.InAdequate;
-        var all = record.ServiceToTheUniversity.Concat(record.ServiceToNationalAndInternational);
-        return all.Any(s => s.UapcScore.HasValue) ? record.UapcPerformance : PerformanceTypes.InAdequate;
+        return record.Services.Any(s => s.UapcScore.HasValue) ? record.UapcPerformance : PerformanceTypes.InAdequate;
     }
 
 

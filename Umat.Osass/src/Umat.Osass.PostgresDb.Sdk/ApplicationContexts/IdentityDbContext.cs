@@ -12,6 +12,7 @@ public class IdentityDbContext : DbContext
     public DbSet<Faculty> Faculties => Set<Faculty>();
     public DbSet<School> Schools => Set<School>();
     public DbSet<ServicePosition>  ServicePositions => Set<ServicePosition>();
+    public DbSet<ServiceCategory> ServiceCategories => Set<ServiceCategory>();
     public DbSet<PublicationIndicator> PublicationIndicators => Set<PublicationIndicator>();
     public DbSet<KnowledgeMaterialIndicator> KnowledgeMaterialIndicators => Set<KnowledgeMaterialIndicator>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();

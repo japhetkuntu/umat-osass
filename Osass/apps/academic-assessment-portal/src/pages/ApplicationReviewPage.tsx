@@ -478,9 +478,7 @@ export default function ApplicationReviewPage() {
   };
 
   const calculateServiceTotals = () => {
-    const university = application?.services?.universityService || [];
-    const national = application?.services?.nationalInternationalService || [];
-    const all = [...university, ...national];
+    const all = application?.services?.records || [];
     return {
       self: all.reduce((sum, r) => sum + (r.applicantScore || r.systemGeneratedScore || 0), 0),
       dapc: all.reduce((sum, r) => sum + (r.dapcScore || 0), 0),
@@ -1143,7 +1141,7 @@ export default function ApplicationReviewPage() {
                             {/* Score Timeline - Full View */}
                             <ScoreBreakdown
                               applicantScore={pub.applicantScore}
-                              systemScore={getEffectivePublicationScore(pub.systemGeneratedScore, pub.isPresented)}
+                              systemScore={pub.systemGeneratedScore}
                               dapcScore={pub.dapcScore}
                               dapcRemarks={pub.dapcRemarks}
                               fapcScore={pub.fapcScore}
@@ -1244,29 +1242,55 @@ export default function ApplicationReviewPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    {application.services.universityService.length > 0 && (
-                      <div>
-                        <h4 className="font-medium mb-3">University Service</h4>
-                        <Accordion type="multiple" className="w-full">
-                          {application.services.universityService.map((svc) => (
-                            <AccordionItem key={svc.id} value={svc.id}>
-                              <AccordionTrigger className="hover:no-underline py-4">
-                                <div className="flex items-start justify-between w-full pr-4 gap-4">
-                                  <div className="flex-1 min-w-0 text-left">
-                                    <p className="font-medium break-words">{svc.serviceTitle || "N/A"}</p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <span className="text-xs text-muted-foreground">{svc.role || "N/A"}</span>
-                                      <span className="text-xs text-muted-foreground">• {svc.duration || "N/A"}</span>
-                                      {svc.isActing && (
-                                        <Badge className="text-xs bg-amber-100 text-amber-800 border-amber-200">Acting</Badge>
-                                      )}
-                                      {svc.supportingEvidence.length > 0 && (
-                                        <Badge variant="secondary" className="text-xs">
-                                          {svc.supportingEvidence.length} files
-                                        </Badge>
-                                      )}
+                    {Object.entries(
+                      (application.services.records || []).reduce((groups, svc) => {
+                        const key = svc.categoryName || "Other";
+                        (groups[key] ||= []).push(svc);
+                        return groups;
+                      }, {} as Record<string, typeof application.services.records>)
+                    )
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([categoryName, records]) => (
+                        <div key={categoryName}>
+                          <h4 className="font-medium mb-3">{categoryName}</h4>
+                          <Accordion type="multiple" className="w-full">
+                            {records.map((svc) => (
+                              <AccordionItem key={svc.id} value={svc.id}>
+                                <AccordionTrigger className="hover:no-underline py-4">
+                                  <div className="flex items-start justify-between w-full pr-4 gap-4">
+                                    <div className="flex-1 min-w-0 text-left">
+                                      <p className="font-medium break-words">{svc.positionName || "N/A"}</p>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        {svc.committeeName && (
+                                          <span className="text-xs text-muted-foreground">{svc.committeeName}</span>
+                                        )}
+                                        {svc.isActing !== undefined && svc.isActing !== null && (
+                                          <Badge className="text-xs bg-amber-100 text-amber-800 border-amber-200">
+                                            {svc.isActing ? "Acting" : "Full-time"}
+                                          </Badge>
+                                        )}
+                                        {svc.supportingEvidence.length > 0 && (
+                                          <Badge variant="secondary" className="text-xs">
+                                            {svc.supportingEvidence.length} files
+                                          </Badge>
+                                        )}
+                                      </div>
                                     </div>
+                                    <ScoreBreakdown
+                                      applicantScore={svc.applicantScore}
+                                      systemScore={svc.systemGeneratedScore}
+                                      dapcScore={svc.dapcScore}
+                                      dapcRemarks={svc.dapcRemarks}
+                                      fapcScore={svc.fapcScore}
+                                      fapcRemarks={svc.fapcRemarks}
+                                      uapcScore={svc.uapcScore}
+                                      uapcRemarks={svc.uapcRemarks}
+                                      compact
+                                    />
                                   </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="space-y-6 pt-4">
+                                  {/* Score Timeline - Full View */}
                                   <ScoreBreakdown
                                     applicantScore={svc.applicantScore}
                                     systemScore={svc.systemGeneratedScore}
@@ -1276,158 +1300,51 @@ export default function ApplicationReviewPage() {
                                     fapcRemarks={svc.fapcRemarks}
                                     uapcScore={svc.uapcScore}
                                     uapcRemarks={svc.uapcRemarks}
-                                    compact
                                   />
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent className="space-y-6 pt-4">
-                                {/* Score Timeline - Full View */}
-                                <ScoreBreakdown
-                                  applicantScore={svc.applicantScore}
-                                  systemScore={svc.systemGeneratedScore}
-                                  dapcScore={svc.dapcScore}
-                                  dapcRemarks={svc.dapcRemarks}
-                                  fapcScore={svc.fapcScore}
-                                  fapcRemarks={svc.fapcRemarks}
-                                  uapcScore={svc.uapcScore}
-                                  uapcRemarks={svc.uapcRemarks}
-                                />
 
-                                <Separator />
+                                  <Separator />
 
-                                <div className="grid sm:grid-cols-2 gap-6">
-                                  <div>
-                                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Applicant Remarks</Label>
-                                    <p className="text-sm mt-2 p-3 bg-muted/30 rounded-lg">
-                                      {svc.applicantRemarks || "No remarks provided"}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Supporting Evidence</Label>
-                                    <div className="mt-2">
-                                      {renderEvidenceList(svc.supportingEvidence)}
+                                  <div className="grid sm:grid-cols-2 gap-6">
+                                    <div>
+                                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">Applicant Remarks</Label>
+                                      <p className="text-sm mt-2 p-3 bg-muted/30 rounded-lg">
+                                        {svc.applicantRemarks || "No remarks provided"}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">Supporting Evidence</Label>
+                                      <div className="mt-2">
+                                        {renderEvidenceList(svc.supportingEvidence)}
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                                {svc.isActing && (
-                                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                                    <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-1">Acting / Temporary Position</p>
-                                    <p className="text-[10px] text-amber-700">Score was halved (50%) as this is an acting position. The effective score shown has already been adjusted.</p>
-                                  </div>
-                                )}
-                                {canSubmitScores && (
-                                  <ScoreInputPanel
-                                    currentScore={serviceScores[svc.id]?.score}
-                                    onScoreChange={(score) => updateServiceScore(svc.id, score)}
-                                    remarks={serviceScores[svc.id]?.remarks}
-                                    onRemarksChange={(remarks) =>
-                                      updateServiceScore(
-                                        svc.id,
-                                        serviceScores[svc.id]?.score || 0,
-                                        remarks
-                                      )
-                                    }
-                                    committeeType={getCurrentCommitteeType()}
-                                  />
-                                )}
-                              </AccordionContent>
-                            </AccordionItem>
-                          ))}
-                        </Accordion>
-                      </div>
-                    )}
-                    {application.services.nationalInternationalService.length > 0 && (
-                      <div>
-                        <h4 className="font-medium mb-3">National/International Service</h4>
-                        <Accordion type="multiple" className="w-full">
-                          {application.services.nationalInternationalService.map((svc) => (
-                            <AccordionItem key={svc.id} value={svc.id}>
-                              <AccordionTrigger className="hover:no-underline py-4">
-                                <div className="flex items-start justify-between w-full pr-4 gap-4">
-                                  <div className="flex-1 min-w-0 text-left">
-                                    <p className="font-medium break-words">{svc.serviceTitle || "N/A"}</p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <span className="text-xs text-muted-foreground">{svc.role || "N/A"}</span>
-                                      <span className="text-xs text-muted-foreground">• {svc.duration || "N/A"}</span>
-                                      {svc.isActing && (
-                                        <Badge className="text-xs bg-amber-100 text-amber-800 border-amber-200">Acting</Badge>
-                                      )}
-                                      {svc.supportingEvidence.length > 0 && (
-                                        <Badge variant="secondary" className="text-xs">
-                                          {svc.supportingEvidence.length} files
-                                        </Badge>
-                                      )}
+                                  {svc.isActing && (
+                                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                      <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-1">Acting / Temporary Position</p>
+                                      <p className="text-[10px] text-amber-700">Score reflects the acting-designation multiplier for this category. The effective score shown has already been adjusted.</p>
                                     </div>
-                                  </div>
-                                  <ScoreBreakdown
-                                    applicantScore={svc.applicantScore}
-                                    systemScore={svc.systemGeneratedScore}
-                                    dapcScore={svc.dapcScore}
-                                    dapcRemarks={svc.dapcRemarks}
-                                    fapcScore={svc.fapcScore}
-                                    fapcRemarks={svc.fapcRemarks}
-                                    uapcScore={svc.uapcScore}
-                                    uapcRemarks={svc.uapcRemarks}
-                                    compact
-                                  />
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent className="space-y-6 pt-4">
-                                {/* Score Timeline - Full View */}
-                                <ScoreBreakdown
-                                  applicantScore={svc.applicantScore}
-                                  systemScore={svc.systemGeneratedScore}
-                                  dapcScore={svc.dapcScore}
-                                  dapcRemarks={svc.dapcRemarks}
-                                  fapcScore={svc.fapcScore}
-                                  fapcRemarks={svc.fapcRemarks}
-                                  uapcScore={svc.uapcScore}
-                                  uapcRemarks={svc.uapcRemarks}
-                                />
-
-                                <Separator />
-
-                                <div className="grid sm:grid-cols-2 gap-6">
-                                  <div>
-                                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Applicant Remarks</Label>
-                                    <p className="text-sm mt-2 p-3 bg-muted/30 rounded-lg">
-                                      {svc.applicantRemarks || "No remarks provided"}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Supporting Evidence</Label>
-                                    <div className="mt-2">
-                                      {renderEvidenceList(svc.supportingEvidence)}
-                                    </div>
-                                  </div>
-                                </div>
-                                {svc.isActing && (
-                                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                                    <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-1">Acting / Temporary Position</p>
-                                    <p className="text-[10px] text-amber-700">Score was halved (50%) as this is an acting position. The effective score shown has already been adjusted.</p>
-                                  </div>
-                                )}
-                                {canSubmitScores && (
-                                  <ScoreInputPanel
-                                    currentScore={serviceScores[svc.id]?.score}
-                                    onScoreChange={(score) => updateServiceScore(svc.id, score)}
-                                    remarks={serviceScores[svc.id]?.remarks}
-                                    onRemarksChange={(remarks) =>
-                                      updateServiceScore(
-                                        svc.id,
-                                        serviceScores[svc.id]?.score || 0,
-                                        remarks
-                                      )
-                                    }
-                                    committeeType={getCurrentCommitteeType()}
-                                  />
-                                )}
-                              </AccordionContent>
-                            </AccordionItem>
-                          ))}
-                        </Accordion>
-                      </div>
-                    )}
+                                  )}
+                                  {canSubmitScores && (
+                                    <ScoreInputPanel
+                                      currentScore={serviceScores[svc.id]?.score}
+                                      onScoreChange={(score) => updateServiceScore(svc.id, score)}
+                                      remarks={serviceScores[svc.id]?.remarks}
+                                      onRemarksChange={(remarks) =>
+                                        updateServiceScore(
+                                          svc.id,
+                                          serviceScores[svc.id]?.score || 0,
+                                          remarks
+                                        )
+                                      }
+                                      committeeType={getCurrentCommitteeType()}
+                                    />
+                                  )}
+                                </AccordionContent>
+                              </AccordionItem>
+                            ))}
+                          </Accordion>
+                        </div>
+                      ))}
                   </CardContent>
                 </Card>
               </TabsContent>

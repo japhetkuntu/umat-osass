@@ -98,10 +98,11 @@ export interface PublicationAssessmentData {
 
 export interface ServiceRecordAssessment {
   id: string;
-  serviceTitle?: string;
-  role?: string;
-  duration?: string;
-  serviceType?: string;
+  categoryId?: string;
+  categoryName?: string;
+  positionName?: string;
+  committeeName?: string;
+  isActing?: boolean;
   systemGeneratedScore: number;
   applicantScore?: number;
   applicantRemarks?: string;
@@ -112,7 +113,6 @@ export interface ServiceRecordAssessment {
   uapcScore?: number;
   uapcRemarks?: string;
   supportingEvidence: string[];
-  isActing?: boolean;
 }
 
 export interface ServiceAssessmentData {
@@ -121,8 +121,7 @@ export interface ServiceAssessmentData {
   fapcPerformance?: string;
   uapcPerformance?: string;
   totalServiceRecords: number;
-  universityService: ServiceRecordAssessment[];
-  nationalInternationalService: ServiceRecordAssessment[];
+  records: ServiceRecordAssessment[];
 }
 
 export interface PreviousAssessment {

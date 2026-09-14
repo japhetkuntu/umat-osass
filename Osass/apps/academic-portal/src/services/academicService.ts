@@ -5,6 +5,7 @@ import {
     TeachingResponse,
     PublicationResponse,
     ServiceResponse,
+    ServiceCategoryOption,
     OverallReview,
     HistoricalApplication,
     StaffUpdateItem,
@@ -51,8 +52,8 @@ class AcademicService {
         return await academicClient.get<any[]>("/Publications/indicators");
     }
 
-    async getServicePositions(): Promise<ApiResponse<any[]>> {
-        return await academicClient.get<any[]>("/Services/positions");
+    async getServiceCategories(): Promise<ApiResponse<ServiceCategoryOption[]>> {
+        return await academicClient.get<ServiceCategoryOption[]>("/Services/positions");
     }
 
     async startApplication(): Promise<ApiResponse<ApplicationCategoryState>> {

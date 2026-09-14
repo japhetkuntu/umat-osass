@@ -18,6 +18,7 @@ public class ServiceCategoryService : IServiceCategoryService
     private readonly IApplicationService _applicationService;
     private readonly IAcademicPromotionPgRepository<ServiceRecord> _serviceRepository;
     private readonly IIdentityPgRepository<ServicePosition> _servicePositionRepository;
+    private readonly IIdentityPgRepository<ServiceCategory> _serviceCategoryRepository;
     private readonly IStorageService _storageService;
     private readonly ILogger<ServiceCategoryService> _logger;
 
@@ -26,6 +27,7 @@ public class ServiceCategoryService : IServiceCategoryService
         IApplicationService applicationService,
         IAcademicPromotionPgRepository<ServiceRecord> serviceRepository,
         IIdentityPgRepository<ServicePosition> servicePositionRepository,
+        IIdentityPgRepository<ServiceCategory> serviceCategoryRepository,
         IStorageService storageService,
         ILogger<ServiceCategoryService> logger)
     {
@@ -33,6 +35,7 @@ public class ServiceCategoryService : IServiceCategoryService
         _applicationService = applicationService;
         _serviceRepository = serviceRepository;
         _servicePositionRepository = servicePositionRepository;
+        _serviceCategoryRepository = serviceCategoryRepository;
         _storageService = storageService;
         _logger = logger;
     }
@@ -77,29 +80,20 @@ public class ServiceCategoryService : IServiceCategoryService
                 await _serviceRepository.AddAsync(serviceRecord);
             }
 
-            await ProcessServiceList(
-                request.UniversityCommunity,
-                serviceRecord.ServiceToTheUniversity);
-
-            await ProcessServiceList(
-                request.NationalInternationalCommunity,
-                serviceRecord.ServiceToNationalAndInternational);
+            await ProcessServices(request.Services, serviceRecord.Services);
 
             serviceRecord.UpdatedAt = DateTime.UtcNow;
             serviceRecord.UpdatedBy = $"{auth.FirstName} {auth.LastName}";
-            
+
             var totalScore = CalculateOverallTotal(serviceRecord);
             serviceRecord.ApplicantPerformance = PerformanceComputationService.ComputeServicePerformance(totalScore);
 
             await _serviceRepository.UpdateAsync(serviceRecord);
 
             return new ServiceResponse
-            {PerformanceLevel = serviceRecord.ApplicantPerformance,
-                UniversityCommunity = serviceRecord.ServiceToTheUniversity
-                    .Select(MapServiceData)
-                    .ToList(),
-
-                NationalInternationalCommunity = serviceRecord.ServiceToNationalAndInternational
+            {
+                PerformanceLevel = serviceRecord.ApplicantPerformance,
+                Services = serviceRecord.Services
                     .Select(MapServiceData)
                     .ToList()
             }.ToOkApiResponse("Service category updated successfully");
@@ -120,22 +114,10 @@ public class ServiceCategoryService : IServiceCategoryService
                 500);
         }
     }
-    
-    public static double CalculateUniversityTotal(
-        ServiceRecord request)
-    {
-        return request.ServiceToTheUniversity.Sum(x => x.ApplicantScore) ?? 0;
-    }
-
-    public static double CalculateNationalInternationalTotal(ServiceRecord request)
-    {
-        return request.ServiceToNationalAndInternational?.Sum(x => x.ApplicantScore) ?? 0;
-    }
 
     public static double CalculateOverallTotal(ServiceRecord request)
     {
-        return CalculateUniversityTotal(request) +
-               CalculateNationalInternationalTotal(request);
+        return request.Services.Sum(x => x.ApplicantScore) ?? 0;
     }
 
     // ========================= GET =========================
@@ -157,7 +139,7 @@ public class ServiceCategoryService : IServiceCategoryService
             {
                 application = await _applicationRepository.GetOneAsync(a => a.IsActive && a.ApplicantId == auth.Id);
             }
-     
+
             if (application == null)
                 return new ApiResponse<ServiceResponse>(
                     "No active promotion application found",
@@ -176,11 +158,7 @@ public class ServiceCategoryService : IServiceCategoryService
             return new ServiceResponse
             {
                 PerformanceLevel = serviceRecord.ApplicantPerformance,
-                UniversityCommunity = serviceRecord.ServiceToTheUniversity
-                    .Select(MapServiceData)
-                    .ToList(),
-
-                NationalInternationalCommunity = serviceRecord.ServiceToNationalAndInternational
+                Services = serviceRecord.Services
                     .Select(MapServiceData)
                     .ToList()
             }.ToOkApiResponse("Service category retrieved successfully");
@@ -198,50 +176,73 @@ public class ServiceCategoryService : IServiceCategoryService
         }
     }
 
-    public async Task<IApiResponse<List<ServicePositionResponse>>> GetServicePositions()
+    public async Task<IApiResponse<List<ServiceCategoryWithPositions>>> GetServiceCategoriesWithPositions()
     {
         try
         {
+            var categories = await _serviceCategoryRepository.GetAllAsync();
             var positions = await _servicePositionRepository.GetAllAsync();
-            var response = positions.Select(p => new ServicePositionResponse
-            {
-                Id = p.Id,
-                Name = p.Name,
-                ServiceType = p.ServiceType.ToString(),
-                Score = p.Score
-            }).ToList();
 
-            return response.ToOkApiResponse("Service positions retrieved successfully");
+            var response = categories
+                .OrderBy(c => c.DisplayOrder)
+                .Select(c => new ServiceCategoryWithPositions
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    Description = c.Description,
+                    RequiresDesignation = c.RequiresDesignation,
+                    RequiresCommitteeName = c.RequiresCommitteeName,
+                    ActingScoreMultiplier = c.ActingScoreMultiplier,
+                    FullTimeScoreMultiplier = c.FullTimeScoreMultiplier,
+                    DisplayOrder = c.DisplayOrder,
+                    Positions = positions
+                        .Where(p => p.CategoryId == c.Id)
+                        .Select(p => new ServicePositionOption { Id = p.Id, Name = p.Name, Score = p.Score })
+                        .ToList()
+                }).ToList();
+
+            return response.ToOkApiResponse("Service categories retrieved successfully");
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[GetServicePositions] Failed");
-            return new ApiResponse<List<ServicePositionResponse>>("Failed to retrieve service positions", 500);
+            _logger.LogError(e, "[GetServiceCategoriesWithPositions] Failed");
+            return new ApiResponse<List<ServiceCategoryWithPositions>>("Failed to retrieve service categories", 500);
         }
     }
 
     // ========================= HELPERS =========================
 
-    private async Task ProcessServiceList(
+    private async Task ProcessServices(
         List<ServiceRequestData> requests,
-        List<ServiceRecordsData> existingList)
+        List<ServiceRecordItem> existingList)
     {
         foreach (var req in requests)
         {
-            if (string.IsNullOrWhiteSpace(req.ServiceTypeId))
+            if (string.IsNullOrWhiteSpace(req.ServicePositionId))
                 continue;
 
             var servicePosition =
                 await _servicePositionRepository.GetOneAsync(
-                    x => x.Id == req.ServiceTypeId);
+                    x => x.Id == req.ServicePositionId);
 
             if (servicePosition == null)
-                throw new Exception($"Invalid service type {req.ServiceTypeId}");
-            if (servicePosition.Score < req.Score)
-            {
-                req.Score = servicePosition.Score;
-            }
-            var effectiveScore = req.IsActing ? req.Score * 0.5 : req.Score;
+                throw new InvalidOperationException($"Invalid service position {req.ServicePositionId}");
+
+            var category =
+                await _serviceCategoryRepository.GetOneAsync(
+                    x => x.Id == servicePosition.CategoryId);
+
+            if (category == null)
+                throw new InvalidOperationException($"Invalid service category for position {req.ServicePositionId}");
+
+            if (category.RequiresCommitteeName && string.IsNullOrWhiteSpace(req.CommitteeName))
+                throw new InvalidOperationException($"Committee name is required for {category.Name}");
+
+            bool? isActing = category.RequiresDesignation ? (req.IsActing ?? false) : null;
+            var multiplier = category.RequiresDesignation
+                ? (isActing == true ? category.ActingScoreMultiplier : category.FullTimeScoreMultiplier)
+                : 1.0;
+            var effectiveScore = servicePosition.Score * multiplier;
 
             var existing =
                 existingList.FirstOrDefault(x => x.Id == req.Id);
@@ -250,17 +251,18 @@ public class ServiceCategoryService : IServiceCategoryService
             {
                 var evidence = await UploadServiceEvidence(req.Evidence);
 
-                existingList.Add(new ServiceRecordsData
+                existingList.Add(new ServiceRecordItem
                 {
-                    ServiceTitle = req.ServiceTitle,
-                    Role = req.Role,
-                    Duration = req.Duration,
+                    ServicePositionId = servicePosition.Id,
+                    CategoryId = category.Id,
+                    CategoryName = category.Name,
+                    PositionName = servicePosition.Name,
+                    CommitteeName = category.RequiresCommitteeName ? req.CommitteeName : null,
+                    IsActing = isActing,
+                    SystemGeneratedScore = effectiveScore,
                     ApplicantScore = effectiveScore,
                     ApplicantRemarks = req.Remark,
-                    SupportingEvidence = evidence,
-                    SystemGeneratedScore = servicePosition.Score,
-                    ServiceTypeId = servicePosition.Id,
-                    IsActing = req.IsActing
+                    SupportingEvidence = evidence
                 });
             }
             else
@@ -277,14 +279,15 @@ public class ServiceCategoryService : IServiceCategoryService
                             .Where(x => !filesToRemove.Contains(x))
                             .ToList();
                 }
-                existing.ServiceTitle = req.ServiceTitle;
-                existing.Role = req.Role;
-                existing.Duration = req.Duration;
+                existing.ServicePositionId = servicePosition.Id;
+                existing.CategoryId = category.Id;
+                existing.CategoryName = category.Name;
+                existing.PositionName = servicePosition.Name;
+                existing.CommitteeName = category.RequiresCommitteeName ? req.CommitteeName : null;
+                existing.IsActing = isActing;
+                existing.SystemGeneratedScore = effectiveScore;
                 existing.ApplicantScore = effectiveScore;
                 existing.ApplicantRemarks = req.Remark;
-                existing.SystemGeneratedScore = servicePosition.Score;
-                existing.ServiceTypeId = servicePosition.Id;
-                existing.IsActing = req.IsActing;
                 existing.UpdatedAt = DateTime.UtcNow;
 
                 if (req.Evidence.Count == 0) continue;
@@ -294,19 +297,20 @@ public class ServiceCategoryService : IServiceCategoryService
         }
     }
 
-    private ServiceResponseData MapServiceData(ServiceRecordsData data)
+    private ServiceResponseData MapServiceData(ServiceRecordItem data)
     {
         return new ServiceResponseData
         {
             Id = data.Id,
-            ServiceTitle = data.ServiceTitle,
-            ServiceTypeId = data.ServiceTypeId??string.Empty,
-            SystemGeneratedScore = data.SystemGeneratedScore ?? 0,
-            Role = data.Role,
-            Duration = data.Duration,
-            Score = data.ApplicantScore ?? 0,
-            Remark = data.ApplicantRemarks,
+            ServicePositionId = data.ServicePositionId,
+            CategoryId = data.CategoryId,
+            CategoryName = data.CategoryName,
+            PositionName = data.PositionName,
+            CommitteeName = data.CommitteeName,
             IsActing = data.IsActing,
+            Score = data.ApplicantScore ?? 0,
+            SystemGeneratedScore = data.SystemGeneratedScore,
+            Remark = data.ApplicantRemarks,
             Evidence = data.SupportingEvidence
                 .Select(x => _storageService.GetFileUrl(x))
                 .ToList()

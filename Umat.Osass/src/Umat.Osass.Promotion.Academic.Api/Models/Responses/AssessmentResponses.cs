@@ -147,17 +147,17 @@ public class ServiceAssessmentData
     public string? FapcPerformance { get; set; }
     public string? UapcPerformance { get; set; }
     public int TotalServiceRecords { get; set; }
-    public List<ServiceRecordAssessment> UniversityService { get; set; } = new();
-    public List<ServiceRecordAssessment> NationalInternationalService { get; set; } = new();
+    public List<ServiceRecordAssessment> Records { get; set; } = new();
 }
 
 public class ServiceRecordAssessment
 {
     public string Id { get; set; } = default!;
-    public string? ServiceTitle { get; set; }
-    public string? Role { get; set; }
-    public string? Duration { get; set; }
-    public string? ServiceType { get; set; }
+    public string? CategoryId { get; set; }
+    public string? CategoryName { get; set; }
+    public string? PositionName { get; set; }
+    public string? CommitteeName { get; set; }
+    public bool? IsActing { get; set; }
     public double SystemGeneratedScore { get; set; }
     public double? ApplicantScore { get; set; }
     public string? ApplicantRemarks { get; set; }

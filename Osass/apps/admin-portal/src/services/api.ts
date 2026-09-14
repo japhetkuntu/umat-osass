@@ -5,6 +5,7 @@ import type {
   Department,
   Staff,
   AcademicPosition,
+  ServiceCategory,
   ServicePosition,
   PublicationIndicator,
   CommitteeMember,
@@ -15,6 +16,7 @@ import type {
   DepartmentFormData,
   StaffFormData,
   AcademicPositionFormData,
+  ServiceCategoryFormData,
   ServicePositionFormData,
   PublicationIndicatorFormData,
   CommitteeMemberFormData,
@@ -190,6 +192,37 @@ export const updateAcademicPosition = async (
 export const deleteAcademicPosition = async (id: string): Promise<void> => {
   const res = await adminClient.delete(`/AcademicPositions/${id}`);
   if (!res.success) throw new Error(res.message || 'Failed to delete academic position');
+};
+
+// ==================== Service Categories ====================
+export const fetchServiceCategories = async (
+  page = 1,
+  pageSize = 50,
+  search?: string,
+): Promise<PagedResult<ServiceCategory>> => {
+  const query = buildQuery({ page, pageSize, search });
+  const res = await adminClient.get<PagedResult<ServiceCategory>>(`/ServiceCategories${query}`);
+  return res.data ?? { results: [], totalCount: 0, pageIndex: page, pageSize, count: 0, totalPages: 0, lowerBoundSize: 0, upperBoundSize: 0 };
+};
+
+export const createServiceCategory = async (data: ServiceCategoryFormData): Promise<ServiceCategory> => {
+  const res = await adminClient.post<ServiceCategory>('/ServiceCategories', data);
+  if (!res.success) throw new Error(res.message || 'Failed to create service category');
+  return res.data;
+};
+
+export const updateServiceCategory = async (
+  id: string,
+  data: Partial<ServiceCategoryFormData>,
+): Promise<ServiceCategory> => {
+  const res = await adminClient.put<ServiceCategory>(`/ServiceCategories/${id}`, data);
+  if (!res.success) throw new Error(res.message || 'Failed to update service category');
+  return res.data;
+};
+
+export const deleteServiceCategory = async (id: string): Promise<void> => {
+  const res = await adminClient.delete(`/ServiceCategories/${id}`);
+  if (!res.success) throw new Error(res.message || 'Failed to delete service category');
 };
 
 // ==================== Service Positions ====================

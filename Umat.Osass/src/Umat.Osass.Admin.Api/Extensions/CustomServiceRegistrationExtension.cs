@@ -18,6 +18,7 @@ public static class CustomServiceRegistrationExtension
             services.AddScoped<IFacultyService, FacultyService>();
             services.AddScoped<IDepartmentService, DepartmentService>();
             services.AddScoped<IServicePositionService, ServicePositionService>();
+            services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
             services.AddScoped<IPublicationIndicatorService, PublicationIndicatorService>();
             services.AddScoped<IKnowledgeMaterialIndicatorService, KnowledgeMaterialIndicatorService>();
             services.AddScoped<IAcademicPositionService, AcademicPositionService>();

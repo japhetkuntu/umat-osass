@@ -9,5 +9,5 @@ public interface IServiceCategoryService
     //service category
     public Task<IApiResponse<ServiceResponse>> UpdateServiceCategoryState(AuthData auth, UpdateServiceRequest request);
     public Task<IApiResponse<ServiceResponse>> GetServiceCategoryState(AuthData auth, string? id=null);
-    Task<IApiResponse<List<ServicePositionResponse>>> GetServicePositions();
+    Task<IApiResponse<List<ServiceCategoryWithPositions>>> GetServiceCategoriesWithPositions();
 }

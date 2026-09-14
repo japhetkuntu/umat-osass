@@ -96,16 +96,11 @@ public class AcademicPromotionDbContext : DbContext
         modelBuilder.Entity<ServiceRecord>(entity =>
         {
             // 🔧 Convert object to jsonb
-            entity.Property(e => e.ServiceToNationalAndInternational)
+            entity.Property(e => e.Services)
                 .HasColumnType("jsonb")
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
-                    v => JsonSerializer.Deserialize<List<ServiceRecordsData>>(v, (JsonSerializerOptions)null));
-            entity.Property(e => e.ServiceToTheUniversity)
-                .HasColumnType("jsonb")
-                .HasConversion(
-                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
-                    v => JsonSerializer.Deserialize<List<ServiceRecordsData>>(v, (JsonSerializerOptions)null));
+                    v => JsonSerializer.Deserialize<List<ServiceRecordItem>>(v, (JsonSerializerOptions)null));
             
             // ⚡ Performance indexes for common queries
             entity.HasIndex(e => e.PromotionApplicationId)

@@ -76,11 +76,13 @@ export interface PublicationResponse {
 
 export interface ServiceResponseData {
     id: string;
-    serviceTitle: string;
-    serviceTypeId: string;
-    role: string | null;
-    duration: string | null;
-    score: number; // Applicant score
+    servicePositionId: string;
+    categoryId: string;
+    categoryName: string;
+    positionName: string;
+    committeeName: string | null;
+    isActing: boolean | null;
+    score: number; // System-computed, read-only
     systemGeneratedScore: number;
     remark: string | null;
     evidence: string[];
@@ -88,8 +90,25 @@ export interface ServiceResponseData {
 
 export interface ServiceResponse {
     performanceLevel: string;
-    universityCommunity: ServiceResponseData[];
-    nationalInternationalCommunity: ServiceResponseData[];
+    services: ServiceResponseData[];
+}
+
+export interface ServiceCategoryPosition {
+    id: string;
+    name: string;
+    score: number;
+}
+
+export interface ServiceCategoryOption {
+    id: string;
+    name: string;
+    description: string | null;
+    requiresDesignation: boolean;
+    requiresCommitteeName: boolean;
+    actingScoreMultiplier: number;
+    fullTimeScoreMultiplier: number;
+    displayOrder: number;
+    positions: ServiceCategoryPosition[];
 }
 
 export interface OverallReview {

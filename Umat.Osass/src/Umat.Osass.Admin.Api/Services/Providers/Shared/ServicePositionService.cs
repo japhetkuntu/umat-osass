@@ -15,11 +15,13 @@ public class ServicePositionService:IServicePositionService
 {
     private readonly ILogger<ServicePositionService> _logger;
     private readonly IIdentityPgRepository<ServicePosition> _servicePositionRepository;
+    private readonly IIdentityPgRepository<ServiceCategory> _serviceCategoryRepository;
 
-    public ServicePositionService(ILogger<ServicePositionService> logger,IIdentityPgRepository<ServicePosition> servicePositionRepository)
+    public ServicePositionService(ILogger<ServicePositionService> logger,IIdentityPgRepository<ServicePosition> servicePositionRepository, IIdentityPgRepository<ServiceCategory> serviceCategoryRepository)
     {
         _logger = logger;
         _servicePositionRepository = servicePositionRepository;
+        _serviceCategoryRepository = serviceCategoryRepository;
     }
 
     public async Task<IApiResponse<ServicePositionResponse>> Add(ServicePositionRequest request, AuthData auth)
@@ -32,10 +34,15 @@ public class ServicePositionService:IServicePositionService
             {
                 return new ApiResponse<ServicePositionResponse>("ServicePosition with the same name already exists",400);
             }
+            var categoryExist = await _serviceCategoryRepository.GetByIdAsync(request.CategoryId);
+            if (categoryExist == null) return new ApiResponse<ServicePositionResponse>("Service category does not exist",400);
             var newServicePosition = request.Adapt<ServicePosition>();
             newServicePosition.CreatedAt = DateTime.UtcNow;
+            newServicePosition.CreatedBy = auth.Name;
             var added = await _servicePositionRepository.AddAsync(newServicePosition);
             var response = newServicePosition.Adapt<ServicePositionResponse>();
+            response.CategoryId = request.CategoryId;
+            response.CategoryName = categoryExist.Name;
             return added > 0 ? response.ToOkApiResponse("ServicePosition added") : new ApiResponse<ServicePositionResponse>("ServicePosition could not be added",400);
         }
         catch (Exception e)
@@ -55,12 +62,17 @@ public class ServicePositionService:IServicePositionService
             {
                 return new ApiResponse<ServicePositionResponse>("ServicePosition does not exist",400);
             }
+            var categoryExist = await _serviceCategoryRepository.GetByIdAsync(request.CategoryId);
+            if (categoryExist == null) return new ApiResponse<ServicePositionResponse>("Service category does not exist",400);
             // Update the existing tracked entity instead of creating a new one
             servicePositionExist.Name = request.Name;
+            servicePositionExist.Score = request.Score;
+            servicePositionExist.CategoryId = request.CategoryId;
             servicePositionExist.UpdatedAt = DateTime.UtcNow;
             servicePositionExist.UpdatedBy = auth.Name;
             var updated = await _servicePositionRepository.UpdateAsync(servicePositionExist);
             var response = servicePositionExist.Adapt<ServicePositionResponse>();
+            response.CategoryName = categoryExist.Name;
             return updated > 0 ? response.ToOkApiResponse("ServicePosition updated") : new ApiResponse<ServicePositionResponse>("ServicePosition could not be updated",400);
         }
         catch (Exception e)
@@ -80,7 +92,7 @@ public class ServicePositionService:IServicePositionService
             {
                 return new ApiResponse<ServicePositionResponse>("ServicePosition does not exist",400);
             }
-            
+
             var deleted = await _servicePositionRepository.Remove(servicePositionExist);
             return deleted > 0 ? new ApiResponse<ServicePositionResponse>("ServicePosition deleted",200) : new ApiResponse<ServicePositionResponse>("ServicePosition could not be deleted",400);
         }
@@ -101,8 +113,10 @@ public class ServicePositionService:IServicePositionService
             {
                 return new ApiResponse<ServicePositionResponse>("ServicePosition does not exist",400);
             }
-            
+
             var response = servicePositionExist.Adapt<ServicePositionResponse>();
+            var categoryExist = await _serviceCategoryRepository.GetByIdAsync(servicePositionExist.CategoryId);
+            if (categoryExist != null) response.CategoryName = categoryExist.Name;
             return response.ToOkApiResponse("ServicePosition found");
         }
         catch (Exception e)
@@ -132,6 +146,19 @@ public class ServicePositionService:IServicePositionService
 
             var totalCount = await servicePositionQuery.CountAsync();
             var response = servicePositions.Adapt<List<ServicePositionResponse>>();
+
+            // Fetch related ServiceCategory data to populate response
+            foreach (var pos in response)
+            {
+                if (!string.IsNullOrEmpty(pos.CategoryId))
+                {
+                    var category = await _serviceCategoryRepository.GetByIdAsync(pos.CategoryId);
+                    if (category != null)
+                    {
+                        pos.CategoryName = category.Name;
+                    }
+                }
+            }
 
             var pagedResult = new PagedResult<ServicePositionResponse>(response, filter.Page, filter.PageSize, response.Count, totalCount);
 

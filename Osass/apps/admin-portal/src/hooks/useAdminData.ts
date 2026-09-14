@@ -6,6 +6,10 @@ import {
   fetchDepartments,
   fetchStaff,
   fetchAcademicPositions,
+  fetchServiceCategories,
+  createServiceCategory,
+  updateServiceCategory,
+  deleteServiceCategory,
   fetchServicePositions,
   fetchPublicationIndicators,
   fetchCommitteeMembers,
@@ -61,6 +65,7 @@ import type {
   Department,
   Staff,
   AcademicPosition,
+  ServiceCategory,
   ServicePosition,
   PublicationIndicator,
   CommitteeMember,
@@ -70,6 +75,7 @@ import type {
   DepartmentFormData,
   StaffFormData,
   AcademicPositionFormData,
+  ServiceCategoryFormData,
   ServicePositionFormData,
   PublicationIndicatorFormData,
   CommitteeMemberFormData,
@@ -93,6 +99,7 @@ export const queryKeys = {
   departments: (departmentType?: string) => departmentType ? ['departments', departmentType] : ['departments'],
   staff: (category?: string) => category ? ['staff', category] : ['staff'],
   academicPositions: () => ['academicPositions'],
+  serviceCategories: () => ['serviceCategories'],
   servicePositions: () => ['servicePositions'],
   publicationIndicators: () => ['publicationIndicators'],
   knowledgeMaterialIndicators: () => ['knowledgeMaterialIndicators'],
@@ -421,6 +428,81 @@ export const useDeleteAcademicPosition = () => {
       toast({
         title: 'Error',
         description: 'Failed to delete academic position',
+        variant: 'destructive',
+      });
+    },
+  });
+};
+
+// ==================== SERVICE CATEGORIES ====================
+export const useServiceCategories = () => {
+  return useQuery({
+    queryKey: queryKeys.serviceCategories(),
+    queryFn: async () => {
+      const data = await fetchServiceCategories();
+      return data.results ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useCreateServiceCategory = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (data: ServiceCategoryFormData) => createServiceCategory(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.serviceCategories() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.servicePositions() });
+      toast({ title: 'Success', description: 'Service category created successfully' });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create service category',
+        variant: 'destructive',
+      });
+    },
+  });
+};
+
+export const useUpdateServiceCategory = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: ServiceCategoryFormData }) =>
+      updateServiceCategory(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.serviceCategories() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.servicePositions() });
+      toast({ title: 'Success', description: 'Service category updated successfully' });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update service category',
+        variant: 'destructive',
+      });
+    },
+  });
+};
+
+export const useDeleteServiceCategory = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (id: string) => deleteServiceCategory(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.serviceCategories() });
+      toast({ title: 'Success', description: 'Service category deleted successfully' });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete service category',
         variant: 'destructive',
       });
     },
