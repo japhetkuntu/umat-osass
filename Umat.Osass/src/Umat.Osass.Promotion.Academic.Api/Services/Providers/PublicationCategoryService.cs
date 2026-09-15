@@ -76,11 +76,10 @@ public class PublicationCategoryService : IPublicationCategoryService
                 if (indicator == null)
                     throw new Exception($"Invalid publication type {req.PublicationTypeId}");
 
-                var maxScore = indicator.Score;
-                if (maxScore < req.Score)
-                {
-                    req.Score = maxScore;
-                }
+                // Clamp to [0, indicator.Score] - the applicant's self-reported score can never
+                // exceed the indicator's ceiling, and a negative value would otherwise crash
+                // ComputePerformanceForPublications (no arm below 0 in its threshold switch).
+                req.Score = Math.Clamp(req.Score, 0, indicator.Score);
 
                 var existing = publication.Publications
                     .FirstOrDefault(x => x.Id == req.Id);
@@ -89,6 +88,9 @@ public class PublicationCategoryService : IPublicationCategoryService
                 {
                     var evidence = await UploadPublicationEvidence(req.Evidence);
                     var presentationEvidence = await UploadPublicationEvidence(req.PresentationEvidence);
+                    // The presentation bonus requires both a presentation claim AND evidence of it -
+                    // computed once here so SystemGeneratedScore and PresentationBonus never disagree.
+                    var earnsPresentationBonus = req.IsPresented && presentationEvidence.Count > 0;
 
                     var newPub = new PublicationData
                     {
@@ -96,14 +98,12 @@ public class PublicationCategoryService : IPublicationCategoryService
                         Year = req.Year,
                         PublicationTypeId = indicator.Id,
                         PublicationTypeName = indicator.Name,
-                        SystemGeneratedScore = indicator.Score + (req.IsPresented ? indicator.ScoreForPresentation : 0),
+                        SystemGeneratedScore = indicator.Score + (earnsPresentationBonus ? indicator.ScoreForPresentation : 0),
                         ApplicantScore = req.Score,
                         ApplicantRemarks = req.Remark,
                         SupportingEvidence = evidence,
                         IsPresented = req.IsPresented,
-                        PresentationBonus = req.IsPresented
-                            ? (indicator.ScoreForPresentation > 0 ? indicator.ScoreForPresentation : PresentationBonusFallback)
-                            : 0,
+                        PresentationBonus = earnsPresentationBonus ? indicator.ScoreForPresentation : 0,
                         PresentationEvidence = presentationEvidence
                     };
                     req.Id = newPub.Id;
@@ -123,20 +123,9 @@ public class PublicationCategoryService : IPublicationCategoryService
                                 .Where(x => !filesToRemove.Contains(x))
                                 .ToList();
                     }
-                    existing.Title = req.Title;
-                    existing.Year = req.Year;
-                    existing.PublicationTypeId = indicator.Id;
-                    existing.PublicationTypeName = indicator.Name;
-                    existing.SystemGeneratedScore = indicator.Score + (req.IsPresented ? indicator.ScoreForPresentation : 0);
-                    existing.ApplicantScore = req.Score;
-                    existing.ApplicantRemarks = req.Remark;
-                    existing.IsPresented = req.IsPresented;
-                    existing.PresentationBonus = req.IsPresented
-                        ? (indicator.ScoreForPresentation > 0 ? indicator.ScoreForPresentation : PresentationBonusFallback)
-                        : 0;
-                    existing.UpdatedAt = DateTime.UtcNow;
 
-                    // Remove presentation evidence files
+                    // Presentation evidence is updated before the score/bonus below is computed, so
+                    // PresentationBonus reflects the final evidence count for this same request.
                     if (req.RemovedPresentationEvidence.Count != 0)
                     {
                         var filesToRemove = req.RemovedPresentationEvidence
@@ -154,6 +143,18 @@ public class PublicationCategoryService : IPublicationCategoryService
                         var newPresentationEvidence = await UploadPublicationEvidence(req.PresentationEvidence);
                         existing.PresentationEvidence.AddRange(newPresentationEvidence);
                     }
+
+                    existing.Title = req.Title;
+                    existing.Year = req.Year;
+                    existing.PublicationTypeId = indicator.Id;
+                    existing.PublicationTypeName = indicator.Name;
+                    existing.ApplicantScore = req.Score;
+                    existing.ApplicantRemarks = req.Remark;
+                    existing.IsPresented = req.IsPresented;
+                    var earnsPresentationBonus = req.IsPresented && existing.PresentationEvidence.Count > 0;
+                    existing.SystemGeneratedScore = indicator.Score + (earnsPresentationBonus ? indicator.ScoreForPresentation : 0);
+                    existing.PresentationBonus = earnsPresentationBonus ? indicator.ScoreForPresentation : 0;
+                    existing.UpdatedAt = DateTime.UtcNow;
 
                     if (req.Evidence.Count == 0) continue;
                     var newEvidence = await UploadPublicationEvidence(req.Evidence);
@@ -200,15 +201,12 @@ public class PublicationCategoryService : IPublicationCategoryService
         }
     }
     
-    private const double PresentationBonusFallback = 2;
-
     public static double CalculateTotalScore(Publication request)
     {
-        return request.Publications.Sum(p =>
-            (p.ApplicantScore ?? 0) +
-            (p.IsPresented && p.PresentationEvidence.Count > 0
-                ? (p.PresentationBonus > 0 ? p.PresentationBonus : PresentationBonusFallback)
-                : 0));
+        // PresentationBonus is already correctly gated (IsPresented && evidence present) and
+        // zeroed otherwise at write time in UpdatePublicationCategoryState - no need to re-derive
+        // eligibility here.
+        return request.Publications.Sum(p => (p.ApplicantScore ?? 0) + p.PresentationBonus);
     }
 
     public async Task<IApiResponse<PublicationResponse>> GetPublicationCategoryState(

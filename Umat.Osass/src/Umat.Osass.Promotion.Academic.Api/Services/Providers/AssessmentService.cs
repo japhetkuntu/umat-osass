@@ -1314,9 +1314,9 @@ public class AssessmentService : IAssessmentService
 
         double GetCommitteeScore(TeachingData? data) => committeeType switch
         {
-            AcademicPromotionApplicationRoles.DAPC => data?.DapcScore ?? 0,
-            AcademicPromotionApplicationRoles.FAPSC => data?.FapcScore ?? 0,
-            AcademicPromotionApplicationRoles.UAPC => data?.UapcScore ?? 0,
+            AcademicPromotionApplicationRoles.DAPC => data?.DapcScore ?? data?.ApplicantScore ?? 0,
+            AcademicPromotionApplicationRoles.FAPSC => data?.FapcScore ?? data?.ApplicantScore ?? 0,
+            AcademicPromotionApplicationRoles.UAPC => data?.UapcScore ?? data?.ApplicantScore ?? 0,
             _ => 0
         };
 
@@ -1761,28 +1761,49 @@ public class AssessmentService : IAssessmentService
 
     private static bool MatchesPerformanceByNumericTeaching(List<string> acceptableCriteria, double teachingScore, double publicationScore, double serviceScore)
     {
-        // Fallback: if any acceptable pattern exists with publication/service criteria met and teaching numeric score is sufficiently high, accept.
+        // Fallback: derive an actual performance level for each category from its raw numeric
+        // score, then apply the same category-agnostic rank-bucket matching as
+        // MatchesPerformanceCriteria (any category can satisfy any slot) - kept consistent with
+        // that method rather than treating criteria positionally.
         if (acceptableCriteria == null || acceptableCriteria.Count == 0)
             return true;
 
-        // Classify using each category's own thresholds (Publications: 90/70/50, Service: 100/50/30) -
-        // these differ from Teaching's 80/60/50 scale, so the two scores must not share one threshold set.
+        // Classify using each category's own thresholds (Teaching: 80/60/50, Publications: 90/70/50,
+        // Service: 100/50/30) - these differ, so the three scores must not share one threshold set.
+        var teachingLevel = PerformanceComputationService.ComputePerformanceForTeaching(teachingScore);
         var publicationLevel = PerformanceComputationService.ComputePerformanceForPublications(publicationScore);
         var serviceLevel = PerformanceComputationService.ComputeServicePerformance(serviceScore);
+
+        var actualRanks = new[] { teachingLevel, publicationLevel, serviceLevel }
+            .Select(PerformanceLevelWeight).OrderByDescending(x => x).ToArray();
 
         foreach (var criteria in acceptableCriteria)
         {
             var parts = criteria.Split(',').Select(p => p.Trim()).ToList();
             if (parts.Count != 3) continue;
 
-            var publicationRequired = parts[1];
-            var serviceRequired = parts[2];
-            if (PerformanceLevelWeight(publicationLevel) < PerformanceLevelWeight(publicationRequired)) continue;
-            if (PerformanceLevelWeight(serviceLevel) < PerformanceLevelWeight(serviceRequired)) continue;
+            var requiredRanks = parts.Select(PerformanceLevelWeight).OrderByDescending(x => x).ToArray();
 
-            // teaching numeric threshold min: 60 (Good) to be considered acceptable as numeric
-            if (teachingScore >= TeachingThresholdForLevel(PerformanceTypes.Good, double.MaxValue))
-                return true;
+            var used = new bool[3];
+            var matched = true;
+            for (int j = 0; j < 3; j++)
+            {
+                int requiredRank = requiredRanks[j];
+                bool found = false;
+                for (int k = 0; k < 3; k++)
+                {
+                    if (used[k]) continue;
+                    if (actualRanks[k] >= requiredRank)
+                    {
+                        used[k] = true;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) { matched = false; break; }
+            }
+
+            if (matched) return true;
         }
 
         return false;
@@ -1790,9 +1811,13 @@ public class AssessmentService : IAssessmentService
 
     // Shared rank weights for comparing performance levels across the criteria-matching helpers
     // above - a single source of truth instead of the same dictionary redefined per method.
+    // Both "In Adequate" (PerformanceTypes - the unscored default) and "Inadequate" (PerformanceRating -
+    // what PerformanceComputationService actually writes for a genuinely-computed low score) are
+    // mapped, since a real record can hold either string depending on whether it's been scored yet.
     private static readonly Dictionary<string, int> PerformanceLevelWeights = new()
     {
         { PerformanceTypes.InAdequate, 1 },
+        { PerformanceRating.Inadequate, 1 },
         { PerformanceTypes.Adequate, 2 },
         { PerformanceTypes.Good, 3 },
         { PerformanceTypes.High, 4 }

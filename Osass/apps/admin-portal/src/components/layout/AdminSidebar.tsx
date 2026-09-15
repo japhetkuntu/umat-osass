@@ -104,17 +104,24 @@ export function AdminSidebar() {
     },
   ];
 
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(['Organization', 'Academic', 'Non-Academic', 'Administration']);
+  // Every page renders its own <AdminLayout>, so this component fully unmounts and remounts on
+  // every navigation - any "expanded" state stored here cannot survive a link click. Rather than
+  // fight that by lifting state elsewhere, embrace it: default a group's expansion to whether it
+  // contains the active route (so navigating to a sub-item always leaves its own group open on the
+  // freshly-mounted sidebar), and let manual toggles override that default only for the current
+  // page view.
+  const [manualToggles, setManualToggles] = useState<Record<string, boolean>>({});
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-
-  const toggleGroup = (title: string) => {
-    setExpandedGroups(prev =>
-      prev.includes(title) ? prev.filter(g => g !== title) : [...prev, title]
-    );
-  };
 
   const isActiveRoute = (href: string) => location.pathname === href;
   const isGroupActive = (items: NavItem[]) => items.some(item => isActiveRoute(item.href));
+
+  const isGroupExpanded = (group: NavGroup) =>
+    group.title in manualToggles ? manualToggles[group.title] : isGroupActive(group.items);
+
+  const toggleGroup = (group: NavGroup) => {
+    setManualToggles(prev => ({ ...prev, [group.title]: !isGroupExpanded(group) }));
+  };
 
   const renderNavItem = (item: NavItem, isNested = false) => (
     <NavLink
@@ -134,13 +141,13 @@ export function AdminSidebar() {
   );
 
   const renderNavGroup = (group: NavGroup) => {
-    const isExpanded = expandedGroups.includes(group.title);
+    const isExpanded = isGroupExpanded(group);
     const isActive = isGroupActive(group.items);
 
     return (
       <div key={group.title} className="space-y-1">
         <button
-          onClick={() => toggleGroup(group.title)}
+          onClick={() => toggleGroup(group)}
           className={cn(
             'flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
             'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground',
@@ -256,9 +263,13 @@ export function AdminSidebar() {
       )}
 
       {/* Sidebar */}
+      {/* lg:sticky lg:top-0 lg:h-screen caps the sidebar to exactly one viewport height on desktop -
+          without it, this is just a normal flex sibling of <main> with no height of its own, so on
+          any page whose content is taller than the viewport the whole flex row (and the sidebar
+          along with it, footer included) stretches past 100vh instead of staying pinned. */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 lg:relative lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >

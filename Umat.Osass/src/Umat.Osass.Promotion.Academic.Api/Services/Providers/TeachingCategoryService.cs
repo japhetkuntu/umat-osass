@@ -232,6 +232,15 @@ public class TeachingCategoryService : ITeachingCategoryService
     {
         var isNew = existing == null;
 
+        // Each of the 10 teaching dimensions is scored on a 0-10 scale (enforced only by the
+        // frontend slider/quick-select today) - clamp server-side too, since nothing else here
+        // validates the range and CalculateTotalScore's sum feeds thresholds calibrated for
+        // exactly this 0-10-per-dimension scale.
+        if (request.Score.HasValue)
+        {
+            request.Score = Math.Clamp(request.Score.Value, 0, 10);
+        }
+
         var teachingData = existing ?? new TeachingData
         {
             ApplicantScore = request.Score,
