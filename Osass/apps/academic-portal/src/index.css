@@ -34,8 +34,8 @@
     --color-text-info: #073d25;
     --color-border-info: #0e7143;
 
-    --background: 0 0% 100%;           /* White */
-    --foreground: 0 0% 10%;            /* Black */
+    --background: 150 18% 97%;
+    --foreground: 160 12% 13%;
 
     --card: 0 0% 100%;
     --card-foreground: 0 0% 10%;
@@ -70,18 +70,18 @@
     --destructive: 4 84% 47%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 152 15% 90%;
-    --input: 152 15% 94%;
+    --border: 150 10% 87%;
+    --input: 150 10% 97%;
     --ring: 152 78% 25%;
 
-    --radius: 0.75rem;
+    --radius: 0.625rem;
 
     --shadow-sm: none;
     --shadow-md: none;
     --shadow-lg: none;
 
     --font-serif: 'Lora', Georgia, serif;
-    --font-sans: 'Anthropic Sans', Inter, system-ui, -apple-system, sans-serif;
+    --font-sans: Inter, system-ui, -apple-system, sans-serif;
 
     --sidebar-background: 152 78% 15%;
     --sidebar-foreground: 0 0% 98%;
@@ -120,7 +120,7 @@
     font-family: var(--font-sans);
     font-weight: 400;
     font-size: 1rem;
-    letter-spacing: -0.3px;
+    letter-spacing: normal;
   }
 
   h1 {
@@ -147,10 +147,6 @@
     font-size: 1rem;
     line-height: 1.5;
     text-transform: none;
-  }
-
-  svg {
-    stroke-width: 0.5px;
   }
 
   .card,
@@ -204,7 +200,7 @@
   select {
     min-height: 36px;
     border: 1px solid hsl(var(--border));
-    border-radius: 16px;
+    border-radius: 8px;
     background: hsl(var(--input));
     color: var(--foreground);
     padding: 0 0.75rem;
@@ -236,6 +232,11 @@
 
   p {
     line-height: 1.65;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
   }
 
   a {
@@ -325,6 +326,48 @@
   /* Loading State */
   .skeleton {
     @apply bg-muted rounded-sm animate-pulse;
+  }
+}
+
+@media (max-width: 639px) {
+  .app-sidebar {
+    width: 5rem !important;
+  }
+
+  .app-sidebar .sidebar-brand,
+  .app-sidebar .sidebar-label,
+  .app-sidebar .sidebar-sublinks,
+  .app-sidebar .sidebar-user-profile,
+  .app-sidebar .sidebar-collapse {
+    display: none;
+  }
+
+  .app-sidebar > div:first-child {
+    height: 3.5rem;
+    padding: 0;
+  }
+
+  .app-sidebar nav {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .app-sidebar nav > div > button {
+    justify-content: center;
+    gap: 0;
+    padding-inline: 0;
+  }
+
+  .app-sidebar > div:last-child {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .app-sidebar > div:last-child button {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .app-sidebar > div:last-child button span {
+    display: none;
   }
 }
 

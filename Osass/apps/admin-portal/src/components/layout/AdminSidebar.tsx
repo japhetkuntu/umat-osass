@@ -142,6 +142,7 @@ export function AdminSidebar() {
       <div key={group.title} className="space-y-1">
         <button
           onClick={() => toggleGroup(group)}
+          aria-expanded={isExpanded}
           className={cn(
             'flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
             'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground',
@@ -187,13 +188,14 @@ export function AdminSidebar() {
           size="icon"
           className="ml-auto text-sidebar-foreground lg:hidden"
           onClick={() => setIsMobileOpen(false)}
+          aria-label="Close navigation"
         >
           <X className="h-5 w-5" />
         </Button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 overflow-y-auto p-4">
+      <nav id="admin-navigation" aria-label="Administration navigation" className="flex-1 space-y-1 overflow-y-auto p-4">
         {navigationItems.map(item =>
           isNavGroup(item) ? renderNavGroup(item) : renderNavItem(item)
         )}
@@ -244,6 +246,9 @@ export function AdminSidebar() {
         size="icon"
         className="fixed left-4 top-4 z-50 lg:hidden"
         onClick={() => setIsMobileOpen(true)}
+        aria-label="Open navigation"
+        aria-expanded={isMobileOpen}
+        aria-controls="admin-navigation"
       >
         <Menu className="h-6 w-6" />
       </Button>

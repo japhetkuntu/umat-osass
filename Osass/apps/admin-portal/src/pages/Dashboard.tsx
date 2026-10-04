@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/common/PageHeader';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Building2,
@@ -24,7 +23,6 @@ interface StatCard {
   key: keyof DashboardStats;
   icon: React.ElementType;
   href: string;
-  color: string;
 }
 
 interface StatGroup {
@@ -36,65 +34,31 @@ const statGroups: StatGroup[] = [
   {
     title: 'Organization',
     cards: [
-      { key: 'totalSchools', label: 'Schools', icon: Building2, href: '/schools', color: 'text-blue-600' },
-      { key: 'totalFaculties', label: 'Faculties', icon: GraduationCap, href: '/faculties', color: 'text-indigo-600' },
-      { key: 'totalDepartments', label: 'Academic Departments', icon: Layers, href: '/departments', color: 'text-violet-600' },
-      { key: 'totalUnits', label: 'Units & Sections', icon: Network, href: '/units-sections', color: 'text-purple-600' },
+      { key: 'totalSchools', label: 'Schools', icon: Building2, href: '/schools' },
+      { key: 'totalFaculties', label: 'Faculties', icon: GraduationCap, href: '/faculties' },
+      { key: 'totalDepartments', label: 'Academic Departments', icon: Layers, href: '/departments' },
+      { key: 'totalUnits', label: 'Units & Sections', icon: Network, href: '/units-sections' },
     ],
   },
   {
     title: 'Teaching Staff',
     cards: [
-      { key: 'totalAcademicStaff', label: 'Teaching Staff', icon: Users, href: '/academic-staff', color: 'text-emerald-600' },
-      { key: 'totalAcademicPositions', label: 'Teaching Staff Positions', icon: TrendingUp, href: '/academic-positions', color: 'text-teal-600' },
-      { key: 'totalServicePositions', label: 'Service Positions', icon: Briefcase, href: '/service-positions', color: 'text-cyan-600' },
-      { key: 'totalPublicationIndicators', label: 'Publication Indicators', icon: BookOpen, href: '/publication-types', color: 'text-sky-600' },
-      { key: 'totalAcademicCommitteeMembers', label: 'Committee Members', icon: UserCheck, href: '/committees', color: 'text-blue-500' },
+      { key: 'totalAcademicStaff', label: 'Teaching Staff', icon: Users, href: '/academic-staff' },
+      { key: 'totalAcademicPositions', label: 'Teaching Staff Positions', icon: TrendingUp, href: '/academic-positions' },
+      { key: 'totalServicePositions', label: 'Service Positions', icon: Briefcase, href: '/service-positions' },
+      { key: 'totalPublicationIndicators', label: 'Publication Indicators', icon: BookOpen, href: '/publication-types' },
+      { key: 'totalAcademicCommitteeMembers', label: 'Committee Members', icon: UserCheck, href: '/committees' },
     ],
   },
   {
     title: 'Non-Teaching Staff',
     cards: [
-      { key: 'totalNonAcademicStaff', label: 'Non-Teaching Staff', icon: Users, href: '/non-academic-staff', color: 'text-orange-600' },
-      { key: 'totalNonAcademicPositions', label: 'Non-Teaching Staff Positions', icon: TrendingUp, href: '/non-academic-positions', color: 'text-amber-600' },
-      { key: 'totalNonAcademicCommitteeMembers', label: 'Committee Members', icon: UserCheck, href: '/non-academic-committees', color: 'text-yellow-600' },
+      { key: 'totalNonAcademicStaff', label: 'Non-Teaching Staff', icon: Users, href: '/non-academic-staff' },
+      { key: 'totalNonAcademicPositions', label: 'Non-Teaching Staff Positions', icon: TrendingUp, href: '/non-academic-positions' },
+      { key: 'totalNonAcademicCommitteeMembers', label: 'Committee Members', icon: UserCheck, href: '/non-academic-committees' },
     ],
   },
 ];
-
-function StatCard({ label, value, icon: Icon, href, color, isLoading }: {
-  label: string;
-  value: number;
-  icon: React.ElementType;
-  href: string;
-  color: string;
-  isLoading: boolean;
-}) {
-  return (
-    <Link to={href} className="block group">
-      <Card className="transition-all duration-200 hover:shadow-md hover:border-primary/30 cursor-pointer">
-        <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4">
-          <CardTitle className="text-sm font-medium text-muted-foreground leading-tight">
-            {label}
-          </CardTitle>
-          <div className={`rounded-md p-1.5 bg-muted/50 ${color}`}>
-            <Icon className="h-4 w-4" />
-          </div>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
-          {isLoading ? (
-            <div className="h-8 w-16 animate-pulse rounded bg-muted" />
-          ) : (
-            <div className="flex items-end justify-between">
-              <p className="text-2xl font-bold">{value.toLocaleString()}</p>
-              <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </Link>
-  );
-}
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -137,50 +101,57 @@ export default function Dashboard() {
       )}
 
       {/* Summary totals */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+      <section aria-label="Institutional totals" className="mb-8 grid grid-cols-2 divide-x divide-y divide-border overflow-hidden rounded-md border border-border bg-card sm:grid-cols-4 sm:divide-y-0">
         {[
-          { label: 'Total Staff', value: totalStaff, icon: Users, color: 'text-primary', href: '/academic-staff' },
-          { label: 'Total Schools', value: stats?.totalSchools ?? 0, icon: Building2, color: 'text-blue-600', href: '/schools' },
-          { label: 'Total Departments & Units', value: (stats?.totalDepartments ?? 0) + (stats?.totalUnits ?? 0), icon: Layers, color: 'text-violet-600', href: '/departments' },
-          { label: 'Total Committee Members', value: stats?.totalCommitteeMembers ?? 0, icon: UserCheck, color: 'text-emerald-600', href: '/committees' },
-        ].map(({ label, value, icon: Icon, color, href }) => (
-          <Link key={label} to={href} className="block group">
-            <Card className="border-2 transition-all duration-200 hover:shadow-md hover:border-primary/40 bg-primary/5">
-              <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-                <div className={`${color}`}><Icon className="h-5 w-5" /></div>
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
-                {isLoading ? (
-                  <div className="h-9 w-20 animate-pulse rounded bg-muted" />
-                ) : (
-                  <p className="text-3xl font-bold">{value.toLocaleString()}</p>
-                )}
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
+          { label: 'Total Staff', value: totalStaff },
+          { label: 'Total Schools', value: stats?.totalSchools ?? 0, href: '/schools' },
+          { label: 'Departments & Units', value: (stats?.totalDepartments ?? 0) + (stats?.totalUnits ?? 0), href: '/departments' },
+          { label: 'Committee Members', value: stats?.totalCommitteeMembers ?? 0, href: '/committees' },
+        ].map(({ label, value, href }) => {
+          const content = (
+            <>
+              <span className="block text-xs font-medium text-muted-foreground">{label}</span>
+              {isLoading ? (
+                <span className="mt-2 block h-7 w-16 animate-pulse rounded bg-muted" />
+              ) : (
+                <span className="mt-1 block text-2xl font-semibold tabular-nums text-foreground">{value.toLocaleString()}</span>
+              )}
+            </>
+          );
+
+          return href ? (
+            <Link key={label} to={href} className="min-h-20 px-4 py-3 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50">
+              {content}
+            </Link>
+          ) : (
+            <div key={label} className="min-h-20 px-4 py-3">
+              {content}
+            </div>
+          );
+        })}
+      </section>
 
       {/* Per-section breakdowns */}
       <div className="space-y-8">
         {statGroups.map((group) => (
           <section key={group.title}>
-            <h2 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
-              <span className="h-1 w-4 rounded-full bg-primary inline-block" />
-              {group.title}
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {group.cards.map(({ key, label, icon, href, color }) => (
-                <StatCard
+            <h2 className="mb-3 text-base font-semibold text-foreground">{group.title}</h2>
+            <div className="divide-y divide-border rounded-md border border-border bg-card">
+              {group.cards.map(({ key, label, icon: Icon, href }) => (
+                <Link
                   key={key}
-                  label={label}
-                  value={stats?.[key] ?? 0}
-                  icon={icon}
-                  href={href}
-                  color={color}
-                  isLoading={isLoading}
-                />
+                  to={href}
+                  className="group flex min-h-12 items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/40 focus-visible:bg-muted/40 sm:px-4"
+                >
+                  <Icon aria-hidden="true" className="h-4 w-4 shrink-0 text-primary/75" />
+                  <span className="min-w-0 flex-1 text-sm text-foreground">{label}</span>
+                  {isLoading ? (
+                    <span className="h-5 w-10 animate-pulse rounded bg-muted" />
+                  ) : (
+                    <span className="text-sm font-medium tabular-nums text-foreground">{(stats?.[key] ?? 0).toLocaleString()}</span>
+                  )}
+                  <ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
+                </Link>
               ))}
             </div>
           </section>

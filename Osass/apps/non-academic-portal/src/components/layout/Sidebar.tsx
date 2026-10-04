@@ -23,12 +23,13 @@ interface SidebarProps {
   userName: string;
   userRank: string;
   onLogout: () => void;
+  isCollapsed: boolean;
+  onCollapsedChange: (isCollapsed: boolean) => void;
 }
 
-export const Sidebar = ({ userName, userRank, onLogout }: SidebarProps) => {
+export const Sidebar = ({ userName, userRank, onLogout, isCollapsed, onCollapsedChange }: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isCollapsed, setIsCollapsed] = React.useState(false);
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -54,14 +55,14 @@ export const Sidebar = ({ userName, userRank, onLogout }: SidebarProps) => {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 h-screen bg-sidebar text-sidebar-foreground transition-all duration-300 z-50 border-r border-sidebar-border shadow-xl flex flex-col overflow-hidden",
+        "app-sidebar fixed left-0 top-0 h-screen bg-sidebar text-sidebar-foreground transition-all duration-300 z-50 border-r border-sidebar-border flex flex-col overflow-hidden",
         isCollapsed ? "w-20" : "w-64"
       )}
     >
       {/* Sidebar Header */}
       <div className="p-6 flex items-center justify-between border-b border-sidebar-border/50">
         {!isCollapsed && (
-          <div className="flex items-center gap-3 animate-fade-in">
+          <div className="sidebar-brand flex items-center gap-3 animate-fade-in">
             <div className="w-8 h-8 rounded bg-sidebar-primary flex items-center justify-center">
               <Briefcase className="w-5 h-5 text-sidebar-primary-foreground" />
             </div>
@@ -71,19 +72,23 @@ export const Sidebar = ({ userName, userRank, onLogout }: SidebarProps) => {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="text-sidebar-foreground hover:bg-sidebar-accent"
+          onClick={() => onCollapsedChange(!isCollapsed)}
+          aria-label={isCollapsed ? "Expand navigation" : "Collapse navigation"}
+          className="sidebar-collapse text-sidebar-foreground hover:bg-sidebar-accent"
         >
           {isCollapsed ? <Menu className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
         </Button>
       </div>
 
       {/* Navigation Items */}
-      <nav className="flex-1 min-h-0 px-3 py-6 space-y-2 overflow-y-auto custom-scrollbar">
+      <nav aria-label="Primary navigation" className="flex-1 min-h-0 px-3 py-6 space-y-2 overflow-y-auto custom-scrollbar">
         {menuItems.map((item) => (
           <div key={item.path} className="space-y-1">
             <button
               onClick={() => navigate(item.path)}
+              aria-label={item.label}
+              aria-current={isActive(item.path) ? "page" : undefined}
+              title={isCollapsed ? item.label : undefined}
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative",
                 isActive(item.path)
@@ -92,7 +97,7 @@ export const Sidebar = ({ userName, userRank, onLogout }: SidebarProps) => {
               )}
             >
               <item.icon className={cn("w-5 h-5 shrink-0 transition-colors", isActive(item.path) ? "" : "text-sidebar-foreground/80 group-hover:text-sidebar-foreground")} />
-              {!isCollapsed && <span className="font-medium text-sm">{item.label}</span>}
+              {!isCollapsed && <span className="sidebar-label font-medium text-sm">{item.label}</span>}
 
               {isCollapsed && isActive(item.path) && (
                 <div className="absolute left-0 w-1 h-6 bg-sidebar-primary rounded-r-full" />
@@ -100,11 +105,13 @@ export const Sidebar = ({ userName, userRank, onLogout }: SidebarProps) => {
             </button>
 
             {!isCollapsed && item.subItems && isActive(item.path) && (
-              <div className="ml-9 space-y-1 mt-1 border-l border-sidebar-border/50 pl-4 animate-slide-up">
+              <div className="sidebar-sublinks ml-9 space-y-1 mt-1 border-l border-sidebar-border/50 pl-4 animate-slide-up">
                 {item.subItems.map((sub) => (
                   <button
                     key={sub.path}
                     onClick={() => navigate(sub.path)}
+                    aria-current={location.pathname === sub.path ? "page" : undefined}
+                    title={isCollapsed ? sub.label : undefined}
                     className={cn(
                       "w-full text-left py-1.5 text-xs transition-colors",
                       location.pathname === sub.path
@@ -125,7 +132,7 @@ export const Sidebar = ({ userName, userRank, onLogout }: SidebarProps) => {
       <div className="mt-auto p-4 border-t border-sidebar-border/50 bg-sidebar/50 backdrop-blur-sm space-y-3">
         {!isCollapsed ? (
           <>
-            <div className="flex items-center gap-3 px-2">
+            <div className="sidebar-user-profile flex items-center gap-3 px-2">
               <div className="w-10 h-10 rounded-full bg-sidebar-primary/20 border border-sidebar-primary/30 flex items-center justify-center shrink-0">
                 <span className="text-sidebar-primary font-bold text-sm">
                   {userName ? userName.split(' ').map(n => n[0]).filter(Boolean).join('') : '??'}
@@ -140,6 +147,8 @@ export const Sidebar = ({ userName, userRank, onLogout }: SidebarProps) => {
               variant="ghost"
               size="sm"
               onClick={() => navigate("/settings")}
+              aria-label="Settings"
+              title="Settings"
               className="w-full text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent text-xs justify-start px-3"
             >
               <Settings className="w-3.5 h-3.5 mr-2 shrink-0" />
@@ -149,6 +158,8 @@ export const Sidebar = ({ userName, userRank, onLogout }: SidebarProps) => {
               variant="ghost"
               size="sm"
               onClick={() => navigate("/change-password")}
+              aria-label="Change password"
+              title="Change password"
               className="w-full text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent text-xs justify-start px-3"
             >
               <KeyRound className="w-3.5 h-3.5 mr-2 shrink-0" />
@@ -158,6 +169,8 @@ export const Sidebar = ({ userName, userRank, onLogout }: SidebarProps) => {
               variant="ghost"
               size="sm"
               onClick={onLogout}
+              aria-label="Log out"
+              title="Log out"
               className="w-full text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent text-xs justify-start px-3"
             >
               <LogOut className="w-3.5 h-3.5 mr-2 shrink-0" />
@@ -175,6 +188,7 @@ export const Sidebar = ({ userName, userRank, onLogout }: SidebarProps) => {
               size="icon" 
               variant="ghost" 
               onClick={() => navigate("/change-password")}
+              aria-label="Change password"
               className="w-full text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent"
               title="Change Password"
             >
@@ -184,6 +198,7 @@ export const Sidebar = ({ userName, userRank, onLogout }: SidebarProps) => {
               size="icon" 
               variant="ghost" 
               onClick={onLogout} 
+              aria-label="Log out"
               className="w-full text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent"
               title="Logout"
             >

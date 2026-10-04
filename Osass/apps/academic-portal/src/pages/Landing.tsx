@@ -8,18 +8,10 @@ import {
   ArrowRight,
   ArrowUpRight,
   ArrowUp,
-  CheckCircle2,
   FileText,
-  Sparkles,
   Search,
   HelpCircle,
-  Mail,
-  Phone,
-  MapPin,
-  Clock,
-  Award,
   TrendingUp,
-  LineChart,
   Lock,
   Workflow,
   BookOpen,
@@ -28,7 +20,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
   AccordionContent,
@@ -65,16 +56,16 @@ const PORTALS: Portal[] = [
     shortName: "Teaching Staff Portal",
     description: "Submit and track your teaching staff promotion application.",
     longDescription:
-      "For lecturers and teaching staff applying for promotion. Build your dossier, attach evidence and follow your application through every stage.",
+      "For lecturers and teaching staff applying for promotion. Record teaching, publication and service evidence, then review your application in the applicant portal.",
     audience: "Applicant",
     url: env("VITE_ACADEMIC_PORTAL_URL", "/login"),
     internal: true,
     icon: GraduationCap,
     accent: "primary",
     highlights: [
-      "Eligibility & forecasting tools",
-      "Teaching, publications & service sections",
-      "Real-time application progress",
+      "Check promotion eligibility and forecast",
+      "Record teaching, publications and service",
+      "Review saved applications and history",
     ],
   },
   {
@@ -89,9 +80,9 @@ const PORTALS: Portal[] = [
     icon: Users,
     accent: "accent",
     highlights: [
-      "Role-specific scoring rubrics",
-      "Guided evidence upload",
-      "Consolidated career timeline",
+      "Check eligibility and promotion forecast",
+      "Record performance, knowledge and service",
+      "Review saved applications and history",
     ],
   },
   {
@@ -100,15 +91,15 @@ const PORTALS: Portal[] = [
     shortName: "Teaching Staff Assessor",
     description: "For assessors reviewing teaching staff promotion applications.",
     longDescription:
-      "Internal & external assessors score applications, leave structured feedback and submit recommendations through a secure, auditable workflow.",
+      "Committee members review assigned teaching staff applications, assess teaching, publication and service evidence, and record scores and remarks.",
     audience: "Assessor",
     url: env("VITE_ACADEMIC_ASSESSMENT_PORTAL_URL", "http://localhost:3003"),
     icon: ClipboardCheck,
     accent: "secondary",
     highlights: [
-      "Blind & open assessment modes",
-      "Structured scoring sheets",
-      "Comment & recommendation logs",
+      "Review applications assigned to your committee",
+      "Assess teaching, publication and service evidence",
+      "Record scores, remarks and available actions",
     ],
   },
   {
@@ -117,32 +108,32 @@ const PORTALS: Portal[] = [
     shortName: "Non-Teaching Staff Assessor",
     description: "Assessment workspace for non-teaching staff promotion panels.",
     longDescription:
-      "Panel members evaluate non-teaching staff applications using role-specific criteria, with side-by-side evidence preview and decision capture.",
+      "Committee members review assigned non-teaching staff applications, assess performance, knowledge and service records, and record scores and remarks.",
     audience: "Assessor",
     url: env("VITE_NON_ACADEMIC_ASSESSMENT_PORTAL_URL", "http://localhost:3004"),
     icon: ClipboardCheck,
     accent: "accent",
     highlights: [
-      "Side-by-side evidence viewer",
-      "Panel decision capture",
-      "Audit-ready review trail",
+      "Review applications assigned to your committee",
+      "Assess performance, knowledge and service records",
+      "Record scores, remarks and available actions",
     ],
   },
   {
     id: "admin",
     name: "OSASS Administration Portal",
     shortName: "Admin Portal",
-    description: "System administration, configuration & analytics.",
+    description: "Maintain institutional records and OSASS reference data.",
     longDescription:
-      "For UAPC, FAPC, DAPC and IT administrators. Manage users, configure promotion rounds, monitor activity and generate institutional reports.",
+      "For authorised administrators. Maintain the university structure, staff and positions, committees, staff updates and audit logs.",
     audience: "Administrator",
-    url: env("VITE_ADMIN_PORTAL_URL", "http://localhost:3000"),
+    url: env("VITE_ADMIN_PORTAL_URL", "http://localhost:3001"),
     icon: ShieldCheck,
-    accent: "destructive",
+    accent: "primary",
     highlights: [
-      "User & role management",
-      "Promotion round configuration",
-      "Reports, analytics & audit logs",
+      "Manage organisation and staff records",
+      "Maintain positions and committees",
+      "Review staff updates and audit logs",
     ],
   },
 ];
@@ -159,35 +150,23 @@ const AUDIENCE_FILTERS: { label: string; value: Audience | "All" }[] = [
 // =============================================================================
 const accentClasses: Record<
   Portal["accent"],
-  { bg: string; text: string; ring: string; soft: string; chip: string }
+  { bg: string; text: string }
 > = {
   primary: {
     bg: "bg-primary",
     text: "text-primary",
-    ring: "group-hover:ring-primary/30",
-    soft: "bg-primary/10",
-    chip: "bg-primary/10 text-primary border-primary/20",
   },
   accent: {
     bg: "bg-accent",
-    text: "text-accent",
-    ring: "group-hover:ring-accent/30",
-    soft: "bg-accent/10",
-    chip: "bg-accent/10 text-accent border-accent/20",
+    text: "text-accent-foreground",
   },
   secondary: {
     bg: "bg-secondary",
     text: "text-secondary-foreground",
-    ring: "group-hover:ring-secondary/40",
-    soft: "bg-secondary/15",
-    chip: "bg-secondary/15 text-secondary-foreground border-secondary/30",
   },
   destructive: {
     bg: "bg-destructive",
     text: "text-destructive",
-    ring: "group-hover:ring-destructive/30",
-    soft: "bg-destructive/10",
-    chip: "bg-destructive/10 text-destructive border-destructive/20",
   },
 };
 
@@ -198,21 +177,15 @@ const PortalCard = ({ portal }: { portal: Portal }) => {
 
   const inner = (
     <div
-      className={`group relative h-full rounded-xl border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ring-1 ring-transparent ${a.ring} hover:ring-4`}
+      className="group flex h-full flex-col border-b border-border py-5 transition-colors hover:bg-muted/30 sm:px-4"
     >
-      <div className="flex items-start justify-between gap-4">
-        <div
-          className={`flex h-12 w-12 items-center justify-center rounded-lg ${a.soft} transition-transform duration-300 group-hover:scale-110`}
-        >
-          <Icon className={`h-6 w-6 ${a.text}`} />
-        </div>
-        <Badge variant="outline" className={`${a.chip} text-[10px] uppercase tracking-wider font-semibold`}>
-          {portal.audience}
-        </Badge>
+      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        <Icon aria-hidden="true" className={`h-4 w-4 ${a.text}`} />
+        <span>{portal.audience}</span>
       </div>
 
-      <div className="mt-5 space-y-2">
-        <h3 className="text-lg font-bold text-foreground leading-tight">
+      <div className="mt-3 space-y-2">
+        <h3 className="text-base font-semibold text-foreground leading-snug">
           {portal.name}
         </h3>
         <p className="text-sm text-muted-foreground leading-relaxed">
@@ -220,26 +193,24 @@ const PortalCard = ({ portal }: { portal: Portal }) => {
         </p>
       </div>
 
-      <ul className="mt-5 space-y-2">
+      <ul className="mt-4 space-y-2">
         {portal.highlights.map((h) => (
           <li key={h} className="flex items-start gap-2 text-sm text-foreground/80">
-            <CheckCircle2 className={`mt-0.5 h-4 w-4 shrink-0 ${a.text}`} />
+            <span aria-hidden="true" className={`mt-2 h-1 w-1 shrink-0 rounded-full ${a.bg}`} />
             <span>{h}</span>
           </li>
         ))}
       </ul>
 
-      <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
-        <span className="text-xs uppercase tracking-wider font-bold text-muted-foreground">
+      <div className="mt-auto flex items-center justify-between pt-5">
+        <span className="text-sm font-semibold text-primary group-hover:underline">
           Open portal
         </span>
-        <span
-          className={`flex h-9 w-9 items-center justify-center rounded-full ${a.soft} ${a.text} transition-transform duration-300 group-hover:translate-x-1`}
-        >
+        <span className="text-primary transition-transform group-hover:translate-x-1">
           {isExternal ? (
-            <ArrowUpRight className="h-4 w-4" />
+            <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
           ) : (
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRight aria-hidden="true" className="h-4 w-4" />
           )}
         </span>
       </div>
@@ -252,7 +223,7 @@ const PortalCard = ({ portal }: { portal: Portal }) => {
         href={portal.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="block h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl"
+        className="block h-full rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         aria-label={`Open ${portal.name}`}
       >
         {inner}
@@ -262,7 +233,7 @@ const PortalCard = ({ portal }: { portal: Portal }) => {
   return (
     <Link
       to={portal.url}
-      className="block h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl"
+      className="block h-full rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       aria-label={`Open ${portal.name}`}
     >
       {inner}
@@ -335,7 +306,7 @@ const Header = () => {
           </div>
         </a>
 
-        <nav className="hidden md:flex items-center gap-7" aria-label="Primary">
+        <nav className="hidden lg:flex items-center gap-5 xl:gap-7" aria-label="Primary">
           {NAV_LINKS.map((l) => {
             const isActive = active === l.id;
             return (
@@ -343,7 +314,7 @@ const Header = () => {
                 key={l.href}
                 href={l.href}
                 aria-current={isActive ? "page" : undefined}
-                className={`relative text-sm font-medium transition-colors hover:text-primary ${
+                className={`relative whitespace-nowrap text-sm font-medium transition-colors hover:text-primary ${
                   isActive ? "text-primary" : "text-muted-foreground"
                 }`}
               >
@@ -359,7 +330,7 @@ const Header = () => {
           })}
         </nav>
 
-        <div className="hidden md:flex items-center gap-2">
+        <div className="hidden lg:flex items-center gap-2">
           <Button variant="ghost" asChild>
             <Link to="/login">Sign in</Link>
           </Button>
@@ -372,7 +343,7 @@ const Header = () => {
         </div>
 
         <button
-          className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-md border border-border"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary lg:hidden"
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? "Close navigation" : "Open navigation"}
           aria-expanded={open}
@@ -383,7 +354,7 @@ const Header = () => {
       </div>
 
       {open && (
-        <div id="mobile-nav" className="md:hidden border-t border-border bg-background">
+        <div id="mobile-nav" className="border-t border-border bg-background lg:hidden">
           <div className="container py-4 flex flex-col gap-2">
             {NAV_LINKS.map((l) => (
               <a
@@ -417,69 +388,36 @@ const Header = () => {
 const Hero = () => (
   <section
     id="top"
-    className="relative isolate overflow-hidden border-b border-border bg-background"
+    className="border-b border-border bg-muted/20"
   >
-    {/* Layered, soft background */}
-    <div
-      aria-hidden
-      className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,hsl(var(--primary)/0.18),transparent_70%)]"
-    />
-    <div
-      aria-hidden
-      className="absolute inset-x-0 top-0 -z-10 h-[520px] bg-gradient-to-b from-primary/5 to-transparent"
-    />
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0 -z-10 opacity-[0.035] [background-image:linear-gradient(to_right,hsl(var(--foreground))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--foreground))_1px,transparent_1px)] [background-size:42px_42px]"
-    />
-    <div
-      aria-hidden
-      className="absolute -top-32 -left-32 -z-10 h-80 w-80 rounded-full bg-primary/10 blur-3xl"
-    />
-    <div
-      aria-hidden
-      className="absolute -bottom-40 -right-32 -z-10 h-96 w-96 rounded-full bg-accent/10 blur-3xl"
-    />
-
-    <div className="container relative grid gap-14 py-16 md:py-24 lg:grid-cols-12 lg:gap-10 lg:py-28">
+    <div className="container grid gap-12 py-14 md:py-16 lg:grid-cols-12 lg:items-center lg:gap-14 lg:py-20">
       {/* Left: copy */}
       <div className="lg:col-span-7 flex flex-col justify-center">
-        <div className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-primary">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full motion-safe:animate-ping rounded-full bg-primary/60 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-          </span>
-          <span className="text-[11px] font-semibold uppercase tracking-widest">
-            One entry point · {PORTALS.length} portals
+        <div className="w-fit border-l-2 border-secondary pl-3 text-primary">
+          <span className="text-xs font-semibold uppercase tracking-wider">
+            Staff promotion and appointment
           </span>
         </div>
 
-        <h1 className="mt-6 font-serif text-4xl font-semibold leading-[1.05] tracking-tight text-foreground md:text-6xl lg:text-7xl">
+        <h1 className="mt-5 max-w-3xl font-serif text-4xl font-semibold leading-[1.08] tracking-tight text-foreground md:text-5xl lg:text-6xl">
           Every UMaT staff{" "}
-          <span className="relative inline-block">
-            <span className="relative z-10 text-primary">promotion</span>
-            <span
-              aria-hidden
-              className="absolute inset-x-0 bottom-1 -z-0 h-3 rounded-sm bg-secondary/50 md:h-4"
-            />
-          </span>{" "}
-          journey,
+          <span className="text-primary">promotion</span> journey,
+          {" "}
           <br className="hidden sm:block" />
           one place.
         </h1>
 
-        <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-          OSASS is the Online Staff Appointment & Promotion System for the
-          University of Mines and Technology, Tarkwa. Apply, assess and
-          administer — every workflow, every committee, one signed-in
-          experience.
+        <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
+          OSASS supports the University of Mines and Technology's staff
+          promotion process. Staff prepare and track applications, committees
+          assess submissions, and administrators maintain institutional records.
         </p>
 
-        <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+        <div className="mt-7 flex flex-col gap-3 sm:flex-row">
           <Button
             size="lg"
             asChild
-            className="h-12 px-6 text-base font-semibold shadow-lg shadow-primary/20"
+            className="h-11 px-5 text-base font-semibold"
           >
             <a href="#portals">
               Choose your portal
@@ -490,7 +428,7 @@ const Hero = () => (
             size="lg"
             variant="outline"
             asChild
-            className="h-12 px-6 text-base"
+            className="h-11 px-5 text-base"
           >
             <a href="#how-it-works">
               <BookOpen className="mr-2 h-5 w-5" />
@@ -499,101 +437,53 @@ const Hero = () => (
           </Button>
         </div>
 
-        <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-xs uppercase tracking-widest text-muted-foreground">
+        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs uppercase tracking-wider text-muted-foreground">
           <span className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-primary" />
-            Secure UMaT sign-in
+            <Users className="h-4 w-4 text-primary" />
+            Staff and committee roles
           </span>
           <span className="flex items-center gap-2">
             <Workflow className="h-4 w-4 text-primary" />
-            DAPC · FAPC · UAPC
+            Committee review
           </span>
           <span className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-primary" />
-            Auditable end-to-end
+            Application records
           </span>
         </div>
       </div>
 
-      {/* Right: portal stack visual */}
-      <div className="lg:col-span-5 relative">
-        <div className="relative mx-auto w-full max-w-md lg:max-w-none">
-          {/* Decorative glow behind the stack */}
-          <div
-            aria-hidden
-            className="absolute -inset-6 -z-10 rounded-[2rem] bg-gradient-to-br from-primary/15 via-secondary/10 to-accent/15 blur-2xl"
-          />
-
-          {/* Floating stat card */}
-          <div className="absolute -left-3 -top-8 z-20 hidden rounded-xl border border-border bg-card/95 px-4 py-3 shadow-lg backdrop-blur md:block">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Active portals
-            </p>
-            <p className="mt-0.5 font-serif text-2xl font-semibold text-primary">
-              {PORTALS.length}
-            </p>
-          </div>
-          <div className="absolute -right-3 -bottom-5 z-20 hidden rounded-xl border border-border bg-card/95 px-4 py-3 shadow-lg backdrop-blur md:block">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-primary" />
-              <p className="text-xs font-semibold text-foreground">
-                One sign-in
-              </p>
-            </div>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
-              Across all OSASS services
-            </p>
-          </div>
-
-          {/* Stacked portal cards */}
-          <div className="relative space-y-3 rounded-2xl border border-border bg-card/80 p-4 shadow-xl backdrop-blur">
-            <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-destructive/70" />
-                <span className="h-2.5 w-2.5 rounded-full bg-secondary/80" />
-                <span className="h-2.5 w-2.5 rounded-full bg-primary/70" />
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                osass.umat.edu.gh
-              </span>
-            </div>
-
-            {PORTALS.slice(0, 4).map((p, i) => {
-              const a = accentClasses[p.accent];
-              const Icon = p.icon;
-              return (
-                <a
-                  key={p.id}
-                  href="#portals"
-                  className="group flex items-center gap-4 rounded-xl border border-border bg-background p-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
-                  style={{ animationDelay: `${i * 80}ms` }}
-                >
-                  <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${a.soft}`}
-                  >
-                    <Icon className={`h-5 w-5 ${a.text}`} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-foreground">
-                      {p.shortName}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {p.audience}
-                    </p>
-                  </div>
-                  <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" />
-                </a>
-              );
-            })}
-
+      <div className="lg:col-span-5">
+        <div className="border-y border-border">
+          <p className="py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Choose by role
+          </p>
+          {[
+            {
+              title: "Applicants",
+              description: "Prepare and follow a teaching or non-teaching application.",
+            },
+            {
+              title: "Committee members",
+              description: "Review assigned applications and record assessments.",
+            },
+            {
+              title: "Administrators",
+              description: "Maintain university, staff and committee records.",
+            },
+          ].map((role) => (
             <a
+              key={role.title}
               href="#portals"
-              className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+              className="group flex items-start justify-between gap-4 border-t border-border py-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
-              View all portals
-              <ArrowRight className="h-3.5 w-3.5" />
+              <span>
+                <span className="block text-base font-semibold text-foreground">{role.title}</span>
+                <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">{role.description}</span>
+              </span>
+              <ArrowRight aria-hidden="true" className="mt-1 h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-1" />
             </a>
-          </div>
+          ))}
         </div>
       </div>
     </div>
@@ -701,18 +591,18 @@ const HowItWorks = () => {
     },
     {
       icon: Lock,
-      title: "2. Sign in securely",
-      text: "Use your UMaT staff credentials. Multi-factor verification and audit logging keep your account protected.",
+      title: "2. Sign in to your portal",
+      text: "Sign in with the credentials for your staff or administrator account. Access depends on your assigned role.",
     },
     {
       icon: Workflow,
       title: "3. Complete your task",
-      text: "Build a dossier, score an application or configure a promotion round — every workflow is guided step-by-step.",
+      text: "Prepare an application, assess an assigned submission or maintain institutional records in the relevant portal.",
     },
     {
       icon: TrendingUp,
       title: "4. Track every outcome",
-      text: "Real-time progress, notifications and a complete audit trail keep everyone aligned through every committee stage.",
+      text: "Applicants can check their application status and history. Committee members can review assigned work and its recorded activity.",
     },
   ];
   return (
@@ -763,34 +653,34 @@ const HowItWorks = () => {
 const Features = () => {
   const items = [
     {
-      icon: ShieldCheck,
-      title: "Secure & auditable",
-      text: "Role-based access control, encrypted storage and an immutable audit trail across every portal.",
+      icon: Users,
+      title: "Separate workspaces by role",
+      text: "Applicants, committee members and administrators have dedicated portals for their work.",
     },
     {
       icon: FileText,
-      title: "Evidence-driven dossiers",
-      text: "Upload publications, teaching evidence and service records once — reuse them across submissions.",
+      title: "Cadre-specific applications",
+      text: "Teaching staff record teaching, publication and service evidence; non-teaching staff record performance, knowledge and service.",
     },
     {
-      icon: LineChart,
-      title: "Forecasting & analytics",
-      text: "Eligibility forecasts for staff and institutional dashboards for administrators.",
+      icon: TrendingUp,
+      title: "Eligibility and forecasts",
+      text: "Applicant portals provide eligibility information and promotion forecasts.",
     },
     {
-      icon: Award,
-      title: "Aligned with UMaT criteria",
-      text: "Built around the official UMaT promotion criteria and committee workflow (DAPC → FAPC → UAPC).",
+      icon: ClipboardCheck,
+      title: "Committee assessment",
+      text: "Committee members review assigned applications, assess evidence and record scores and remarks.",
     },
     {
-      icon: Clock,
-      title: "Save time at every stage",
-      text: "Auto-saved drafts, smart validation and instant notifications mean no more chasing paper.",
+      icon: FileText,
+      title: "Application history",
+      text: "Applicants can return to review saved records and check the status and history of their applications.",
     },
     {
-      icon: Sparkles,
-      title: "One sign-in, many portals",
-      text: "Your UMaT identity unlocks every OSASS portal you're authorised to access.",
+      icon: ShieldCheck,
+      title: "Institutional administration",
+      text: "Administrators maintain university structure, staff, positions, committees, staff updates and audit logs.",
     },
   ];
   return (
@@ -842,8 +732,8 @@ const FAQ = () => {
       a: "If you are a lecturer or teaching staff member applying for promotion, use the Teaching Staff Promotion Portal. Administrative and technical staff should use the Non-Teaching Staff Promotion Portal. Assessors and committee members have dedicated assessment portals, and OSASS administrators use the Admin Portal.",
     },
     {
-      q: "Do I need separate accounts for each portal?",
-      a: "No. Your UMaT staff identity gives you access to every OSASS portal you are authorised to use. Sign in once with your staff credentials.",
+      q: "Which credentials should I use?",
+      a: "Use the staff or administrator credentials assigned to your account. Access to committee and administration functions depends on your account role and assignments.",
     },
     {
       q: "Where can I learn about the promotion criteria?",
@@ -851,11 +741,11 @@ const FAQ = () => {
     },
     {
       q: "Can I save my application and continue later?",
-      a: "Yes. Drafts are auto-saved as you go and remain available until you submit. You can stop and resume from any device.",
+      a: "Your progress is saved automatically as you make changes. Nothing is submitted to a committee until you choose Submit Application. You can return to the portal to continue your application.",
     },
     {
       q: "How do I know what stage my application is at?",
-      a: "The Application Progress page shows your dossier moving through each committee — DAPC, FAPC and UAPC — with timestamps, comments and the current decision-maker.",
+      a: "Open Application Progress in your applicant portal to check the status and any committee updates available for your application.",
     },
     {
       q: "What if I have a problem signing in or using a portal?",
@@ -902,93 +792,67 @@ const FAQ = () => {
 const Support = () => (
   <section
     id="support"
-    className="scroll-mt-20 relative overflow-hidden border-b border-border bg-primary text-primary-foreground"
+    className="scroll-mt-20 border-y border-border bg-muted/30"
   >
-    <div className="absolute -top-32 -right-32 h-80 w-80 rounded-full bg-secondary/20 blur-3xl" />
-    <div className="container relative py-20 md:py-24">
-      <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-secondary">
+    <div className="container py-12 md:py-14">
+      <div className="grid gap-8 lg:grid-cols-12 lg:gap-12">
+        <div className="lg:col-span-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-primary">
             Support
           </p>
-          <h2 className="mt-3 font-serif text-3xl md:text-4xl font-semibold">
-            We're here to help
+          <h2 className="mt-2 font-serif text-2xl font-semibold md:text-3xl">
+            Need help with OSASS?
           </h2>
-          <p className="mt-4 max-w-xl text-primary-foreground/80 leading-relaxed">
-            Whether you're applying, assessing or administering, the OSASS team
-            and UMaT IT Support are a click away.
+          <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
+            For help with your account or an application, contact UMaT IT Support.
           </p>
-
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            <a
-              href="mailto:support@umat.edu.gh"
-              className="flex items-center gap-3 rounded-xl border border-primary-foreground/15 bg-primary-foreground/5 p-4 transition-colors hover:bg-primary-foreground/10"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                <Mail className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-widest text-primary-foreground/60">
-                  Email
-                </p>
-                <p className="text-sm font-semibold">support@umat.edu.gh</p>
-              </div>
-            </a>
-            <a
-              href="tel:+233312020324"
-              className="flex items-center gap-3 rounded-xl border border-primary-foreground/15 bg-primary-foreground/5 p-4 transition-colors hover:bg-primary-foreground/10"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                <Phone className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-widest text-primary-foreground/60">
-                  Phone
-                </p>
-                <p className="text-sm font-semibold">+233 (0)312 020 324</p>
-              </div>
-            </a>
-            <div className="flex items-center gap-3 rounded-xl border border-primary-foreground/15 bg-primary-foreground/5 p-4 sm:col-span-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                <MapPin className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-widest text-primary-foreground/60">
-                  Visit
-                </p>
-                <p className="text-sm font-semibold">
-                  University of Mines and Technology, Tarkwa, Ghana
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
 
-        <div className="rounded-2xl border border-primary-foreground/15 bg-primary-foreground/5 p-8 backdrop-blur">
-          <h3 className="font-serif text-2xl font-semibold">Ready to begin?</h3>
-          <p className="mt-3 text-sm text-primary-foreground/75 leading-relaxed">
-            Sign in to the Teaching Staff Promotion Portal to start a new application
-            or check the status of an existing one.
-          </p>
-          <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <Button
-              size="lg"
-              asChild
-              className="bg-secondary text-secondary-foreground hover:bg-secondary/90 h-12 px-5 font-semibold flex-1"
+        <div className="lg:col-span-8 lg:border-l lg:border-border lg:pl-10">
+          <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
+            <div className="border-t border-border pt-3">
+              <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Email
+              </dt>
+              <dd className="mt-1">
+                <a
+                  href="mailto:support@umat.edu.gh"
+                  className="text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  support@umat.edu.gh
+                </a>
+              </dd>
+            </div>
+            <div className="border-t border-border pt-3">
+              <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Phone
+              </dt>
+              <dd className="mt-1">
+                <a
+                  href="tel:+233312020324"
+                  className="text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  +233 (0)312 020 324
+                </a>
+              </dd>
+            </div>
+            <div className="border-t border-border pt-3 sm:col-span-2">
+              <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Location
+              </dt>
+              <dd className="mt-1 text-sm font-medium text-foreground">
+                University of Mines and Technology, Tarkwa, Ghana
+              </dd>
+            </div>
+          </dl>
+          <div className="mt-6 border-t border-border pt-4">
+            <a
+              href="#portals"
+              className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
-              <Link to="/login">
-                Sign in
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              asChild
-              className="h-12 px-5 bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground flex-1"
-            >
-              <a href="#portals">All portals</a>
-            </Button>
+              Browse portals
+              <ArrowRight aria-hidden="true" className="h-4 w-4" />
+            </a>
           </div>
         </div>
       </div>

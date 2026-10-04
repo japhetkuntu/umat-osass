@@ -38,8 +38,8 @@
     --color-text-info: #073d25;
     --color-border-info: #0e7143;
 
-    --background: 0 0% 100%;           /* White */
-    --foreground: 0 0% 10%;            /* Black */
+    --background: 150 18% 97%;
+    --foreground: 160 12% 13%;
 
     /* Card surfaces */
     --card: 0 0% 100%;
@@ -76,17 +76,17 @@
     --info-foreground: 0 0% 100%;
     --info-light: 152 15% 92%;
 
-    --border: 152 15% 90%;
-    --input: 152 15% 94%;
+    --border: 150 10% 87%;
+    --input: 150 10% 97%;
     --ring: 152 78% 25%;
 
-    --radius: 0.75rem;
+    --radius: 0.625rem;
     --shadow-sm: none;
     --shadow-md: none;
     --shadow-lg: none;
 
     --font-serif: 'Lora', Georgia, serif;
-    --font-sans: 'Anthropic Sans', Inter, system-ui, -apple-system, sans-serif;
+    --font-sans: Inter, system-ui, -apple-system, sans-serif;
 
     --sidebar-background: 152 78% 15%;
     --sidebar-foreground: 0 0% 98%;
@@ -159,7 +159,7 @@
     font-family: var(--font-sans);
     font-weight: 400;
     font-size: 1rem;
-    letter-spacing: -0.3px;
+    letter-spacing: normal;
   }
 
   h1 {
@@ -186,10 +186,6 @@
     font-size: 1rem;
     line-height: 1.5;
     text-transform: none;
-  }
-
-  svg {
-    stroke-width: 0.5px;
   }
 
   .card,
@@ -243,7 +239,7 @@
   select {
     min-height: 36px;
     border: 1px solid hsl(var(--border));
-    border-radius: 16px;
+    border-radius: 8px;
     background: hsl(var(--input));
     color: var(--foreground);
     padding: 0 0.75rem;
@@ -266,6 +262,11 @@
 
   .node:hover {
     opacity: 0.95;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
   }
 }
 

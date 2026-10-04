@@ -119,10 +119,6 @@ const Dashboard = () => {
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-muted w-fit">
-              <div className="w-2 h-2 rounded-full bg-success" />
-              <span className="text-xs font-medium text-muted-foreground">Online</span>
-            </div>
           </div>
         </div>
       </section>
@@ -299,27 +295,6 @@ const Dashboard = () => {
                   <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </button>
               </nav>
-            </div>
-
-            {/* Recent Updates */}
-            <div className="card-elevated p-6 space-y-4">
-              <div className="space-y-2 pb-4 border-b border-border">
-                <h3 className="text-sm font-serif font-semibold text-foreground">Recent Updates</h3>
-              </div>
-
-              <div className="space-y-3">
-                <div className="border-l-2 border-primary pl-3 py-1">
-                  <p className="text-xs font-medium text-muted-foreground">Latest Announcement</p>
-                  <p className="text-sm font-medium text-foreground mt-0.5">Check the Updates page for details</p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => navigate("/updates")}
-                className="w-full mt-2 py-2 px-3 border border-border rounded text-xs font-medium text-foreground hover:bg-muted transition-colors"
-              >
-                View All Updates
-              </button>
             </div>
 
             {/* Help Section */}

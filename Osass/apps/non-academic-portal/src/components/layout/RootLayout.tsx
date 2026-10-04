@@ -10,6 +10,7 @@ interface RootLayoutProps {
 export const RootLayout = ({ children }: RootLayoutProps) => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
 
     // The ProtectedRoute handles authentication check, so user will be available here
     if (!user) return null;
@@ -25,9 +26,11 @@ export const RootLayout = ({ children }: RootLayoutProps) => {
                 userName={user.fullName}
                 userRank={user.position}
                 onLogout={handleLogout}
+                isCollapsed={isSidebarCollapsed}
+                onCollapsedChange={setIsSidebarCollapsed}
             />
 
-            <div className="flex-1 flex flex-col transition-all duration-300 ml-20 sm:ml-64">
+            <div className={`flex-1 flex flex-col transition-[margin] duration-200 ml-20 ${isSidebarCollapsed ? "sm:ml-20" : "sm:ml-64"}`}>
                 {/* Main Content Area */}
                 <main className="flex-1 overflow-y-auto pt-6 px-4 sm:px-8 pb-12 w-full max-w-7xl mx-auto">
                     {children}
