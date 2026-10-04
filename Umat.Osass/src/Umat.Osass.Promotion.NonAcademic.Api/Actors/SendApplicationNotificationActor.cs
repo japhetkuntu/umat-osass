@@ -21,7 +21,7 @@ public class SendApplicationNotificationActor : BaseActor
     {
         try
         {
-            _logger.LogInformation("[SendApplicationNotificationActor] Sending approval email to {Email}", message.Payload.RecipientEmail);
+            _logger.LogInformation("[SendApplicationNotificationActor] Sending approval email to {Email}", "[redacted]");
 
             using var scope = _serviceProvider.CreateScope();
             var emailNotificationService = scope.ServiceProvider.GetRequiredService<IEmailNotificationService>();
@@ -30,13 +30,13 @@ public class SendApplicationNotificationActor : BaseActor
             if (!response.IsSuccessful)
             {
                 _logger.LogWarning("[SendApplicationNotificationActor] Approval email failed for {Email}: {Message}",
-                    message.Payload.RecipientEmail, response.Message);
+                    "[redacted]", "[redacted]");
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[SendApplicationNotificationActor] Error sending approval email to {Email}",
-                message.Payload.RecipientEmail);
+                "[redacted]");
         }
     }
 
@@ -44,7 +44,7 @@ public class SendApplicationNotificationActor : BaseActor
     {
         try
         {
-            _logger.LogInformation("[SendApplicationNotificationActor] Sending returned email to {Email}", message.Payload.RecipientEmail);
+            _logger.LogInformation("[SendApplicationNotificationActor] Sending returned email to {Email}", "[redacted]");
 
             using var scope = _serviceProvider.CreateScope();
             var emailNotificationService = scope.ServiceProvider.GetRequiredService<IEmailNotificationService>();
@@ -53,13 +53,13 @@ public class SendApplicationNotificationActor : BaseActor
             if (!response.IsSuccessful)
             {
                 _logger.LogWarning("[SendApplicationNotificationActor] Returned email failed for {Email}: {Message}",
-                    message.Payload.RecipientEmail, response.Message);
+                    "[redacted]", "[redacted]");
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[SendApplicationNotificationActor] Error sending returned email to {Email}",
-                message.Payload.RecipientEmail);
+                "[redacted]");
         }
     }
 }

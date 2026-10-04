@@ -401,14 +401,17 @@ const PromotionLetter = () => {
                   <div className="performance-item text-center">
                     <div className="performance-label text-muted-foreground">Teaching</div>
                     <div className="performance-value font-semibold text-primary text-lg">{letterData.teachingPerformance}</div>
+                    <div className="text-muted-foreground">{letterData.teachingScore}/100</div>
                   </div>
                   <div className="performance-item text-center">
                     <div className="performance-label text-muted-foreground">Publications</div>
                     <div className="performance-value font-semibold text-secondary text-lg">{letterData.publicationPerformance}</div>
+                    <div className="text-muted-foreground">{letterData.publicationScore} points</div>
                   </div>
                   <div className="performance-item text-center">
                     <div className="performance-label text-muted-foreground">Service</div>
                     <div className="performance-value font-semibold text-success text-lg">{letterData.servicePerformance}</div>
+                    <div className="text-muted-foreground">{letterData.serviceScore} points</div>
                   </div>
                 </div>
               </div>

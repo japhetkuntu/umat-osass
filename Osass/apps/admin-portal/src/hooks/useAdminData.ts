@@ -1,20 +1,22 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
+import { createCrudHooks } from "./createCrudHooks";
+import { useQuery, keepPreviousData, type QueryKey } from '@tanstack/react-query';
 import {
+  fetchAllPages,
   fetchSchools,
   fetchFaculties,
   fetchDepartments,
   fetchStaff,
   fetchAcademicPositions,
   fetchServiceCategories,
-  createServiceCategory,
-  updateServiceCategory,
-  deleteServiceCategory,
   fetchServicePositions,
   fetchPublicationIndicators,
   fetchCommitteeMembers,
   fetchStaffUpdates,
   fetchAuditLogs,
+  fetchNonAcademicCommitteeMembers,
+  fetchNonAcademicPositions,
+  fetchKnowledgeMaterialIndicators,
+  fetchAdminUsers,
   createSchool,
   updateSchool,
   deleteSchool,
@@ -30,6 +32,9 @@ import {
   createAcademicPosition,
   updateAcademicPosition,
   deleteAcademicPosition,
+  createServiceCategory,
+  updateServiceCategory,
+  deleteServiceCategory,
   createServicePosition,
   updateServicePosition,
   deleteServicePosition,
@@ -42,34 +47,20 @@ import {
   createStaffUpdate,
   updateStaffUpdate,
   deleteStaffUpdate,
-  fetchNonAcademicCommitteeMembers,
   createNonAcademicCommitteeMember,
   updateNonAcademicCommitteeMember,
   deleteNonAcademicCommitteeMember,
-  fetchNonAcademicPositions,
   createNonAcademicPosition,
   updateNonAcademicPosition,
   deleteNonAcademicPosition,
-  fetchKnowledgeMaterialIndicators,
   createKnowledgeMaterialIndicator,
   updateKnowledgeMaterialIndicator,
   deleteKnowledgeMaterialIndicator,
-  fetchAdminUsers,
   createAdminUser,
   updateAdminUser,
   deleteAdminUser,
 } from '@/services/api';
 import type {
-  School,
-  Faculty,
-  Department,
-  Staff,
-  AcademicPosition,
-  ServiceCategory,
-  ServicePosition,
-  PublicationIndicator,
-  CommitteeMember,
-  StaffUpdate,
   SchoolFormData,
   FacultyFormData,
   DepartmentFormData,
@@ -80,15 +71,10 @@ import type {
   PublicationIndicatorFormData,
   CommitteeMemberFormData,
   StaffUpdateFormData,
-  AuditLog,
   AuditLogFilters,
-  NonAcademicCommitteeMember,
   NonAcademicCommitteeMemberFormData,
-  NonAcademicPosition,
   NonAcademicPositionFormData,
-  KnowledgeMaterialIndicator,
   KnowledgeMaterialIndicatorFormData,
-  AdminUser,
   AdminUserFormData,
 } from '@/types';
 
@@ -104,950 +90,230 @@ export const queryKeys = {
   publicationIndicators: () => ['publicationIndicators'],
   knowledgeMaterialIndicators: () => ['knowledgeMaterialIndicators'],
   committeeMembers: () => ['committeeMembers'],
+  nonAcademicCommitteeMembers: () => ['nonAcademicCommitteeMembers'],
+  nonAcademicPositions: () => ['nonAcademicPositions'],
   staffUpdates: () => ['staffUpdates'],
   auditLogs: (filters?: object) => ['auditLogs', filters],
   adminUsers: () => ['adminUsers'],
 };
 
+const STALE_TIME = 5 * 60 * 1000;
+
+const useListQuery = <T,>(queryKey: QueryKey, queryFn: () => Promise<T[]>) =>
+  useQuery({ queryKey, queryFn, staleTime: STALE_TIME });
+
 // ==================== SCHOOLS ====================
-export const useSchools = () => {
-  return useQuery({
-    queryKey: queryKeys.schools(),
-    queryFn: async () => {
-      const data = await fetchSchools();
-      return data.results ?? [];
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-};
-
-export const useCreateSchool = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (data: SchoolFormData) => createSchool(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.schools() });
-      toast({ title: 'Success', description: 'School created successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to create school', variant: 'destructive' });
-    },
-  });
-};
-
-export const useUpdateSchool = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: SchoolFormData }) =>
-      updateSchool(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.schools() });
-      toast({ title: 'Success', description: 'School updated successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to update school', variant: 'destructive' });
-    },
-  });
-};
-
-export const useDeleteSchool = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (id: string) => deleteSchool(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.schools() });
-      toast({ title: 'Success', description: 'School deleted successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to delete school', variant: 'destructive' });
-    },
-  });
-};
+const schoolHooks = createCrudHooks<SchoolFormData>({
+  label: 'school',
+  invalidates: () => [queryKeys.schools(), queryKeys.faculties(), queryKeys.departments()],
+  create: createSchool,
+  update: updateSchool,
+  remove: deleteSchool,
+});
+export const useSchools = () => useListQuery(queryKeys.schools(), () => fetchAllPages(fetchSchools));
+export const useCreateSchool = schoolHooks.useCreate;
+export const useUpdateSchool = schoolHooks.useUpdate;
+export const useDeleteSchool = schoolHooks.useRemove;
 
 // ==================== FACULTIES ====================
-export const useFaculties = () => {
-  return useQuery({
-    queryKey: queryKeys.faculties(),
-    queryFn: async () => {
-      const data = await fetchFaculties();
-      return data.results ?? [];
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-};
-
-export const useCreateFaculty = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (data: FacultyFormData) => createFaculty(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.faculties() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.schools() });
-      toast({ title: 'Success', description: 'Faculty created successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to create faculty', variant: 'destructive' });
-    },
-  });
-};
-
-export const useUpdateFaculty = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: FacultyFormData }) =>
-      updateFaculty(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.faculties() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.schools() });
-      toast({ title: 'Success', description: 'Faculty updated successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to update faculty', variant: 'destructive' });
-    },
-  });
-};
-
-export const useDeleteFaculty = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (id: string) => deleteFaculty(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.faculties() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.schools() });
-      toast({ title: 'Success', description: 'Faculty deleted successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to delete faculty', variant: 'destructive' });
-    },
-  });
-};
+const facultyHooks = createCrudHooks<FacultyFormData>({
+  label: 'faculty',
+  invalidates: () => [queryKeys.faculties(), queryKeys.schools(), queryKeys.departments()],
+  create: createFaculty,
+  update: updateFaculty,
+  remove: deleteFaculty,
+});
+export const useFaculties = () => useListQuery(queryKeys.faculties(), () => fetchAllPages(fetchFaculties));
+export const useCreateFaculty = facultyHooks.useCreate;
+export const useUpdateFaculty = facultyHooks.useUpdate;
+export const useDeleteFaculty = facultyHooks.useRemove;
 
 // ==================== DEPARTMENTS ====================
-export const useDepartments = (departmentType?: string) => {
-  return useQuery({
-    queryKey: queryKeys.departments(departmentType),
-    queryFn: async () => {
-      const data = await fetchDepartments(1, 50, undefined, departmentType);
-      return data.results ?? [];
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-};
-
-export const useCreateDepartment = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (data: DepartmentFormData) => createDepartment(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.departments() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.faculties() });
-      toast({ title: 'Success', description: 'Department created successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to create department', variant: 'destructive' });
-    },
-  });
-};
-
-export const useUpdateDepartment = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: DepartmentFormData }) =>
-      updateDepartment(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.departments() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.faculties() });
-      toast({ title: 'Success', description: 'Department updated successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to update department', variant: 'destructive' });
-    },
-  });
-};
-
-export const useDeleteDepartment = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (id: string) => deleteDepartment(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.departments() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.faculties() });
-      toast({ title: 'Success', description: 'Department deleted successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to delete department', variant: 'destructive' });
-    },
-  });
-};
+const departmentHooks = createCrudHooks<DepartmentFormData>({
+  label: 'department',
+  invalidates: () => [queryKeys.departments(), queryKeys.faculties(), queryKeys.staff()],
+  create: createDepartment,
+  update: updateDepartment,
+  remove: deleteDepartment,
+});
+export const useDepartments = (departmentType?: string) =>
+  useListQuery(queryKeys.departments(departmentType), () =>
+    fetchAllPages((page, pageSize) => fetchDepartments(page, pageSize, undefined, departmentType)),
+  );
+export const useCreateDepartment = departmentHooks.useCreate;
+export const useUpdateDepartment = departmentHooks.useUpdate;
+export const useDeleteDepartment = departmentHooks.useRemove;
 
 // ==================== STAFF ====================
-export const useStaff = (staffCategory?: string) => {
-  return useQuery({
-    queryKey: queryKeys.staff(staffCategory),
-    queryFn: async () => {
-      const data = await fetchStaff(1, 200, undefined, staffCategory);
-      return data.results ?? [];
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-};
-
+const staffHooks = createCrudHooks<StaffFormData>({
+  label: 'staff',
+  invalidates: () => [queryKeys.staff(), queryKeys.committeeMembers(), queryKeys.nonAcademicCommitteeMembers()],
+  create: createStaff,
+  update: updateStaff,
+  remove: deleteStaff,
+});
+export const useStaff = (staffCategory?: string) =>
+  useListQuery(queryKeys.staff(staffCategory), () =>
+    fetchAllPages((page, pageSize) => fetchStaff(page, pageSize, undefined, staffCategory)),
+  );
 export const useAcademicStaff = () => useStaff('Academic');
 export const useNonAcademicStaff = () => useStaff('Non-Academic');
-
-export const useCreateStaff = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (data: StaffFormData) => createStaff(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.staff() });
-      toast({ title: 'Success', description: 'Staff created successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to create staff', variant: 'destructive' });
-    },
-  });
-};
-
-export const useUpdateStaff = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: StaffFormData }) => updateStaff(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.staff() });
-      toast({ title: 'Success', description: 'Staff updated successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to update staff', variant: 'destructive' });
-    },
-  });
-};
-
-export const useDeleteStaff = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (id: string) => deleteStaff(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.staff() });
-      toast({ title: 'Success', description: 'Staff deleted successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to delete staff', variant: 'destructive' });
-    },
-  });
-};
+export const useCreateStaff = staffHooks.useCreate;
+export const useUpdateStaff = staffHooks.useUpdate;
+export const useDeleteStaff = staffHooks.useRemove;
 
 // ==================== ACADEMIC POSITIONS ====================
-export const useAcademicPositions = () => {
-  return useQuery({
-    queryKey: queryKeys.academicPositions(),
-    queryFn: async () => {
-      const data = await fetchAcademicPositions();
-      return data.results ?? [];
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-};
-
-export const useCreateAcademicPosition = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (data: AcademicPositionFormData) => createAcademicPosition(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.academicPositions() });
-      toast({ title: 'Success', description: 'Academic position created successfully' });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to create academic position',
-        variant: 'destructive',
-      });
-    },
-  });
-};
-
-export const useUpdateAcademicPosition = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: AcademicPositionFormData }) =>
-      updateAcademicPosition(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.academicPositions() });
-      toast({ title: 'Success', description: 'Academic position updated successfully' });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to update academic position',
-        variant: 'destructive',
-      });
-    },
-  });
-};
-
-export const useDeleteAcademicPosition = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (id: string) => deleteAcademicPosition(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.academicPositions() });
-      toast({ title: 'Success', description: 'Academic position deleted successfully' });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete academic position',
-        variant: 'destructive',
-      });
-    },
-  });
-};
+const academicPositionHooks = createCrudHooks<AcademicPositionFormData>({
+  label: 'academic position',
+  invalidates: () => [queryKeys.academicPositions()],
+  create: createAcademicPosition,
+  update: updateAcademicPosition,
+  remove: deleteAcademicPosition,
+});
+export const useAcademicPositions = () =>
+  useListQuery(queryKeys.academicPositions(), () => fetchAllPages(fetchAcademicPositions));
+export const useCreateAcademicPosition = academicPositionHooks.useCreate;
+export const useUpdateAcademicPosition = academicPositionHooks.useUpdate;
+export const useDeleteAcademicPosition = academicPositionHooks.useRemove;
 
 // ==================== SERVICE CATEGORIES ====================
-export const useServiceCategories = () => {
-  return useQuery({
-    queryKey: queryKeys.serviceCategories(),
-    queryFn: async () => {
-      const data = await fetchServiceCategories();
-      return data.results ?? [];
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-};
-
-export const useCreateServiceCategory = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (data: ServiceCategoryFormData) => createServiceCategory(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.serviceCategories() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.servicePositions() });
-      toast({ title: 'Success', description: 'Service category created successfully' });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to create service category',
-        variant: 'destructive',
-      });
-    },
-  });
-};
-
-export const useUpdateServiceCategory = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: ServiceCategoryFormData }) =>
-      updateServiceCategory(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.serviceCategories() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.servicePositions() });
-      toast({ title: 'Success', description: 'Service category updated successfully' });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to update service category',
-        variant: 'destructive',
-      });
-    },
-  });
-};
-
-export const useDeleteServiceCategory = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (id: string) => deleteServiceCategory(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.serviceCategories() });
-      toast({ title: 'Success', description: 'Service category deleted successfully' });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to delete service category',
-        variant: 'destructive',
-      });
-    },
-  });
-};
+const serviceCategoryHooks = createCrudHooks<ServiceCategoryFormData>({
+  label: 'service category',
+  invalidates: () => [queryKeys.serviceCategories(), queryKeys.servicePositions()],
+  create: createServiceCategory,
+  update: updateServiceCategory,
+  remove: deleteServiceCategory,
+});
+export const useServiceCategories = () =>
+  useListQuery(queryKeys.serviceCategories(), () => fetchAllPages(fetchServiceCategories));
+export const useCreateServiceCategory = serviceCategoryHooks.useCreate;
+export const useUpdateServiceCategory = serviceCategoryHooks.useUpdate;
+export const useDeleteServiceCategory = serviceCategoryHooks.useRemove;
 
 // ==================== SERVICE POSITIONS ====================
-export const useServicePositions = () => {
-  return useQuery({
-    queryKey: queryKeys.servicePositions(),
-    queryFn: async () => {
-      const data = await fetchServicePositions();
-      return data.results ?? [];
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-};
-
-export const useCreateServicePosition = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (data: ServicePositionFormData) => createServicePosition(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.servicePositions() });
-      toast({ title: 'Success', description: 'Service position created successfully' });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to create service position',
-        variant: 'destructive',
-      });
-    },
-  });
-};
-
-export const useUpdateServicePosition = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: ServicePositionFormData }) =>
-      updateServicePosition(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.servicePositions() });
-      toast({ title: 'Success', description: 'Service position updated successfully' });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to update service position',
-        variant: 'destructive',
-      });
-    },
-  });
-};
-
-export const useDeleteServicePosition = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (id: string) => deleteServicePosition(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.servicePositions() });
-      toast({ title: 'Success', description: 'Service position deleted successfully' });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete service position',
-        variant: 'destructive',
-      });
-    },
-  });
-};
+const servicePositionHooks = createCrudHooks<ServicePositionFormData>({
+  label: 'service position',
+  invalidates: () => [queryKeys.servicePositions()],
+  create: createServicePosition,
+  update: updateServicePosition,
+  remove: deleteServicePosition,
+});
+export const useServicePositions = () =>
+  useListQuery(queryKeys.servicePositions(), () => fetchAllPages(fetchServicePositions));
+export const useCreateServicePosition = servicePositionHooks.useCreate;
+export const useUpdateServicePosition = servicePositionHooks.useUpdate;
+export const useDeleteServicePosition = servicePositionHooks.useRemove;
 
 // ==================== PUBLICATION INDICATORS ====================
-export const usePublicationIndicators = () => {
-  return useQuery({
-    queryKey: queryKeys.publicationIndicators(),
-    queryFn: async () => {
-      const data = await fetchPublicationIndicators();
-      return data.results ?? [];
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-};
-
-export const useCreatePublicationIndicator = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (data: PublicationIndicatorFormData) => createPublicationIndicator(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.publicationIndicators() });
-      toast({ title: 'Success', description: 'Publication indicator created successfully' });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to create publication indicator',
-        variant: 'destructive',
-      });
-    },
-  });
-};
-
-export const useUpdatePublicationIndicator = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: PublicationIndicatorFormData }) =>
-      updatePublicationIndicator(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.publicationIndicators() });
-      toast({ title: 'Success', description: 'Publication indicator updated successfully' });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to update publication indicator',
-        variant: 'destructive',
-      });
-    },
-  });
-};
-
-export const useDeletePublicationIndicator = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (id: string) => deletePublicationIndicator(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.publicationIndicators() });
-      toast({ title: 'Success', description: 'Publication indicator deleted successfully' });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete publication indicator',
-        variant: 'destructive',
-      });
-    },
-  });
-};
+const publicationIndicatorHooks = createCrudHooks<PublicationIndicatorFormData>({
+  label: 'publication indicator',
+  invalidates: () => [queryKeys.publicationIndicators()],
+  create: createPublicationIndicator,
+  update: updatePublicationIndicator,
+  remove: deletePublicationIndicator,
+});
+export const usePublicationIndicators = () =>
+  useListQuery(queryKeys.publicationIndicators(), () => fetchAllPages(fetchPublicationIndicators));
+export const useCreatePublicationIndicator = publicationIndicatorHooks.useCreate;
+export const useUpdatePublicationIndicator = publicationIndicatorHooks.useUpdate;
+export const useDeletePublicationIndicator = publicationIndicatorHooks.useRemove;
 
 // ==================== COMMITTEE MEMBERS ====================
-export const useCommitteeMembers = () => {
-  return useQuery({
-    queryKey: queryKeys.committeeMembers(),
-    queryFn: async () => {
-      const data = await fetchCommitteeMembers();
-      return data.results ?? [];
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-};
-
-export const useCreateCommitteeMember = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (data: CommitteeMemberFormData) => createCommitteeMember(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.committeeMembers() });
-      toast({ title: 'Success', description: 'Committee member added successfully' });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to add committee member',
-        variant: 'destructive',
-      });
-    },
-  });
-};
-
-export const useUpdateCommitteeMember = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: CommitteeMemberFormData }) =>
-      updateCommitteeMember(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.committeeMembers() });
-      toast({ title: 'Success', description: 'Committee member updated successfully' });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to update committee member',
-        variant: 'destructive',
-      });
-    },
-  });
-};
-
-export const useDeleteCommitteeMember = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (id: string) => deleteCommitteeMember(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.committeeMembers() });
-      toast({ title: 'Success', description: 'Committee member removed successfully' });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to remove committee member',
-        variant: 'destructive',
-      });
-    },
-  });
-};
+const committeeHooks = createCrudHooks<CommitteeMemberFormData>({
+  label: 'committee member',
+  createdVerb: 'added',
+  removedVerb: 'removed',
+  invalidates: () => [queryKeys.committeeMembers()],
+  create: createCommitteeMember,
+  update: updateCommitteeMember,
+  remove: deleteCommitteeMember,
+});
+export const useCommitteeMembers = () =>
+  useListQuery(queryKeys.committeeMembers(), () => fetchAllPages(fetchCommitteeMembers));
+export const useCreateCommitteeMember = committeeHooks.useCreate;
+export const useUpdateCommitteeMember = committeeHooks.useUpdate;
+export const useDeleteCommitteeMember = committeeHooks.useRemove;
 
 // ==================== STAFF UPDATES ====================
-export const useStaffUpdates = (page = 1, pageSize = 10, search?: string) => {
-  return useQuery({
-    queryKey: queryKeys.staffUpdates().concat([page, pageSize, search]),
-    queryFn: async () => {
-      return await fetchStaffUpdates(page, pageSize, search);
-    },
-    staleTime: 2 * 60 * 1000, // 2 minutes
+const staffUpdateHooks = createCrudHooks<StaffUpdateFormData>({
+  label: 'staff update',
+  invalidates: () => [queryKeys.staffUpdates()],
+  create: createStaffUpdate,
+  update: updateStaffUpdate,
+  remove: deleteStaffUpdate,
+});
+export const useStaffUpdates = (page = 1, pageSize = 10, search?: string) =>
+  useQuery({
+    queryKey: [...queryKeys.staffUpdates(), page, pageSize, search],
+    queryFn: () => fetchStaffUpdates(page, pageSize, search),
+    staleTime: 2 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
-};
-
-export const useCreateStaffUpdate = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (data: StaffUpdateFormData) => createStaffUpdate(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.staffUpdates() });
-      toast({ title: 'Success', description: 'Staff update created successfully' });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to create staff update',
-        variant: 'destructive',
-      });
-    },
-  });
-};
-
-export const useUpdateStaffUpdate = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: StaffUpdateFormData }) =>
-      updateStaffUpdate(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.staffUpdates() });
-      toast({ title: 'Success', description: 'Staff update updated successfully' });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to update staff update',
-        variant: 'destructive',
-      });
-    },
-  });
-};
-
-export const useDeleteStaffUpdate = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (id: string) => deleteStaffUpdate(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.staffUpdates() });
-      toast({ title: 'Success', description: 'Staff update deleted successfully' });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete staff update',
-        variant: 'destructive',
-      });
-    },
-  });
-};
+export const useCreateStaffUpdate = staffUpdateHooks.useCreate;
+export const useUpdateStaffUpdate = staffUpdateHooks.useUpdate;
+export const useDeleteStaffUpdate = staffUpdateHooks.useRemove;
 
 // ==================== AUDIT LOGS ====================
-export const useAuditLogs = (filters: AuditLogFilters = {}) => {
-  return useQuery({
+export const useAuditLogs = (filters: AuditLogFilters = {}) =>
+  useQuery({
     queryKey: queryKeys.auditLogs(filters),
     queryFn: () => fetchAuditLogs(filters),
+    placeholderData: keepPreviousData,
   });
-};
 
 // ==================== NON-ACADEMIC COMMITTEES ====================
-export const useNonAcademicCommitteeMembers = () => {
-  return useQuery({
-    queryKey: ['nonAcademicCommitteeMembers'],
-    queryFn: async () => {
-      const data = await fetchNonAcademicCommitteeMembers();
-      return data.results ?? [];
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-};
-
-export const useCreateNonAcademicCommitteeMember = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (data: NonAcademicCommitteeMemberFormData) => createNonAcademicCommitteeMember(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['nonAcademicCommitteeMembers'] });
-      toast({ title: 'Success', description: 'Committee member added successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to add committee member', variant: 'destructive' });
-    },
-  });
-};
-
-export const useUpdateNonAcademicCommitteeMember = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: NonAcademicCommitteeMemberFormData }) =>
-      updateNonAcademicCommitteeMember(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['nonAcademicCommitteeMembers'] });
-      toast({ title: 'Success', description: 'Committee member updated successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to update committee member', variant: 'destructive' });
-    },
-  });
-};
-
-export const useDeleteNonAcademicCommitteeMember = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (id: string) => deleteNonAcademicCommitteeMember(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['nonAcademicCommitteeMembers'] });
-      toast({ title: 'Success', description: 'Committee member removed successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to remove committee member', variant: 'destructive' });
-    },
-  });
-};
+const nonAcademicCommitteeHooks = createCrudHooks<NonAcademicCommitteeMemberFormData>({
+  label: 'committee member',
+  createdVerb: 'added',
+  removedVerb: 'removed',
+  invalidates: () => [queryKeys.nonAcademicCommitteeMembers()],
+  create: createNonAcademicCommitteeMember,
+  update: updateNonAcademicCommitteeMember,
+  remove: deleteNonAcademicCommitteeMember,
+});
+export const useNonAcademicCommitteeMembers = () =>
+  useListQuery(queryKeys.nonAcademicCommitteeMembers(), () => fetchAllPages(fetchNonAcademicCommitteeMembers));
+export const useCreateNonAcademicCommitteeMember = nonAcademicCommitteeHooks.useCreate;
+export const useUpdateNonAcademicCommitteeMember = nonAcademicCommitteeHooks.useUpdate;
+export const useDeleteNonAcademicCommitteeMember = nonAcademicCommitteeHooks.useRemove;
 
 // ==================== NON-ACADEMIC POSITIONS ====================
-export const useNonAcademicPositions = () => {
-  return useQuery({
-    queryKey: ['nonAcademicPositions'],
-    queryFn: async () => {
-      const data = await fetchNonAcademicPositions();
-      return data.results ?? [];
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-};
-
-export const useCreateNonAcademicPosition = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (data: NonAcademicPositionFormData) => createNonAcademicPosition(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['nonAcademicPositions'] });
-      toast({ title: 'Success', description: 'Position created successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to create position', variant: 'destructive' });
-    },
-  });
-};
-
-export const useUpdateNonAcademicPosition = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: NonAcademicPositionFormData }) =>
-      updateNonAcademicPosition(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['nonAcademicPositions'] });
-      toast({ title: 'Success', description: 'Position updated successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to update position', variant: 'destructive' });
-    },
-  });
-};
-
-export const useDeleteNonAcademicPosition = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (id: string) => deleteNonAcademicPosition(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['nonAcademicPositions'] });
-      toast({ title: 'Success', description: 'Position deleted successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to delete position', variant: 'destructive' });
-    },
-  });
-};
+const nonAcademicPositionHooks = createCrudHooks<NonAcademicPositionFormData>({
+  label: 'position',
+  invalidates: () => [queryKeys.nonAcademicPositions()],
+  create: createNonAcademicPosition,
+  update: updateNonAcademicPosition,
+  remove: deleteNonAcademicPosition,
+});
+export const useNonAcademicPositions = () =>
+  useListQuery(queryKeys.nonAcademicPositions(), () => fetchAllPages(fetchNonAcademicPositions));
+export const useCreateNonAcademicPosition = nonAcademicPositionHooks.useCreate;
+export const useUpdateNonAcademicPosition = nonAcademicPositionHooks.useUpdate;
+export const useDeleteNonAcademicPosition = nonAcademicPositionHooks.useRemove;
 
 // ==================== KNOWLEDGE MATERIAL INDICATORS ====================
-export const useKnowledgeMaterialIndicators = () => {
-  return useQuery({
-    queryKey: queryKeys.knowledgeMaterialIndicators(),
-    queryFn: async () => {
-      const data = await fetchKnowledgeMaterialIndicators();
-      return data.results ?? [];
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-};
-
-export const useCreateKnowledgeMaterialIndicator = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (data: KnowledgeMaterialIndicatorFormData) => createKnowledgeMaterialIndicator(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.knowledgeMaterialIndicators() });
-      toast({ title: 'Success', description: 'Knowledge material indicator created successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to create knowledge material indicator', variant: 'destructive' });
-    },
-  });
-};
-
-export const useUpdateKnowledgeMaterialIndicator = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: KnowledgeMaterialIndicatorFormData }) =>
-      updateKnowledgeMaterialIndicator(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.knowledgeMaterialIndicators() });
-      toast({ title: 'Success', description: 'Knowledge material indicator updated successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to update knowledge material indicator', variant: 'destructive' });
-    },
-  });
-};
-
-export const useDeleteKnowledgeMaterialIndicator = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (id: string) => deleteKnowledgeMaterialIndicator(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.knowledgeMaterialIndicators() });
-      toast({ title: 'Success', description: 'Knowledge material indicator deleted successfully' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to delete knowledge material indicator', variant: 'destructive' });
-    },
-  });
-};
+const knowledgeIndicatorHooks = createCrudHooks<KnowledgeMaterialIndicatorFormData>({
+  label: 'knowledge material indicator',
+  invalidates: () => [queryKeys.knowledgeMaterialIndicators()],
+  create: createKnowledgeMaterialIndicator,
+  update: updateKnowledgeMaterialIndicator,
+  remove: deleteKnowledgeMaterialIndicator,
+});
+export const useKnowledgeMaterialIndicators = () =>
+  useListQuery(queryKeys.knowledgeMaterialIndicators(), () => fetchAllPages(fetchKnowledgeMaterialIndicators));
+export const useCreateKnowledgeMaterialIndicator = knowledgeIndicatorHooks.useCreate;
+export const useUpdateKnowledgeMaterialIndicator = knowledgeIndicatorHooks.useUpdate;
+export const useDeleteKnowledgeMaterialIndicator = knowledgeIndicatorHooks.useRemove;
 
 // ==================== ADMIN USERS ====================
-export const useAdminUsers = () => {
-  return useQuery({
-    queryKey: queryKeys.adminUsers(),
-    queryFn: async () => {
-      const data = await fetchAdminUsers();
-      return data.results ?? [];
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-};
-
-export const useCreateAdminUser = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (data: AdminUserFormData) => createAdminUser(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers() });
-      toast({ title: 'Success', description: 'Admin created successfully' });
-    },
-    onError: (err: Error) => {
-      toast({ title: 'Error', description: err.message || 'Failed to create admin', variant: 'destructive' });
-    },
-  });
-};
-
-export const useUpdateAdminUser = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Omit<AdminUserFormData, 'password'> }) =>
-      updateAdminUser(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers() });
-      toast({ title: 'Success', description: 'Admin updated successfully' });
-    },
-    onError: (err: Error) => {
-      toast({ title: 'Error', description: err.message || 'Failed to update admin', variant: 'destructive' });
-    },
-  });
-};
-
-export const useDeleteAdminUser = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (id: string) => deleteAdminUser(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers() });
-      toast({ title: 'Success', description: 'Admin deleted successfully' });
-    },
-    onError: (err: Error) => {
-      toast({ title: 'Error', description: err.message || 'Failed to delete admin', variant: 'destructive' });
-    },
-  });
-};
+const adminUserHooks = createCrudHooks<AdminUserFormData, Omit<AdminUserFormData, 'password'>>({
+  label: 'admin',
+  invalidates: () => [queryKeys.adminUsers()],
+  create: createAdminUser,
+  update: updateAdminUser,
+  remove: deleteAdminUser,
+});
+export const useAdminUsers = () => useListQuery(queryKeys.adminUsers(), () => fetchAllPages(fetchAdminUsers));
+export const useCreateAdminUser = adminUserHooks.useCreate;
+export const useUpdateAdminUser = adminUserHooks.useUpdate;
+export const useDeleteAdminUser = adminUserHooks.useRemove;

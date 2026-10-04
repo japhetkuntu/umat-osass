@@ -1,3 +1,4 @@
+using Umat.Osass.Promotion.Domain;
 using Akka.Actor;
 using System.Text.RegularExpressions;
 using Umat.Osass.AcademicPromotion.Sdk.Services;
@@ -139,8 +140,12 @@ public class AssessmentService : IAssessmentService
             // counts below, and the recent-activity feed). ApplicationStatus never carries
             // an "UnderReview" or "NotApproved" value in this workflow, so those states can't
             // be used for counting - the activity log is the real signal for committee progress.
+            var visibleApplicationIds = new HashSet<string>();
+            foreach (var membership in memberInfo.Committees)
+                visibleApplicationIds.UnionWith((await GetApplicationsForCommittee(membership)).Select(application => application.Id));
+
             var committeeActivities = await _activityRepository.GetAllAsync(
-                a => committeeTypes.Contains(a.CommitteeLevel));
+                a => committeeTypes.Contains(a.CommitteeLevel) && visibleApplicationIds.Contains(a.ApplicationId));
 
             var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
             var thisMonthActivities = committeeActivities.Where(a => a.ActivityDate >= monthStart).ToList();
@@ -273,9 +278,9 @@ public class AssessmentService : IAssessmentService
                     ResubmissionCount = Math.Max(0, (app.ReviewStatusHistory?.Split(',').Length ?? 1) - 1),
                     ApplicantPerformance = new PerformanceSummary
                     {
-                        TeachingPerformance = teaching?.ApplicantPerformance ?? PerformanceTypes.InAdequate,
-                        PublicationPerformance = publication?.ApplicantPerformance ?? PerformanceTypes.InAdequate,
-                        ServicePerformance = service?.ApplicantPerformance ?? PerformanceTypes.InAdequate,
+                        TeachingPerformance = AcademicGradeTotals.TeachingPerformance(teaching),
+                        PublicationPerformance = AcademicGradeTotals.PublicationPerformance(publication),
+                        ServicePerformance = AcademicGradeTotals.ServicePerformance(service),
                         TotalTeachingScore = CalculateTeachingScore(teaching),
                         TotalPublicationScore = CalculatePublicationScore(publication),
                         TotalServiceScore = CalculateServiceScore(service)
@@ -370,9 +375,9 @@ public class AssessmentService : IAssessmentService
                     ResubmissionCount = Math.Max(0, (app.ReviewStatusHistory?.Split(',').Length ?? 1) - 1),
                     ApplicantPerformance = new PerformanceSummary
                     {
-                        TeachingPerformance = teaching?.ApplicantPerformance ?? PerformanceTypes.InAdequate,
-                        PublicationPerformance = publication?.ApplicantPerformance ?? PerformanceTypes.InAdequate,
-                        ServicePerformance = service?.ApplicantPerformance ?? PerformanceTypes.InAdequate,
+                        TeachingPerformance = AcademicGradeTotals.TeachingPerformance(teaching),
+                        PublicationPerformance = AcademicGradeTotals.PublicationPerformance(publication),
+                        ServicePerformance = AcademicGradeTotals.ServicePerformance(service),
                         TotalTeachingScore = CalculateTeachingScore(teaching),
                         TotalPublicationScore = CalculatePublicationScore(publication),
                         TotalServiceScore = CalculateServiceScore(service)
@@ -489,7 +494,8 @@ public class AssessmentService : IAssessmentService
 
             // Determine which committee level is assessing
             var activeCommittee = committees.FirstOrDefault(c => 
-                GetReviewStatusForCommittee(c.CommitteeType) == application.ReviewStatus);
+                GetReviewStatusForCommittee(c.CommitteeType) == application.ReviewStatus &&
+                IsInScope(application, c) && application.ApplicationStatus == ApplicationStatusTypes.Submitted);
             
             if (activeCommittee == null)
                 return new ApiResponse<bool>("This application is not at a stage you can assess", 400);
@@ -499,13 +505,19 @@ public class AssessmentService : IAssessmentService
                 || application.ApplicationStatus == ApplicationStatusTypes.Approved)
                 return new ApiResponse<bool>("Application has already been processed and cannot be assessed", 400);
 
+            var scoredTeaching = await _teachingRepository.GetOneAsync(record => record.PromotionApplicationId == application.Id && record.ApplicantId == application.ApplicantId);
+            var scoredPublication = await _publicationRepository.GetOneAsync(record => record.PromotionApplicationId == application.Id && record.ApplicantId == application.ApplicantId);
+            var scoredService = await _serviceRepository.GetOneAsync(record => record.PromotionApplicationId == application.Id && record.ApplicantId == application.ApplicantId);
+            if (!AcademicScoreValidation.IsValid(request, scoredTeaching, scoredPublication, scoredService))
+                return new ApiResponse<bool>("Scores must be finite, within item bounds, and reference distinct existing records", 400);
+
             var staff = await _staffRepository.GetByIdAsync(auth.Id);
             var committeeType = activeCommittee.CommitteeType;
 
             // Update teaching scores
             if (request.TeachingScores != null)
             {
-                var teaching = await _teachingRepository.GetOneAsync(t => t.PromotionApplicationId == request.ApplicationId);
+                var teaching = scoredTeaching;
                 if (teaching != null)
                 {
                     // Preserve all critical properties for data integrity
@@ -539,7 +551,7 @@ public class AssessmentService : IAssessmentService
             // Update publication scores
             if (request.PublicationScores != null && request.PublicationScores.Any())
             {
-                var publication = await _publicationRepository.GetOneAsync(p => p.PromotionApplicationId == request.ApplicationId);
+                var publication = scoredPublication;
                 if (publication != null)
                 {
                     // Preserve all critical properties for data integrity
@@ -571,7 +583,7 @@ public class AssessmentService : IAssessmentService
             // Update service scores
             if (request.ServiceScores != null && request.ServiceScores.Any())
             {
-                var service = await _serviceRepository.GetOneAsync(s => s.PromotionApplicationId == request.ApplicationId);
+                var service = scoredService;
                 if (service != null)
                 {
                     // Preserve all critical properties for data integrity
@@ -641,7 +653,8 @@ public class AssessmentService : IAssessmentService
 
             var staff = await _staffRepository.GetByIdAsync(auth.Id);
             var activeCommittee = committees.FirstOrDefault(c => 
-                GetReviewStatusForCommittee(c.CommitteeType) == application.ReviewStatus);
+                GetReviewStatusForCommittee(c.CommitteeType) == application.ReviewStatus &&
+                IsInScope(application, c) && application.ApplicationStatus == ApplicationStatusTypes.Submitted);
 
             if (activeCommittee == null)
                 return new ApiResponse<bool>("This application is not at a stage you can comment on", 400);
@@ -692,7 +705,8 @@ public class AssessmentService : IAssessmentService
                 return new ApiResponse<bool>("Application not found", 404);
 
             var activeCommittee = committees.FirstOrDefault(c => 
-                GetReviewStatusForCommittee(c.CommitteeType) == application.ReviewStatus);
+                GetReviewStatusForCommittee(c.CommitteeType) == application.ReviewStatus &&
+                IsInScope(application, c) && application.ApplicationStatus == ApplicationStatusTypes.Submitted);
 
             if (activeCommittee == null)
                 return new ApiResponse<bool>("This application is not at a stage you can return", 400);
@@ -776,7 +790,8 @@ public class AssessmentService : IAssessmentService
                 return new ApiResponse<bool>("Application not found", 404);
 
             var activeCommittee = committees.FirstOrDefault(c => 
-                GetReviewStatusForCommittee(c.CommitteeType) == application.ReviewStatus);
+                GetReviewStatusForCommittee(c.CommitteeType) == application.ReviewStatus &&
+                IsInScope(application, c) && application.ApplicationStatus == ApplicationStatusTypes.Submitted);
 
             if (activeCommittee == null)
                 return new ApiResponse<bool>("This application is not at a stage you can advance", 400);
@@ -869,6 +884,12 @@ public class AssessmentService : IAssessmentService
             if (!committees.Any())
                 return new ApiResponse<List<ActivityHistoryItem>>("Not authorized", 403);
 
+            var application = await _applicationRepository.GetByIdAsync(applicationId);
+            if (application == null)
+                return new ApiResponse<List<ActivityHistoryItem>>("Application not found", 404);
+            if (!await HasAccessToApplication(auth.Id, application, committees.ToList()))
+                return new ApiResponse<List<ActivityHistoryItem>>("Application is outside your review scope", 403);
+
             var activities = await _activityRepository.GetAllAsync(a => a.ApplicationId == applicationId);
 
             var response = activities.OrderByDescending(a => a.ActivityDate).Select(a => new ActivityHistoryItem
@@ -913,7 +934,8 @@ public class AssessmentService : IAssessmentService
             if (application == null)
                 return new ApiResponse<bool>("Application not found", 404);
 
-            if (application.ReviewStatus != AcademicPromotionState.UAPCReview)
+            if (application.ApplicationStatus != ApplicationStatusTypes.Submitted ||
+                application.ReviewStatus != AcademicPromotionState.UAPCReview)
                 return new ApiResponse<bool>("Application is not at UAPC review stage", 400);
 
             var chairperson = await _staffRepository.GetByIdAsync(auth.Id);
@@ -1001,7 +1023,8 @@ public class AssessmentService : IAssessmentService
             if (application == null)
                 return new ApiResponse<bool>("Application not found", 404);
 
-            if (application.ReviewStatus != AcademicPromotionState.UAPCReview)
+            if (application.ApplicationStatus != ApplicationStatusTypes.Submitted ||
+                application.ReviewStatus != AcademicPromotionState.UAPCReview)
                 return new ApiResponse<bool>("Application is not at UAPC review stage", 400);
 
             var staff = await _staffRepository.GetByIdAsync(auth.Id);
@@ -1066,9 +1089,11 @@ public class AssessmentService : IAssessmentService
         return committee.CommitteeType switch
         {
             AcademicPromotionApplicationRoles.DAPC => applications.Where(a => 
-                a.ApplicantDepartmentId == committee.DepartmentId).ToList(),
+                !string.IsNullOrWhiteSpace(committee.DepartmentId) && a.ApplicantDepartmentId == committee.DepartmentId &&
+                (string.IsNullOrWhiteSpace(committee.SchoolId) || a.ApplicantSchoolId == committee.SchoolId)).ToList(),
             AcademicPromotionApplicationRoles.FAPSC => applications.Where(a => 
-                a.ApplicantFacultyId == committee.FacultyId).ToList(),
+                !string.IsNullOrWhiteSpace(committee.FacultyId) && a.ApplicantFacultyId == committee.FacultyId &&
+                (string.IsNullOrWhiteSpace(committee.SchoolId) || a.ApplicantSchoolId == committee.SchoolId)).ToList(),
             AcademicPromotionApplicationRoles.UAPC => applications.ToList(),
             _ => new List<AcademicPromotionApplication>()
         };
@@ -1076,53 +1101,31 @@ public class AssessmentService : IAssessmentService
 
     private async Task<bool> HasAccessToApplication(string staffId, AcademicPromotionApplication application, List<AcademicPromotionCommittee> committees)
     {
-        foreach (var committee in committees)
-        {
-            switch (committee.CommitteeType)
-            {
-                case AcademicPromotionApplicationRoles.DAPC:
-                    if (committee.DepartmentId == application.ApplicantDepartmentId) return true;
-                    break;
-                case AcademicPromotionApplicationRoles.FAPSC:
-                    if (committee.FacultyId == application.ApplicantFacultyId) return true;
-                    break;
-                case AcademicPromotionApplicationRoles.UAPC:
-                    return true;
-            }
-        }
-        return false;
+        return application.ApplicationStatus != ApplicationStatusTypes.Draft &&
+            committees.Any(committee => IsInScope(application, committee));
     }
 
-    private double CalculateTeachingScore(TeachingRecord? teaching)
-    {
-        if (teaching == null) return 0;
-        var scores = new List<double?>
+    private static bool IsInScope(AcademicPromotionApplication application, AcademicPromotionCommittee committee) =>
+        committee.CommitteeType switch
         {
-            teaching.LectureLoad?.ApplicantScore,
-            teaching.AbilityToAdaptToTeaching?.ApplicantScore,
-            teaching.RegularityAndPunctuality?.ApplicantScore,
-            teaching.QualityOfLectureMaterial?.ApplicantScore,
-            teaching.PerformanceOfStudentInExam?.ApplicantScore,
-            teaching.AbilityToCompleteSyllabus?.ApplicantScore,
-            teaching.QualityOfExamQuestionAndMarkingScheme?.ApplicantScore,
-            teaching.PunctualityInSettingExamQuestion?.ApplicantScore,
-            teaching.SupervisionOfProjectWorkAndThesis?.ApplicantScore,
-            teaching.StudentReactionToAndAssessmentOfTeaching?.ApplicantScore
+            AcademicPromotionApplicationRoles.DAPC => !string.IsNullOrWhiteSpace(committee.DepartmentId) &&
+                committee.DepartmentId == application.ApplicantDepartmentId &&
+                (string.IsNullOrWhiteSpace(committee.SchoolId) || committee.SchoolId == application.ApplicantSchoolId),
+            AcademicPromotionApplicationRoles.FAPSC => !string.IsNullOrWhiteSpace(committee.FacultyId) &&
+                committee.FacultyId == application.ApplicantFacultyId &&
+                (string.IsNullOrWhiteSpace(committee.SchoolId) || committee.SchoolId == application.ApplicantSchoolId),
+            AcademicPromotionApplicationRoles.UAPC => true,
+            _ => false
         };
-        var validScores = scores.Where(s => s.HasValue).Select(s => s!.Value);
-        return validScores.Any() ? validScores.Average() : 0;
-    }
 
-    private double CalculatePublicationScore(Publication? publication)
-    {
-        if (publication?.Publications == null || !publication.Publications.Any()) return 0;
-        return publication.Publications.Sum(p => p.ApplicantScore ?? 0);
-    }
+    private double CalculateTeachingScore(TeachingRecord? teaching) =>
+        AcademicGradeTotals.Teaching(teaching);
 
-    private double CalculateServiceScore(ServiceRecord? service)
-    {
-        return service?.Services?.Sum(s => s.ApplicantScore ?? 0) ?? 0;
-    }
+    private double CalculatePublicationScore(Publication? publication) =>
+        AcademicGradeTotals.Publications(publication);
+
+    private double CalculateServiceScore(ServiceRecord? service) =>
+        AcademicGradeTotals.Services(service);
 
     private TeachingAssessmentData MapTeachingData(TeachingRecord? teaching)
     {
@@ -1130,10 +1133,10 @@ public class AssessmentService : IAssessmentService
 
         return new TeachingAssessmentData
         {
-            ApplicantPerformance = teaching.ApplicantPerformance,
-            DapcPerformance = teaching.DapcPerformance,
-            FapcPerformance = teaching.FapcPerformance,
-            UapcPerformance = teaching.UapcPerformance,
+            ApplicantPerformance = AcademicGradeTotals.TeachingPerformance(teaching, 0),
+            DapcPerformance = AcademicGradeTotals.TeachingPerformance(teaching, 1),
+            FapcPerformance = AcademicGradeTotals.TeachingPerformance(teaching, 2),
+            UapcPerformance = AcademicGradeTotals.TeachingPerformance(teaching, 3),
             TotalCategoriesAssessed = teaching.TotalCategoriesAssessed,
             Categories = new List<TeachingCategoryAssessment>
             {
@@ -1177,10 +1180,10 @@ public class AssessmentService : IAssessmentService
 
         return new PublicationAssessmentData
         {
-            ApplicantPerformance = publication.ApplicantPerformance,
-            DapcPerformance = publication.DapcPerformance,
-            FapcPerformance = publication.FapcPerformance,
-            UapcPerformance = publication.UapcPerformance,
+            ApplicantPerformance = AcademicGradeTotals.PublicationPerformance(publication, 0),
+            DapcPerformance = AcademicGradeTotals.PublicationPerformance(publication, 1),
+            FapcPerformance = AcademicGradeTotals.PublicationPerformance(publication, 2),
+            UapcPerformance = AcademicGradeTotals.PublicationPerformance(publication, 3),
             TotalPublications = publication.Publications?.Count ?? 0,
             Records = publication.Publications?.Select(p => new PublicationRecordAssessment
             {
@@ -1214,10 +1217,10 @@ public class AssessmentService : IAssessmentService
 
         return new ServiceAssessmentData
         {
-            ApplicantPerformance = service.ApplicantPerformance,
-            DapcPerformance = service.DapcPerformance,
-            FapcPerformance = service.FapcPerformance,
-            UapcPerformance = service.UapcPerformance,
+            ApplicantPerformance = AcademicGradeTotals.ServicePerformance(service, 0),
+            DapcPerformance = AcademicGradeTotals.ServicePerformance(service, 1),
+            FapcPerformance = AcademicGradeTotals.ServicePerformance(service, 2),
+            UapcPerformance = AcademicGradeTotals.ServicePerformance(service, 3),
             TotalServiceRecords = service.Services?.Count ?? 0,
             Records = service.Services?.Select(MapServiceRecord).ToList() ?? new List<ServiceRecordAssessment>()
         };
@@ -1312,15 +1315,9 @@ public class AssessmentService : IAssessmentService
             teaching.StudentReactionToAndAssessmentOfTeaching
         };
 
-        double GetCommitteeScore(TeachingData? data) => committeeType switch
-        {
-            AcademicPromotionApplicationRoles.DAPC => data?.DapcScore ?? data?.ApplicantScore ?? 0,
-            AcademicPromotionApplicationRoles.FAPSC => data?.FapcScore ?? data?.ApplicantScore ?? 0,
-            AcademicPromotionApplicationRoles.UAPC => data?.UapcScore ?? data?.ApplicantScore ?? 0,
-            _ => 0
-        };
-
-        var totalScore = categories.Where(c => c != null).Sum(c => GetCommitteeScore(c));
+        var stage = committeeType == AcademicPromotionApplicationRoles.DAPC ? 1
+            : committeeType == AcademicPromotionApplicationRoles.FAPSC ? 2 : 3;
+        var totalScore = AcademicGradeTotals.Teaching(teaching, stage);
         var performance = PerformanceComputationService.ComputePerformanceForTeaching(totalScore);
 
         // Update the committee-level performance
@@ -1365,15 +1362,9 @@ public class AssessmentService : IAssessmentService
         // Calculate total committee score for performance computation
         if (publication.Publications == null || !publication.Publications.Any()) return;
 
-        double GetCommitteeScore(PublicationData? data) => committeeType switch
-        {
-            AcademicPromotionApplicationRoles.DAPC => data?.DapcScore ?? data?.ApplicantScore ?? data?.SystemGeneratedScore ?? 0,
-            AcademicPromotionApplicationRoles.FAPSC => data?.FapcScore ?? data?.ApplicantScore ?? data?.SystemGeneratedScore ?? 0,
-            AcademicPromotionApplicationRoles.UAPC => data?.UapcScore ?? data?.ApplicantScore ?? data?.SystemGeneratedScore ?? 0,
-            _ => 0
-        };
-
-        var totalScore = publication.Publications.Sum(p => GetCommitteeScore(p));
+        var stage = committeeType == AcademicPromotionApplicationRoles.DAPC ? 1
+            : committeeType == AcademicPromotionApplicationRoles.FAPSC ? 2 : 3;
+        var totalScore = AcademicGradeTotals.Publications(publication, stage);
         var performance = PerformanceComputationService.ComputePerformanceForPublications(totalScore);
 
         // Update the committee-level performance
@@ -1417,16 +1408,9 @@ public class AssessmentService : IAssessmentService
         }
 
         // Calculate total committee score for performance computation
-        double GetCommitteeScore(ServiceRecordItem? data) => committeeType switch
-        {
-            AcademicPromotionApplicationRoles.DAPC => data?.DapcScore ?? data?.ApplicantScore ?? data?.SystemGeneratedScore ?? 0,
-            AcademicPromotionApplicationRoles.FAPSC => data?.FapcScore ?? data?.ApplicantScore ?? data?.SystemGeneratedScore ?? 0,
-            AcademicPromotionApplicationRoles.UAPC => data?.UapcScore ?? data?.ApplicantScore ?? data?.SystemGeneratedScore ?? 0,
-            _ => 0
-        };
-
-        var totalScore = service.Services?.Sum(s => GetCommitteeScore(s)) ?? 0;
-
+        var stage = committeeType == AcademicPromotionApplicationRoles.DAPC ? 1
+            : committeeType == AcademicPromotionApplicationRoles.FAPSC ? 2 : 3;
+        var totalScore = AcademicGradeTotals.Services(service, stage);
         var performance = PerformanceComputationService.ComputeServicePerformance(totalScore);
 
         // Update the committee-level performance
@@ -1460,7 +1444,8 @@ public class AssessmentService : IAssessmentService
             if (application == null)
                 return new ApiResponse<PromotionValidationResponse>("Application not found", 404);
 
-            if (application.ReviewStatus != AcademicPromotionState.UAPCReview)
+            if (application.ApplicationStatus != ApplicationStatusTypes.Submitted ||
+                application.ReviewStatus != AcademicPromotionState.UAPCReview)
                 return new ApiResponse<PromotionValidationResponse>("Application must be at UAPC review stage for validation", 400);
 
             // Get position requirements
@@ -1501,7 +1486,7 @@ public class AssessmentService : IAssessmentService
 
             // Calculate scores
             var teachingScore = CalculateTeachingScore(teaching);
-            var publicationScore = publications.Sum(p => p.UapcScore ?? p.FapcScore ?? p.DapcScore ?? p.ApplicantScore ?? p.SystemGeneratedScore);
+            var publicationScore = AcademicGradeTotals.Publications(publication);
             var serviceScore = CalculateServiceScore(service);
 
             // Build validation items
@@ -1655,15 +1640,6 @@ public class AssessmentService : IAssessmentService
         }
     }
 
-    private string GetFinalPerformance(params string?[] performances)
-    {
-        foreach (var perf in performances)
-        {
-            if (!string.IsNullOrEmpty(perf) && perf != PerformanceTypes.InAdequate)
-                return perf;
-        }
-        return PerformanceTypes.InAdequate;
-    }
 
     /// <summary>
     /// Returns the most authoritative committee performance using nullable item-level scores
@@ -1671,29 +1647,14 @@ public class AssessmentService : IAssessmentService
     /// to "InAdequate", making it impossible to distinguish "not yet scored" from a genuine
     /// InAdequate result without checking the individual nullable score fields).
     /// </summary>
-    private static string GetEffectivePerformance(TeachingRecord? record)
-    {
-        if (record == null) return PerformanceTypes.InAdequate;
-        var cats = new[] {
-            record.LectureLoad, record.AbilityToAdaptToTeaching, record.RegularityAndPunctuality,
-            record.QualityOfLectureMaterial, record.PerformanceOfStudentInExam, record.AbilityToCompleteSyllabus,
-            record.QualityOfExamQuestionAndMarkingScheme, record.PunctualityInSettingExamQuestion,
-            record.SupervisionOfProjectWorkAndThesis, record.StudentReactionToAndAssessmentOfTeaching
-        };
-        return cats.Any(c => c?.UapcScore != null) ? record.UapcPerformance : PerformanceTypes.InAdequate;
-    }
+    private static string GetEffectivePerformance(TeachingRecord? record) =>
+        AcademicGradeTotals.TeachingPerformance(record);
 
-    private static string GetEffectivePerformance(Publication? record)
-    {
-        if (record == null) return PerformanceTypes.InAdequate;
-        return record.Publications.Any(p => p.UapcScore.HasValue) ? record.UapcPerformance : PerformanceTypes.InAdequate;
-    }
+    private static string GetEffectivePerformance(Publication? record) =>
+        AcademicGradeTotals.PublicationPerformance(record);
 
-    private static string GetEffectivePerformance(ServiceRecord? record)
-    {
-        if (record == null) return PerformanceTypes.InAdequate;
-        return record.Services.Any(s => s.UapcScore.HasValue) ? record.UapcPerformance : PerformanceTypes.InAdequate;
-    }
+    private static string GetEffectivePerformance(ServiceRecord? record) =>
+        AcademicGradeTotals.ServicePerformance(record);
 
 
     private bool MatchesPerformanceCriteria(string actual, string required, double teachingScore, double publicationScore, double serviceScore)
@@ -1713,8 +1674,8 @@ public class AssessmentService : IAssessmentService
         {
             var requiredLevelName = requiredRanks[0] switch
             {
-                4 => PerformanceTypes.High,
-                3 => PerformanceTypes.Good,
+                4 => PerformanceGrade.High,
+                3 => PerformanceGrade.Good,
                 _ => null
             };
             // Fail closed for anything below Good - only a High/Good gap can be bridged by a strong numeric score.
@@ -1814,16 +1775,7 @@ public class AssessmentService : IAssessmentService
     // Both "In Adequate" (PerformanceTypes - the unscored default) and "Inadequate" (PerformanceRating -
     // what PerformanceComputationService actually writes for a genuinely-computed low score) are
     // mapped, since a real record can hold either string depending on whether it's been scored yet.
-    private static readonly Dictionary<string, int> PerformanceLevelWeights = new()
-    {
-        { PerformanceTypes.InAdequate, 1 },
-        { PerformanceRating.Inadequate, 1 },
-        { PerformanceTypes.Adequate, 2 },
-        { PerformanceTypes.Good, 3 },
-        { PerformanceTypes.High, 4 }
-    };
-
-    private static int PerformanceLevelWeight(string? level) => PerformanceLevelWeights.GetValueOrDefault(level ?? string.Empty, 0);
+    private static int PerformanceLevelWeight(string? level) => (int)PerformanceGrade.Parse(level);
 
     // Numeric teaching-score threshold for a given level, matching
     // PerformanceComputationService.ComputePerformanceForTeaching. Levels below Adequate (and
@@ -1831,9 +1783,9 @@ public class AssessmentService : IAssessmentService
     // that case should pass (lenient default) or fail (a level gap too wide to bridge numerically).
     private static double TeachingThresholdForLevel(string? level, double unmatchedThreshold) => level switch
     {
-        PerformanceTypes.High => 80,
-        PerformanceTypes.Good => 60,
-        PerformanceTypes.Adequate => 50,
+        PerformanceGrade.High => 80,
+        PerformanceGrade.Good => 60,
+        PerformanceGrade.Adequate => 50,
         _ => unmatchedThreshold
     };
 
@@ -1863,16 +1815,16 @@ public class AssessmentService : IAssessmentService
     {
         switch (performance)
         {
-            case PerformanceTypes.High:
+            case PerformanceGrade.High:
                 strengths.Add($"Excellent {category} performance (High)");
                 break;
-            case PerformanceTypes.Good:
+            case PerformanceGrade.Good:
                 strengths.Add($"Strong {category} performance (Good)");
                 break;
-            case PerformanceTypes.Adequate:
+            case PerformanceGrade.Adequate:
                 // Neither strength nor weakness - meets minimum
                 break;
-            case PerformanceTypes.InAdequate:
+            case PerformanceGrade.Inadequate:
                 improvements.Add($"{category} performance is below acceptable level (Inadequate)");
                 break;
         }

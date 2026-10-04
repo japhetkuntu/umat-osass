@@ -1,3 +1,5 @@
+using Umat.Osass.Promotion.Domain;
+
 namespace Umat.Osass.PostgresDb.Sdk.Common;
 
 public class AcademicPromotionApplicationRoles
@@ -50,10 +52,10 @@ public static class DepartmentTypes
 
 public static class PerformanceTypes
 {
-    public const string InAdequate = "In Adequate";
-    public const string Adequate = "Adequate";
-    public const string Good = "Good";
-    public const string High = "High";
+    public const string InAdequate = PerformanceGrade.Inadequate;
+    public const string Adequate = PerformanceGrade.Adequate;
+    public const string Good = PerformanceGrade.Good;
+    public const string High = PerformanceGrade.High;
     public const string NotStarted = "Not Started";
 }
 
@@ -136,5 +138,4 @@ public static class KnowledgeMaterialTypes
     public const string TechnicalReport = "Technical Report";
     public const string Memo = "Memo";
 }
-
 

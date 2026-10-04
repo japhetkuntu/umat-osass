@@ -1,3 +1,4 @@
+import { UPLOAD_ACCEPT, validateUploadFiles } from "@/lib/files";
 import { useEffect, useRef, useState } from "react";
 import { FileText, FileUp, CheckCircle2, AlertCircle, Loader2, Download, RefreshCw, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,8 +7,7 @@ import { toast } from "sonner";
 import { nonAcademicService } from "@/services/nonAcademicService";
 import { ApplicationDocuments } from "@/types/academic";
 
-const ACCEPTED = ".pdf,.doc,.docx";
-const MAX_BYTES = 15 * 1024 * 1024;
+const ACCEPTED = UPLOAD_ACCEPT;
 
 type FieldKey = "curriculumVitae" | "applicationLetter";
 
@@ -75,15 +75,8 @@ export const RequiredDocumentsCard = ({ applicationStatus, locked = false, onUpl
   const handleUpload = async (key: FieldKey, file: File | null) => {
     if (!file) return;
 
-    if (file.size > MAX_BYTES) {
-      toast.error("File exceeds the 15 MB size limit");
-      return;
-    }
-    const ext = `.${file.name.split(".").pop()?.toLowerCase() || ""}`;
-    if (![".pdf", ".doc", ".docx"].includes(ext)) {
-      toast.error("Only PDF or Word documents are allowed");
-      return;
-    }
+    const error = validateUploadFiles([file]);
+    if (error) { toast.error(error); return; }
 
     const formData = new FormData();
     formData.append(key === "curriculumVitae" ? "CurriculumVitae" : "ApplicationLetter", file);
@@ -116,7 +109,7 @@ export const RequiredDocumentsCard = ({ applicationStatus, locked = false, onUpl
     {
       key: "curriculumVitae",
       label: "Curriculum Vitae",
-      description: "Your most recent CV in PDF or Word format (max 15 MB).",
+      description: "Your most recent CV in PDF, PNG, JPG, JPEG, DOCX or XLSX format (max 20 MB).",
       fileName: docs?.curriculumVitaeFileName || "",
       url: docs?.curriculumVitaeUrl || "",
       uploadedAt: docs?.curriculumVitaeUploadedAt || null,

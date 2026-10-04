@@ -59,7 +59,7 @@ namespace Umat.Osass.Identity.Api.Services.Implementations
 
             var token = new JwtSecurityToken(
                 auth.Issuer,
-                auth.Issuer,
+                auth.Audience,
                 [.. claims],
                 expires: DateTime.UtcNow.AddHours(auth.DurationInHours),
                 signingCredentials: creds);

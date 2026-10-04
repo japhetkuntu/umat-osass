@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTable, Column } from '@/components/common/DataTable';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
@@ -95,7 +94,7 @@ export default function ServicePositionsPage() {
   ];
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Service Positions"
         description="Manage service positions and scoring values"
@@ -193,6 +192,6 @@ export default function ServicePositionsPage() {
         onConfirm={handleDelete}
         isDestructive
       />
-    </AdminLayout>
+    </>
   );
 }

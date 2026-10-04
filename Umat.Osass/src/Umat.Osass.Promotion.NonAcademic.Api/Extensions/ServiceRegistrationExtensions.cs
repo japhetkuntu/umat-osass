@@ -12,6 +12,7 @@ using Microsoft.IdentityModel.Tokens;
 using Umat.Osass.Common.Sdk.Models;
 using Umat.Osass.Common.Sdk.Options;
 using Umat.Osass.PostgresDb.Sdk.ApplicationContexts;
+using Umat.Osass.PostgresDb.Sdk.Extensions;
 using Umat.Osass.Promotion.NonAcademic.Api.Actors;
 using Umat.Osass.Promotion.NonAcademic.Api.Options;
 
@@ -150,10 +151,10 @@ public static class ServiceRegistrationExtensions
             {
                 using var scope = serviceProvider.CreateScope();
                 var identityDb = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
-                await identityDb.Database.MigrateAsync();
+                await DatabaseMigration.MigrateAsync(identityDb);
 
                 var nonAcademicDb = scope.ServiceProvider.GetRequiredService<NonAcademicPromotionDbContext>();
-                await nonAcademicDb.Database.MigrateAsync();
+                await DatabaseMigration.MigrateAsync(nonAcademicDb);
 
                 Console.WriteLine("✅ Migrations applied successfully.");
                 return;

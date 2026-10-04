@@ -1,4 +1,4 @@
-import { adminClient, identityClient, type PagedResult } from './apiClient';
+import { adminClient, identityClient, type ApiResponse, type PagedResult } from './apiClient';
 import type {
   School,
   Faculty,
@@ -36,12 +36,40 @@ import type {
 } from '@/types';
 
 // Helper to build query string from filter params
-function buildQuery(params: Record<string, any>): string {
+function buildQuery(params: Record<string, string | number | boolean | undefined | null>): string {
   const qs = Object.entries(params)
     .filter(([, v]) => v !== undefined && v !== null && v !== '')
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
     .join('&');
   return qs ? `?${qs}` : '';
+}
+
+function pagedData<T>(res: ApiResponse<PagedResult<T>>, page: number, pageSize: number): PagedResult<T> {
+  if (!res.success) throw new Error(res.message || 'Unable to load data. Please try again.');
+  if (!res.data || !Array.isArray(res.data.results)) throw new Error("Invalid paginated response");
+  return { ...res.data, pageIndex: res.data.pageIndex ?? page, pageSize: res.data.pageSize ?? pageSize };
+}
+
+const MAX_PAGE_SIZE = 100;
+const MAX_PAGES = 500;
+
+// Server clamps pageSize to 100, so whole lists are loaded by walking the pages.
+export async function fetchAllPages<T>(
+  fetchPage: (page: number, pageSize: number) => Promise<PagedResult<T>>,
+): Promise<T[]> {
+  const all: T[] = [];
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const result = await fetchPage(page, MAX_PAGE_SIZE);
+    const rows = result.results ?? [];
+    all.push(...rows);
+    if (Number.isFinite(result.totalCount) && all.length >= result.totalCount) return all;
+    if (result.totalPages > 0 && page >= result.totalPages) {
+      if (all.length < result.totalCount) throw new Error("Pagination ended before all records were loaded");
+      return all;
+    }
+    if (rows.length === 0) throw new Error("Pagination ended before all records were loaded");
+  }
+  throw new Error("Too many pages to load. Please narrow the list.");
 }
 
 // ==================== Schools ====================
@@ -52,7 +80,7 @@ export const fetchSchools = async (
 ): Promise<PagedResult<School>> => {
   const query = buildQuery({ page, pageSize, search });
   const res = await adminClient.get<PagedResult<School>>(`/Schools${query}`);
-  return res.data ?? { results: [], totalCount: 0, pageIndex: page, pageSize, count: 0, totalPages: 0, lowerBoundSize: 0, upperBoundSize: 0 };
+  return pagedData(res, page, pageSize);
 };
 
 export const fetchSchool = async (id: string): Promise<School | null> => {
@@ -85,7 +113,7 @@ export const fetchFaculties = async (
 ): Promise<PagedResult<Faculty>> => {
   const query = buildQuery({ page, pageSize, search });
   const res = await adminClient.get<PagedResult<Faculty>>(`/Facultys${query}`);
-  return res.data ?? { results: [], totalCount: 0, pageIndex: page, pageSize, count: 0, totalPages: 0, lowerBoundSize: 0, upperBoundSize: 0 };
+  return pagedData(res, page, pageSize);
 };
 
 export const createFaculty = async (data: FacultyFormData): Promise<Faculty> => {
@@ -114,7 +142,7 @@ export const fetchDepartments = async (
 ): Promise<PagedResult<Department>> => {
   const query = buildQuery({ page, pageSize, search, departmentType });
   const res = await adminClient.get<PagedResult<Department>>(`/Departments${query}`);
-  return res.data ?? { results: [], totalCount: 0, pageIndex: page, pageSize, count: 0, totalPages: 0, lowerBoundSize: 0, upperBoundSize: 0 };
+  return pagedData(res, page, pageSize);
 };
 
 export const createDepartment = async (data: DepartmentFormData): Promise<Department> => {
@@ -143,7 +171,7 @@ export const fetchStaff = async (
 ): Promise<PagedResult<Staff>> => {
   const query = buildQuery({ page, pageSize, search, staffCategory });
   const res = await adminClient.get<PagedResult<Staff>>(`/Staffs${query}`);
-  return res.data ?? { results: [], totalCount: 0, pageIndex: page, pageSize, count: 0, totalPages: 0, lowerBoundSize: 0, upperBoundSize: 0 };
+  return pagedData(res, page, pageSize);
 };
 
 export const createStaff = async (data: StaffFormData): Promise<Staff> => {
@@ -171,7 +199,7 @@ export const fetchAcademicPositions = async (
 ): Promise<PagedResult<AcademicPosition>> => {
   const query = buildQuery({ page, pageSize, search });
   const res = await adminClient.get<PagedResult<AcademicPosition>>(`/AcademicPositions${query}`);
-  return res.data ?? { results: [], totalCount: 0, pageIndex: page, pageSize, count: 0, totalPages: 0, lowerBoundSize: 0, upperBoundSize: 0 };
+  return pagedData(res, page, pageSize);
 };
 
 export const createAcademicPosition = async (data: AcademicPositionFormData): Promise<AcademicPosition> => {
@@ -202,7 +230,7 @@ export const fetchServiceCategories = async (
 ): Promise<PagedResult<ServiceCategory>> => {
   const query = buildQuery({ page, pageSize, search });
   const res = await adminClient.get<PagedResult<ServiceCategory>>(`/ServiceCategories${query}`);
-  return res.data ?? { results: [], totalCount: 0, pageIndex: page, pageSize, count: 0, totalPages: 0, lowerBoundSize: 0, upperBoundSize: 0 };
+  return pagedData(res, page, pageSize);
 };
 
 export const createServiceCategory = async (data: ServiceCategoryFormData): Promise<ServiceCategory> => {
@@ -233,7 +261,7 @@ export const fetchServicePositions = async (
 ): Promise<PagedResult<ServicePosition>> => {
   const query = buildQuery({ page, pageSize, search });
   const res = await adminClient.get<PagedResult<ServicePosition>>(`/ServicePositions${query}`);
-  return res.data ?? { results: [], totalCount: 0, pageIndex: page, pageSize, count: 0, totalPages: 0, lowerBoundSize: 0, upperBoundSize: 0 };
+  return pagedData(res, page, pageSize);
 };
 
 export const createServicePosition = async (data: ServicePositionFormData): Promise<ServicePosition> => {
@@ -264,7 +292,7 @@ export const fetchPublicationIndicators = async (
 ): Promise<PagedResult<PublicationIndicator>> => {
   const query = buildQuery({ page, pageSize, search });
   const res = await adminClient.get<PagedResult<PublicationIndicator>>(`/PublicationIndicators${query}`);
-  return res.data ?? { results: [], totalCount: 0, pageIndex: page, pageSize, count: 0, totalPages: 0, lowerBoundSize: 0, upperBoundSize: 0 };
+  return pagedData(res, page, pageSize);
 };
 
 export const createPublicationIndicator = async (data: PublicationIndicatorFormData): Promise<PublicationIndicator> => {
@@ -295,7 +323,7 @@ export const fetchCommitteeMembers = async (
 ): Promise<PagedResult<CommitteeMember>> => {
   const query = buildQuery({ page, pageSize, search });
   const res = await adminClient.get<PagedResult<CommitteeMember>>(`/Committees${query}`);
-  return res.data ?? { results: [], totalCount: 0, pageIndex: page, pageSize, count: 0, totalPages: 0, lowerBoundSize: 0, upperBoundSize: 0 };
+  return pagedData(res, page, pageSize);
 };
 
 export const createCommitteeMember = async (data: CommitteeMemberFormData): Promise<CommitteeMember> => {
@@ -328,7 +356,7 @@ export const fetchStaffUpdates = async (
 ): Promise<PagedResult<StaffUpdate>> => {
   const query = buildQuery({ page, pageSize, search, category, isVisible });
   const res = await adminClient.get<PagedResult<StaffUpdate>>(`/StaffUpdates${query}`);
-  return res.data ?? { results: [], totalCount: 0, pageIndex: page, pageSize, count: 0, totalPages: 0, lowerBoundSize: 0, upperBoundSize: 0 };
+  return pagedData(res, page, pageSize);
 };
 
 export const fetchStaffUpdate = async (id: string): Promise<StaffUpdate | null> => {
@@ -366,7 +394,7 @@ export const deleteStaffUpdate = async (id: string): Promise<void> => {
 export const fetchAuditLogs = async (filters: AuditLogFilters = {}): Promise<PagedResult<AuditLog>> => {
   const query = buildQuery({ ...filters });
   const res = await adminClient.get<PagedResult<AuditLog>>(`/AuditLogs${query}`);
-  return res.data ?? { results: [], totalCount: 0, pageIndex: 1, pageSize: 20, count: 0, totalPages: 0, lowerBoundSize: 0, upperBoundSize: 0 };
+  return pagedData(res, filters.page ?? 1, filters.pageSize ?? 20);
 };
 
 // ==================== Non-Academic Committees ====================
@@ -377,7 +405,7 @@ export const fetchNonAcademicCommitteeMembers = async (
 ): Promise<PagedResult<NonAcademicCommitteeMember>> => {
   const query = buildQuery({ page, pageSize, search });
   const res = await adminClient.get<PagedResult<NonAcademicCommitteeMember>>(`/NonAcademicCommittees${query}`);
-  return res.data ?? { results: [], totalCount: 0, pageIndex: page, pageSize, count: 0, totalPages: 0, lowerBoundSize: 0, upperBoundSize: 0 };
+  return pagedData(res, page, pageSize);
 };
 
 export const createNonAcademicCommitteeMember = async (data: NonAcademicCommitteeMemberFormData): Promise<NonAcademicCommitteeMember> => {
@@ -408,7 +436,7 @@ export const fetchNonAcademicPositions = async (
 ): Promise<PagedResult<NonAcademicPosition>> => {
   const query = buildQuery({ page, pageSize, search });
   const res = await adminClient.get<PagedResult<NonAcademicPosition>>(`/NonAcademicPositions${query}`);
-  return res.data ?? { results: [], totalCount: 0, pageIndex: page, pageSize, count: 0, totalPages: 0, lowerBoundSize: 0, upperBoundSize: 0 };
+  return pagedData(res, page, pageSize);
 };
 
 export const createNonAcademicPosition = async (data: NonAcademicPositionFormData): Promise<NonAcademicPosition> => {
@@ -439,7 +467,7 @@ export const fetchKnowledgeMaterialIndicators = async (
 ): Promise<PagedResult<KnowledgeMaterialIndicator>> => {
   const query = buildQuery({ page, pageSize, search });
   const res = await adminClient.get<PagedResult<KnowledgeMaterialIndicator>>(`/KnowledgeMaterialIndicators${query}`);
-  return res.data ?? { results: [], totalCount: 0, pageIndex: page, pageSize, count: 0, totalPages: 0, lowerBoundSize: 0, upperBoundSize: 0 };
+  return pagedData(res, page, pageSize);
 };
 
 export const createKnowledgeMaterialIndicator = async (data: KnowledgeMaterialIndicatorFormData): Promise<KnowledgeMaterialIndicator> => {
@@ -464,15 +492,11 @@ export const deleteKnowledgeMaterialIndicator = async (id: string): Promise<void
 
 // ==================== Dashboard ====================
 export const fetchDashboardStats = async (): Promise<DashboardStats> => {
-  // Aggregate stats from multiple endpoints in parallel
-  const [
-    schools, faculties, allDepartments, academicStaff, nonAcademicStaff,
-    positions, servicePositions, pubIndicators, committees,
-    nonAcademicPositions, nonAcademicCommittees, knowledgeIndicators,
-  ] = await Promise.all([
+  const results = await Promise.allSettled([
     fetchSchools(1, 1),
     fetchFaculties(1, 1),
-    fetchDepartments(1, 100),
+    fetchDepartments(1, 1, undefined, 'academic'),
+    fetchDepartments(1, 1, undefined, 'non-academic'),
     fetchStaff(1, 1, undefined, 'Academic'),
     fetchStaff(1, 1, undefined, 'Non-Academic'),
     fetchAcademicPositions(1, 1),
@@ -484,29 +508,37 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
     fetchKnowledgeMaterialIndicators(1, 1),
   ]);
 
-  const totalDepartments = allDepartments.results.filter(
-    (d: { departmentType?: string }) => !d.departmentType || d.departmentType.toLowerCase() === 'academic'
-  ).length;
-  const totalUnits = allDepartments.results.filter(
-    (d: { departmentType?: string }) => d.departmentType?.toLowerCase() === 'non-academic'
-  ).length;
+  if (results.every((r) => r.status === 'rejected')) {
+    const first = results[0] as PromiseRejectedResult;
+    throw first.reason instanceof Error ? first.reason : new Error('Unable to load dashboard statistics');
+  }
+
+  const count = (r: PromiseSettledResult<PagedResult<unknown>>): number | null =>
+    r.status === 'fulfilled' ? r.value.totalCount : null;
+  const sum = (a: number | null, b: number | null) => (a === null || b === null ? null : a + b);
+
+  const [
+    schools, faculties, departments, units, academicStaff, nonAcademicStaff,
+    positions, servicePositions, pubIndicators, committees,
+    nonAcademicPositions, nonAcademicCommittees, knowledgeIndicators,
+  ] = results.map(count);
 
   return {
-    totalSchools: schools.totalCount,
-    totalFaculties: faculties.totalCount,
-    totalDepartments,
-    totalUnits,
-    totalAcademicStaff: academicStaff.totalCount,
-    totalNonAcademicStaff: nonAcademicStaff.totalCount,
-    totalStaff: academicStaff.totalCount + nonAcademicStaff.totalCount,
-    totalAcademicPositions: positions.totalCount,
-    totalServicePositions: servicePositions.totalCount,
-    totalPublicationIndicators: pubIndicators.totalCount,
-    totalAcademicCommitteeMembers: committees.totalCount,
-    totalNonAcademicPositions: nonAcademicPositions.totalCount,
-    totalNonAcademicCommitteeMembers: nonAcademicCommittees.totalCount,
-    totalKnowledgeMaterialIndicators: knowledgeIndicators.totalCount,
-    totalCommitteeMembers: committees.totalCount + nonAcademicCommittees.totalCount,
+    totalSchools: schools,
+    totalFaculties: faculties,
+    totalDepartments: departments,
+    totalUnits: units,
+    totalAcademicStaff: academicStaff,
+    totalNonAcademicStaff: nonAcademicStaff,
+    totalStaff: sum(academicStaff, nonAcademicStaff),
+    totalAcademicPositions: positions,
+    totalServicePositions: servicePositions,
+    totalPublicationIndicators: pubIndicators,
+    totalAcademicCommitteeMembers: committees,
+    totalNonAcademicPositions: nonAcademicPositions,
+    totalNonAcademicCommitteeMembers: nonAcademicCommittees,
+    totalKnowledgeMaterialIndicators: knowledgeIndicators,
+    totalCommitteeMembers: sum(committees, nonAcademicCommittees),
   };
 };
 
@@ -579,12 +611,12 @@ export const adminChangePassword = async (data: {
 // ==================== Admin User Management (SuperAdmin only) ====================
 export const fetchAdminUsers = async (
   page = 1,
-  pageSize = 20,
+  pageSize = 50,
   search?: string,
 ): Promise<PagedResult<AdminUser>> => {
   const query = buildQuery({ page, pageSize, search });
   const res = await identityClient.get<PagedResult<AdminUser>>(`/Admins${query}`);
-  return res.data ?? { results: [], totalCount: 0, pageIndex: page, pageSize, count: 0, totalPages: 0, lowerBoundSize: 0, upperBoundSize: 0 };
+  return pagedData(res, page, pageSize);
 };
 
 export const createAdminUser = async (data: AdminUserFormData): Promise<AdminUser> => {

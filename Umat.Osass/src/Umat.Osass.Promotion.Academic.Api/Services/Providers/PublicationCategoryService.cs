@@ -1,3 +1,4 @@
+using Umat.Osass.Promotion.Domain;
 using Umat.Osass.AcademicPromotion.Sdk.Services;
 using Umat.Osass.Common.Sdk.Models;
 using Umat.Osass.PostgresDb.Sdk.Common;
@@ -39,12 +40,18 @@ public class PublicationCategoryService : IPublicationCategoryService
         {
             _logger.LogInformation(
                 "[UpdatePublicationCategoryState] Request:{Request} By:{Auth}",
-                request.Serialize(),
-                auth.Serialize());
+                "[redacted]",
+                auth.Id);
+
+            await ApplicantUploadValidation.ValidateAsync(request);
 
             var application =
                 await _applicationRepository.GetOneAsync(a => a.IsActive && a.ApplicantId == auth.Id)
                 ?? await _applicationService.CreateAcademicPromotionApplication(auth.Id);
+
+            if (application.ApplicationStatus != ApplicationStatusTypes.Draft &&
+                application.ApplicationStatus != ApplicationStatusTypes.Returned)
+                return new ApiResponse<PublicationResponse>("Submitted applications cannot be edited", 409);
 
             var publication =
                 await _publicationRepository.GetOneAsync(p => p.ApplicantId == auth.Id &&
@@ -176,13 +183,17 @@ public class PublicationCategoryService : IPublicationCategoryService
 
             var response = new PublicationResponse
             {
-                PerformanceLevel = publication.ApplicantPerformance,
+                PerformanceLevel = AcademicGradeTotals.PublicationPerformance(publication, 0),
                 Publications = publication.Publications
                     .Select(MapPublicationData)
                     .ToList()
             };
 
             return response.ToOkApiResponse("Publication category updated successfully");
+        }
+        catch (InvalidDataException ex)
+        {
+            return new ApiResponse<PublicationResponse>(ex.Message, 400);
         }
         catch (InvalidOperationException ex)
         {
@@ -193,7 +204,7 @@ public class PublicationCategoryService : IPublicationCategoryService
             _logger.LogError(
                 e,
                 "[UpdatePublicationCategoryState] Failed By:{Auth}",
-                auth.Serialize());
+                auth.Id);
 
             return new ApiResponse<PublicationResponse>(
                 "Failed to update publication category",
@@ -206,7 +217,7 @@ public class PublicationCategoryService : IPublicationCategoryService
         // PresentationBonus is already correctly gated (IsPresented && evidence present) and
         // zeroed otherwise at write time in UpdatePublicationCategoryState - no need to re-derive
         // eligibility here.
-        return request.Publications.Sum(p => (p.ApplicantScore ?? 0) + p.PresentationBonus);
+        return request.Publications.Sum(p => (p.ApplicantScore ?? 0) + AcademicGradeTotals.PresentationBonus(p));
     }
 
     public async Task<IApiResponse<PublicationResponse>> GetPublicationCategoryState(
@@ -218,7 +229,7 @@ public class PublicationCategoryService : IPublicationCategoryService
         {
             _logger.LogInformation(
                 "[GetPublicationCategoryState] Fetching publications for {Auth}",
-                auth.Serialize());
+                auth.Id);
             AcademicPromotionApplication? application;
             if (!string.IsNullOrEmpty(id))
             {
@@ -242,7 +253,7 @@ public class PublicationCategoryService : IPublicationCategoryService
 
             return
                 new PublicationResponse
-                { PerformanceLevel = publication.ApplicantPerformance,
+                { PerformanceLevel = AcademicGradeTotals.PublicationPerformance(publication, 0),
                     Publications = publication.Publications
                         .Select(MapPublicationData)
                         .ToList()
@@ -253,7 +264,7 @@ public class PublicationCategoryService : IPublicationCategoryService
             _logger.LogError(
                 e,
                 "[GetPublicationCategoryState] Failed for {Auth}",
-                auth.Serialize());
+                auth.Id);
 
             return new ApiResponse<PublicationResponse>(
                 "Failed to retrieve publication category",

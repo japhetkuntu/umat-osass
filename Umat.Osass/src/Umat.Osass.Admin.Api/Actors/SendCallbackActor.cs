@@ -16,12 +16,11 @@ public class SendCallbackActor : BaseActor
 
     private async Task SendCallback(SendCallbackMessage message)
     {
-        var serializedPayload = message.Payload.Serialize();
         try
         {
             if (string.IsNullOrEmpty(message.CallbackUrl))
             {
-                _logger.LogError("No callback url provided for {callback_payload}", serializedPayload);
+                _logger.LogError("No callback url provided for {callback_payload}", "[redacted]");
                 return;
             }
 
@@ -31,7 +30,7 @@ public class SendCallbackActor : BaseActor
             _logger.LogError(ex, "Exception occurred sending callback" +
                                  "\nUrl: {callback_url}" +
                                  "\nPayload: {callback_payload}",
-                message.CallbackUrl, serializedPayload);
+                message.CallbackUrl, "[redacted]");
         }
 
         Self.Tell(PoisonPill.Instance);

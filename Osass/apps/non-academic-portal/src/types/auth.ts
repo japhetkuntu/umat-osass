@@ -1,13 +1,5 @@
-export type ApplicationStatus =
-    | "not-started"
-    | "draft"
-    | "in-progress"
-    | "submitted"
-    | "under-review"
-    | "decision-pending"
-    | "approved"
-    | "not-approved"
-    | "returned";
+import type { ApplicationStatus } from "@osass/domain";
+export type { ApplicationStatus } from "@osass/domain";
 
 export type ReviewStage =
     | "submitted"
@@ -31,8 +23,8 @@ export interface PositionRequirement {
     performanceCriteria: string[];
     minimumNumberOfYearsFromLastPromotion: number;
     previousPosition: string;
-    minimumNumberOfPublications: number;
-    minimumNumberOfRefereedJournal: number;
+    minimumNumberOfKnowledgeMaterials: number;
+    minimumNumberOfJournals: number;
 }
 
 export interface EligibilityData {
@@ -67,16 +59,9 @@ export interface LoginResponse {
     metaData: StaffLoginMetaData;
 }
 
-export interface StaffTokenResponse extends LoginResponse {
-    // Inherits accessToken, refreshToken, and metaData
-}
+export type StaffTokenResponse = LoginResponse;
 
-export interface ApiResponse<T> {
-    code: number;
-    message: string;
-    data: T;
-    success: boolean;
-}
+export type { ApiResponse } from "@osass/domain";
 
 export interface AuthState {
     user: StaffLoginMetaData | null;

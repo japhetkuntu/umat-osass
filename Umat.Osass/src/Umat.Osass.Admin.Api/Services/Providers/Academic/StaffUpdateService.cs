@@ -28,7 +28,7 @@ public class StaffUpdateService : IStaffUpdateService
     {
         try
         {
-            _logger.LogInformation("Received request to add staff update by {Auth}", auth.Serialize());
+            _logger.LogInformation("Received request to add staff update by {Auth}", auth.Id);
 
             var entity = request.Adapt<StaffUpdate>();
             entity.CreatedAt = DateTime.UtcNow;
@@ -52,13 +52,13 @@ public class StaffUpdateService : IStaffUpdateService
     {
         try
         {
-            _logger.LogInformation("Received request to update staff update {Id} by {Auth}", id, auth.Serialize());
+            _logger.LogInformation("Received request to update staff update {Id} by {Auth}", id, auth.Id);
 
             var existing = await _staffUpdateRepository.GetByIdAsync(id);
             if (existing == null)
                 return new ApiResponse<StaffUpdateResponse>("Staff update not found", 404);
 
-            var updated = request.Adapt<StaffUpdate>();
+            var updated = request.Adapt(existing);
             updated.Id = id;
             updated.CreatedAt = existing.CreatedAt;
             updated.CreatedBy = existing.CreatedBy;
@@ -87,7 +87,7 @@ public class StaffUpdateService : IStaffUpdateService
     {
         try
         {
-            _logger.LogInformation("Received request to delete staff update {Id} by {Auth}", id, auth.Serialize());
+            _logger.LogInformation("Received request to delete staff update {Id} by {Auth}", id, auth.Id);
 
             var existing = await _staffUpdateRepository.GetByIdAsync(id);
             if (existing == null)
@@ -127,7 +127,7 @@ public class StaffUpdateService : IStaffUpdateService
     {
         try
         {
-            _logger.LogInformation("Received request to retrieve staff updates by {Auth}", auth.Serialize());
+            _logger.LogInformation("Received request to retrieve staff updates by {Auth}", auth.Id);
 
             var query = _staffUpdateRepository.GetQueryableAsync();
 
@@ -169,7 +169,7 @@ public class StaffUpdateService : IStaffUpdateService
     {
         try
         {
-            _logger.LogInformation("Received request to toggle visibility for staff update {Id} by {Auth}", id, auth.Serialize());
+            _logger.LogInformation("Received request to toggle visibility for staff update {Id} by {Auth}", id, auth.Id);
 
             var existing = await _staffUpdateRepository.GetByIdAsync(id);
             if (existing == null)

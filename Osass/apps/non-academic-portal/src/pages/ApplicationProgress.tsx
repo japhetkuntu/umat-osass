@@ -1,12 +1,12 @@
+import { buildTimelineSteps, normalizeStatus } from "@/lib/status";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { format } from "date-fns";
 import { ArrowLeft, Eye, Download, FileText, Send, Loader2, AlertCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProgressTimeline } from "@/components/promotion/ProgressTimeline";
 import { ApplicationStatusBadge } from "@/components/promotion/ApplicationStatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
-import { ReviewStage, ApplicationStatus } from "@/types/auth";
+
 import { nonAcademicService } from "@/services/nonAcademicService";
 import { toast } from "sonner";
 
@@ -36,54 +36,8 @@ const ApplicationProgress = () => {
   }
 
   const activeApp = eligibility?.activeApplication;
-  const applicationStatus = (activeApp?.applicationStatus?.toLowerCase() || "not-started") as ApplicationStatus;
-  const currentReviewStage = (activeApp?.applicationReviewStatus || "submitted") as ReviewStage;
-
-  // Build timeline based on current review stage
-  const getTimelineSteps = () => {
-    const stages: { id: ReviewStage; label: string }[] = [
-      { id: "submitted", label: "Application Submitted" },
-      { id: "department-review", label: "Unit Review" },
-      { id: "institutional-review", label: "Institutional Review" },
-      { id: "external-assessment", label: "External Assessment" },
-      { id: "committee-review", label: "University Appointments & Promotions Committee" },
-      { id: "council-decision", label: "Council Decision" },
-    ];
-
-    const currentStageIndex = stages.findIndex(
-      (s) => s.id === currentReviewStage
-    );
-
-    const submittedDate = activeApp?.applicationStartDate
-      ? format(new Date(activeApp.applicationStartDate), "MMMM d, yyyy")
-      : undefined;
-
-    return stages.map((stage, index) => {
-      let status: "completed" | "current" | "upcoming" = "upcoming";
-      let date: string | undefined;
-
-      if (index < currentStageIndex) {
-        status = "completed";
-        if (stage.id === "submitted") {
-          date = submittedDate;
-        }
-      } else if (index === currentStageIndex) {
-        status = "current";
-        if (stage.id === "submitted") {
-          date = submittedDate;
-        }
-      }
-
-      return {
-        id: stage.id,
-        label: stage.label,
-        status,
-        date,
-      };
-    });
-  };
-
-  const timelineSteps = getTimelineSteps();
+  const applicationStatus = normalizeStatus(activeApp?.applicationStatus);
+  const timelineSteps = buildTimelineSteps(activeApp?.applicationReviewStatus, activeApp?.applicationStatus, activeApp?.applicationStartDate ? new Date(activeApp.applicationStartDate).toLocaleDateString() : undefined);
 
   const handleDownloadPDF = () => {
     toast.info("PDF download isn't available yet. Please check back soon.");

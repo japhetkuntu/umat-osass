@@ -16,6 +16,7 @@ import {
   ArrowRight,
   LogOut,
   User,
+  KeyRound,
 } from "lucide-react";
 import {
   DropdownMenu,

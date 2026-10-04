@@ -1,3 +1,10 @@
+export interface PublicationIndicator {
+    id: string;
+    name: string;
+    score: number;
+    scoreForPresentation: number;
+}
+
 import { ApplicationStatus } from "./auth";
 
 export interface ApplicationCategoryState {
@@ -65,6 +72,9 @@ export interface PublicationResponseData {
     applicantScore: number;
     presentationBonus: number;
     publicationTypeId: string;
+    isPresented?: boolean;
+    presentationEvidence?: string[];
+    presentationVenue?: string;
     remark: string | null;
     evidence: string[];
 }
@@ -121,6 +131,18 @@ export interface OverallReview {
     totalServiceScore: number;
     overallPerformance: string;
 }
+
+export interface SubmittedApplicationResponse {
+    teachingApplication: {
+        teachingApplicationData: { category: string; remark: string | null; score: number }[];
+    } | null;
+    publicationApplication: {
+        publicationApplicationData: { title: string; year: number; score: number; systemScore: number }[];
+    } | null;
+    serviceApplication: {
+        serviceApplicationData: { title: string; categoryName: string; score: number }[];
+    } | null;
+}
 export interface HistoricalApplication {
     id: string;
     promotionPosition: string;
@@ -148,11 +170,4 @@ export interface StaffUpdateItem {
     createdAt: string;
 }
 
-export interface PagedResult<T> {
-    results: T[];
-    totalCount: number;
-    pageIndex: number;
-    pageSize: number;
-    count: number;
-    totalPages: number;
-}
+export type { PagedResult } from "@osass/domain";

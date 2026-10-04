@@ -1,4 +1,5 @@
 using System.Net.Mime;
+using System.IO.Compression;
 using Akka.Actor;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -191,6 +192,7 @@ namespace Umat.Osass.Identity.Api.Controllers
         /// <response code="404">Email not found or account already verified.</response>
         /// <response code="500">Internal server error.</response>
         [HttpPost("register/resend-top")]
+        [HttpPost("register/resend-otp")]
         [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ApiResponse<OtpResponse>))]
         [AllowAnonymous]
@@ -340,6 +342,8 @@ namespace Umat.Osass.Identity.Api.Controllers
         }
 
         [HttpPost("add-bulk")]
+        [Authorize(Roles = "SuperAdmin,Admin")]
+        [RequestSizeLimit(20 * 1024 * 1024)]
         [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ApiResponse<StaffTokenResponse>))]
         public async Task<IActionResult> AddBulkStaff(IFormFile file)
@@ -354,8 +358,25 @@ namespace Umat.Osass.Identity.Api.Controllers
             {
                 return BadRequest("Only Excel (.xlsx) files are supported");
             }
+            if (file.Length == 0 || file.Length > 20 * 1024 * 1024)
+                return BadRequest("Upload a nonempty Excel file no larger than 20 MB.");
             using var ms = new MemoryStream();
             await file.CopyToAsync(ms);
+            ms.Position = 0;
+            try
+            {
+                using var archive = new ZipArchive(ms, ZipArchiveMode.Read, leaveOpen: true);
+                if (archive.GetEntry("xl/workbook.xml") == null ||
+                    archive.GetEntry("[Content_Types].xml") == null ||
+                    archive.Entries.Count > 1000 ||
+                    archive.Entries.Sum(entry => entry.Length) > 100L * 1024 * 1024 ||
+                    archive.Entries.Any(entry => entry.FullName.EndsWith("vbaProject.bin", StringComparison.OrdinalIgnoreCase)))
+                    return BadRequest("Upload a valid Excel workbook without macros.");
+            }
+            catch (InvalidDataException)
+            {
+                return BadRequest("Upload a valid Excel workbook.");
+            }
 
             TopLevelActors.GetActor<MainActor>().Tell(
                 new AddBulkStaffMessage(

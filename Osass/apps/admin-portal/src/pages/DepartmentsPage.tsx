@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTable, Column } from '@/components/common/DataTable';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
@@ -99,7 +98,7 @@ export default function DepartmentsPage() {
   ];
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Academic Departments"
         description="Manage academic departments within faculties"
@@ -182,6 +181,6 @@ export default function DepartmentsPage() {
         onConfirm={handleDelete}
         isDestructive
       />
-    </AdminLayout>
+    </>
   );
 }

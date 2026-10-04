@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Umat.Osass.Promotion.NonAcademic.Api.Models.Requests;
 
 /// <summary>
@@ -19,6 +21,7 @@ public class KnowledgeProfessionRequestData
     public bool IsFirstAuthor { get; set; } = false;
     public bool IsPrincipalAuthor { get; set; } = false;
     public bool IsPresented { get; set; } = false;
+    [Range(0, 100)]
     public required double Score { get; set; }
     public string? Remark { get; set; }
     public List<IFormFile> Evidence { get; set; } = [];

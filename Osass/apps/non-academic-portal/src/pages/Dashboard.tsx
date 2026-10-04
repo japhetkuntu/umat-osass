@@ -1,3 +1,4 @@
+import { normalizeStatus } from "@/lib/status";
 import { useState, useEffect, memo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowRight, CheckCircle2, AlertCircle, Clock, FileText, BookOpen, BarChart3 } from "lucide-react";
@@ -45,7 +46,7 @@ const Dashboard = () => {
 
   if (!user) return null;
 
-  const applicationStatus = (eligibility?.activeApplication?.applicationStatus?.toLowerCase() || "not-started") as ApplicationStatus;
+  const applicationStatus = normalizeStatus(eligibility?.activeApplication?.applicationStatus);
   const isEligible = eligibility?.isEligibleToApplyForNextPosition || false;
   const hasNextPosition = !!eligibility?.applicantNextPosition;
 
@@ -58,7 +59,7 @@ const Dashboard = () => {
         variant: "default" as const,
         color: "text-success"
       };
-    } else if (applicationStatus === "submitted") {
+    } else if (["submitted", "under-review", "decision-pending"].includes(applicationStatus)) {
       return {
         label: "View Application Status",
         icon: BarChart3,
@@ -66,6 +67,8 @@ const Dashboard = () => {
         variant: "default" as const,
         color: "text-info"
       };
+    } else if (applicationStatus === "not-approved") {
+      return { label: "View Decision", icon: FileText, onClick: () => navigate("/not-approved"), variant: "default" as const, color: "text-muted-foreground" };
     } else if (!hasNextPosition) {
       return {
         label: "Maximum Position Reached",
@@ -75,6 +78,8 @@ const Dashboard = () => {
         color: "text-muted-foreground",
         disabled: true,
       };
+    } else if (!isEligible && applicationStatus === "not-started") {
+      return { label: "Check Eligibility", icon: Clock, onClick: () => navigate("/eligibility"), variant: "outline" as const, color: "text-warning" };
     } else {
       return {
         label: applicationStatus === "not-started" ? "Start Application" : "Continue Application",
@@ -156,7 +161,7 @@ const Dashboard = () => {
                     ) : (
                       <AlertCircle className="w-4 h-4 text-warning" />
                     )}
-                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Eligibility</p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Time in Rank Eligibility</p>
                   </div>
                   <p className="text-sm font-medium text-foreground">{isEligible ? "Met" : "Not Met"}</p>
                 </div>

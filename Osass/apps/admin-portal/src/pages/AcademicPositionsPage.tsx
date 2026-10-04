@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTable, Column } from '@/components/common/DataTable';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
@@ -113,7 +112,7 @@ export default function AcademicPositionsPage() {
   ];
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Teaching Staff Positions"
         description="Manage teaching staff promotion positions and requirements"
@@ -253,6 +252,6 @@ export default function AcademicPositionsPage() {
         onConfirm={handleDelete}
         isDestructive
       />
-    </AdminLayout>
+    </>
   );
 }

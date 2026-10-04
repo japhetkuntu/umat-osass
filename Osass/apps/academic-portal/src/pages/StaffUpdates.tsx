@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import { useState, useEffect } from "react";
 import { Bell, Calendar, ChevronLeft, ChevronRight, ArrowLeft, ExternalLink, Megaphone, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -91,7 +92,7 @@ const StaffUpdates = () => {
 
                         <div
                             className="prose prose-sm max-w-none text-foreground"
-                            dangerouslySetInnerHTML={{ __html: selectedUpdate.content }}
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedUpdate.content) }}
                         />
                     </article>
                 </main>
@@ -168,7 +169,7 @@ const StaffUpdates = () => {
                                     </h2>
                                     <div
                                         className="text-sm text-muted-foreground leading-relaxed line-clamp-2"
-                                        dangerouslySetInnerHTML={{ __html: update.content }}
+                                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(update.content) }}
                                     />
                                 </button>
                             ))}

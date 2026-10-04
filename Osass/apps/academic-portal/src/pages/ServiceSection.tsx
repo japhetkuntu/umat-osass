@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { performancePreview } from "@osass/domain/performance";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Users, Plus, Info, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -144,10 +145,7 @@ const ServiceSection = () => {
   const totalScore = records.reduce((sum, r) => sum + (r.score || 0), 0);
 
   const getPerformanceLevel = (score: number) => {
-    if (score >= 100) return { label: "High", className: "text-secondary", bg: "bg-secondary/10" };
-    if (score >= 50) return { label: "Good", className: "text-primary", bg: "bg-primary/10" };
-    if (score >= 30) return { label: "Adequate", className: "text-primary", bg: "bg-primary/10" };
-    return { label: "Inadequate", className: "text-muted-foreground", bg: "bg-muted/10" };
+    return performancePreview(score, "academic-service");
   };
 
   const perf = getPerformanceLevel(totalScore);

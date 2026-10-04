@@ -1,0 +1,10 @@
+{
+  "name": "@osass/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc -p tsconfig.json", "build": "npm run typecheck" },
+  "dependencies": { "@osass/domain": "0.0.0" },
+  "devDependencies": { "typescript": "^5.8.3" }
+}

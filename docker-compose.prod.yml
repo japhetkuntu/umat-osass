@@ -57,10 +57,10 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     command: server /data --console-address ":9001"
-    # Expose MinIO externally so uploaded files can be served from the browser.
+    # Publish object storage through a separate HTTPS reverse proxy.
     ports:
-      - "0.0.0.0:${MINIO_API_PORT:-9000}:9000"
-      - "0.0.0.0:${MINIO_CONSOLE_PORT:-9001}:9001"
+      - "127.0.0.1:${MINIO_API_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - minio_data:/data
     healthcheck:
@@ -83,11 +83,10 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
     entrypoint: >
-      /bin/sh -c "
-        mc alias set local http://osass-minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
-        mc mb --ignore-existing local/$$MINIO_BUCKET_NAME;
-        mc anonymous set download local/$$MINIO_BUCKET_NAME;
-        exit 0;
+      /bin/sh -ec "
+        mc alias set local http://osass-minio:9000 \"$$MINIO_ROOT_USER\" \"$$MINIO_ROOT_PASSWORD\";
+        mc mb --ignore-existing \"local/$$MINIO_BUCKET_NAME\";
+        mc anonymous set none \"local/$$MINIO_BUCKET_NAME\";
       "
     networks:
       - osass-net
@@ -107,6 +106,10 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
+      BootstrapAdmin__Email: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BootstrapAdmin__Password: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      AuthSecurity__KnownProxies__0: 172.30.90.10
+      AuthSecurity__IpAttemptsPerMinute: ${AUTH_IP_ATTEMPTS_PER_MINUTE:-100}
       ConnectionStrings__IdentityConnection: >-
         Host=postgres;Port=5432;Database=${POSTGRES_IDENTITY_DB:-OsassIdentityDb};
         Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
@@ -299,7 +302,8 @@ services:
   academic-portal:
     env_file: .env
     build:
-      context: ./Osass/apps/academic-portal
+      context: ./Osass
+      dockerfile: apps/academic-portal/Dockerfile
       # VITE_* vars are baked into the JS bundle at build time.
       args:
         VITE_IDENTITY_API_URL: ${VITE_IDENTITY_API_URL}
@@ -320,7 +324,8 @@ services:
   admin-portal:
     env_file: .env
     build:
-      context: ./Osass/apps/admin-portal
+      context: ./Osass
+      dockerfile: apps/admin-portal/Dockerfile
       args:
         VITE_IDENTITY_API_URL: ${VITE_IDENTITY_API_URL}
         VITE_ADMIN_API_URL: ${VITE_ADMIN_API_URL}
@@ -335,7 +340,8 @@ services:
   non-academic-portal:
     env_file: .env
     build:
-      context: ./Osass/apps/non-academic-portal
+      context: ./Osass
+      dockerfile: apps/non-academic-portal/Dockerfile
       args:
         VITE_IDENTITY_API_URL: ${VITE_IDENTITY_API_URL}
         VITE_NON_ACADEMIC_API_URL: ${VITE_NON_ACADEMIC_API_URL}
@@ -350,7 +356,8 @@ services:
   academic-assessment-portal:
     env_file: .env
     build:
-      context: ./Osass/apps/academic-assessment-portal
+      context: ./Osass
+      dockerfile: apps/academic-assessment-portal/Dockerfile
       args:
         VITE_IDENTITY_API_URL: ${VITE_IDENTITY_API_URL}
         VITE_ACADEMIC_API_URL: ${VITE_ACADEMIC_API_URL}
@@ -365,7 +372,8 @@ services:
   non-academic-assessment-portal:
     env_file: .env
     build:
-      context: ./Osass/apps/non-academic-assessment-portal
+      context: ./Osass
+      dockerfile: apps/non-academic-assessment-portal/Dockerfile
       args:
         VITE_IDENTITY_API_URL: ${VITE_IDENTITY_API_URL}
         VITE_NON_ACADEMIC_API_URL: ${VITE_NON_ACADEMIC_API_URL}
@@ -388,18 +396,9 @@ services:
       # Domain mode: only 80 + 443 are needed.
       - "80:80"
       - "443:443"
-      # IP mode (nginx.ip.conf): one port per service.
-      - "8001:8001"   # admin portal
-      - "8002:8002"   # non-academic portal
-      - "8003:8003"   # academic assessment portal
-      - "8004:8004"   # non-academic assessment portal
-      - "8081:8081"   # identity api
-      - "8082:8082"   # admin api
-      - "8083:8083"   # academic promotion api
-      - "8084:8084"   # non-academic promotion api
     volumes:
       # Switch between domain and IP mode by setting NGINX_CONF_FILE in .env
-      - ${NGINX_CONF_FILE:-./docker/nginx/nginx.conf}:/etc/nginx/nginx.conf:ro
+      - ${NGINX_CONF_FILE:-./docker/nginx/nginx.tls.conf}:/etc/nginx/nginx.conf:ro
       - ./docker/nginx/ssl-params.conf:/etc/nginx/ssl-params.conf:ro
       - certbot_www:/var/www/certbot:ro
       - certbot_conf:/etc/letsencrypt:ro
@@ -414,7 +413,8 @@ services:
       - academic-assessment-portal
       - non-academic-assessment-portal
     networks:
-      - osass-net
+      osass-net:
+        ipv4_address: 172.30.90.10
 
   # ── SSL auto-renewal ───────────────────────────────────────────────────────
   # Issues initial cert via: ./deploy.sh --ssl
@@ -445,3 +445,6 @@ networks:
   osass-net:
     name: osass-net
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.90.0/24

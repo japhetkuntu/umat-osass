@@ -1,3 +1,4 @@
+using Umat.Osass.Promotion.Domain;
 using Umat.Osass.Common.Sdk.Models;
 using Umat.Osass.NonAcademicPromotion.Sdk.Services;
 using Umat.Osass.PostgresDb.Sdk.Common;
@@ -50,7 +51,7 @@ public class ApplicationService : IApplicationService
     {
         try
         {
-            _logger.LogInformation("[GetPromotionPositionEligibilityStatus] By:{Auth}", auth.Serialize());
+            _logger.LogInformation("[GetPromotionPositionEligibilityStatus] By:{Auth}", auth.Id);
 
             var activeAppRes = await _applicationRepository.GetOneAsync(a => a.IsActive && a.ApplicantId == auth.Id);
             var staff = await _staffRepository.GetByIdAsync(auth.Id);
@@ -115,7 +116,7 @@ public class ApplicationService : IApplicationService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[GetPromotionPositionEligibilityStatus] Failed. By:{Auth}", auth.Serialize());
+            _logger.LogError(e, "[GetPromotionPositionEligibilityStatus] Failed. By:{Auth}", auth.Id);
             return new ApiResponse<EligibilityResponse>("Failed to get promotion eligibility", 500);
         }
     }
@@ -192,7 +193,7 @@ public async Task<IApiResponse<EligibilityForecastResponse>> GetEligibilityForec
     }
     catch (Exception e)
     {
-        _logger.LogError(e, "[GetEligibilityForecast] Failed. By:{Auth}", auth.Serialize());
+        _logger.LogError(e, "[GetEligibilityForecast] Failed. By:{Auth}", auth.Id);
         return new ApiResponse<EligibilityForecastResponse>("Failed to get eligibility forecast", 500);
     }
 }
@@ -222,9 +223,9 @@ public async Task<IApiResponse<EligibilityForecastResponse>> GetEligibilityForec
                 NumberOfRecordsForPerformanceAtWork = performanceRecord?.TotalCategoriesAssessed ?? 0,
                 NumberOfRecordsForKnowledgeProfession = knowledgeRecord?.Materials.Count ?? 0,
                 NumberOfRecordsForService = (serviceRecord?.ServiceToTheUniversity.Count ?? 0) + (serviceRecord?.ServiceToNationalAndInternational.Count ?? 0),
-                PerformanceAtWorkPerformance = performanceRecord?.ApplicantPerformance ?? PerformanceTypes.InAdequate,
-                KnowledgeProfessionPerformance = knowledgeRecord?.ApplicantPerformance ?? PerformanceTypes.InAdequate,
-                ServicePerformance = serviceRecord?.ApplicantPerformance ?? PerformanceTypes.InAdequate,
+                PerformanceAtWorkPerformance = NonAcademicGradeTotals.WorkPerformance(performanceRecord),
+                KnowledgeProfessionPerformance = NonAcademicGradeTotals.KnowledgePerformance(knowledgeRecord),
+                ServicePerformance = NonAcademicGradeTotals.ServicePerformance(serviceRecord),
                 PerformanceAtWorkCategoryId = performanceRecord?.Id ?? string.Empty,
                 KnowledgeProfessionCategoryId = knowledgeRecord?.Id ?? string.Empty,
                 ServiceCategoryId = serviceRecord?.Id ?? string.Empty,
@@ -245,7 +246,7 @@ public async Task<IApiResponse<EligibilityForecastResponse>> GetEligibilityForec
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[ApplicationCategoryState] Failed. By:{Auth}", auth.Serialize());
+            _logger.LogError(e, "[ApplicationCategoryState] Failed. By:{Auth}", auth.Id);
             return new ApiResponse<ApplicationCategoryStateResponse>("Failed to get application category state", 500);
         }
     }
@@ -320,29 +321,29 @@ public async Task<IApiResponse<EligibilityForecastResponse>> GetEligibilityForec
             {
                 PerformanceAtWork = performanceRecord == null ? null : new PerformanceAtWorkOverview
                 {
-                    Performance = performanceRecord.ApplicantPerformance,
-                    AverageScore = PerformanceAtWorkService.CalculateAverage(performanceRecord),
+                    Performance = NonAcademicGradeTotals.WorkPerformance(performanceRecord),
+                    AverageScore = NonAcademicGradeTotals.Work(performanceRecord),
                     TotalCategoriesAssessed = performanceRecord.TotalCategoriesAssessed
                 },
                 KnowledgeProfession = knowledgeRecord == null ? null : new KnowledgeProfessionOverview
                 {
-                    Performance = knowledgeRecord.ApplicantPerformance,
+                    Performance = NonAcademicGradeTotals.KnowledgePerformance(knowledgeRecord),
                     TotalMaterialsAdded = knowledgeRecord.Materials.Count,
-                    TotalApplicantScore = knowledgeRecord.Materials.Sum(m => m.ApplicantScore ?? 0),
+                    TotalApplicantScore = NonAcademicGradeTotals.Knowledge(knowledgeRecord),
                     TotalSystemGeneratedScore = KnowledgeProfessionService.CalculateTotalScore(knowledgeRecord)
                 },
                 Service = serviceRecord == null ? null : new ServiceOverview
                 {
-                    Performance = serviceRecord.ApplicantPerformance,
+                    Performance = NonAcademicGradeTotals.ServicePerformance(serviceRecord),
                     TotalRecords = serviceRecord.ServiceToTheUniversity.Count + serviceRecord.ServiceToNationalAndInternational.Count,
-                    UniversityCommunityScore = serviceRecord.ServiceToTheUniversity.Sum(x => x.ApplicantScore ?? 0),
-                    NationalInternationalScore = serviceRecord.ServiceToNationalAndInternational.Sum(x => x.ApplicantScore ?? 0)
+                    UniversityCommunityScore = serviceRecord.ServiceToTheUniversity.Sum(item => NonAcademicGradeTotals.Score(item, systemScore: item.SystemGeneratedScore ?? 0)),
+                    NationalInternationalScore = serviceRecord.ServiceToNationalAndInternational.Sum(item => NonAcademicGradeTotals.Score(item, systemScore: item.SystemGeneratedScore ?? 0))
                 }
             }.ToOkApiResponse("Overall review retrieved successfully");
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[ActiveApplicationOverallReview] Failed. By:{Auth}", auth.Serialize());
+            _logger.LogError(e, "[ActiveApplicationOverallReview] Failed. By:{Auth}", auth.Id);
             return new ApiResponse<OverallOverview>("Failed to get overall review", 500);
         }
     }
@@ -396,7 +397,7 @@ public async Task<IApiResponse<EligibilityForecastResponse>> GetEligibilityForec
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[SubmittedApplicationPreview] Failed. By:{Auth}", auth.Serialize());
+            _logger.LogError(e, "[SubmittedApplicationPreview] Failed. By:{Auth}", auth.Id);
             return new ApiResponse<SubmittedApplicationResponse>("Failed to get submitted application preview", 500);
         }
     }
@@ -439,7 +440,7 @@ public async Task<IApiResponse<EligibilityForecastResponse>> GetEligibilityForec
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[SubmitApplication] Failed. By:{Auth}", auth.Serialize());
+            _logger.LogError(e, "[SubmitApplication] Failed. By:{Auth}", auth.Id);
             return new ApiResponse<bool>("Failed to submit application", 500);
         }
     }
@@ -476,9 +477,9 @@ public async Task<IApiResponse<EligibilityForecastResponse>> GetEligibilityForec
                     IsActive = app.IsActive,
                     Performance = new NonAcademicApplicationPerformance
                     {
-                        PerformanceAtWork = performanceRecord?.ApplicantPerformance ?? PerformanceTypes.InAdequate,
-                        KnowledgeProfession = knowledgeRecord?.ApplicantPerformance ?? PerformanceTypes.InAdequate,
-                        Service = serviceRecord?.ApplicantPerformance ?? PerformanceTypes.InAdequate
+                        PerformanceAtWork = NonAcademicGradeTotals.WorkPerformance(performanceRecord),
+                        KnowledgeProfession = NonAcademicGradeTotals.KnowledgePerformance(knowledgeRecord),
+                        Service = NonAcademicGradeTotals.ServicePerformance(serviceRecord)
                     }
                 });
                 }
@@ -488,7 +489,7 @@ public async Task<IApiResponse<EligibilityForecastResponse>> GetEligibilityForec
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[GetPromotionHistory] Failed. By:{Auth}", auth.Serialize());
+            _logger.LogError(e, "[GetPromotionHistory] Failed. By:{Auth}", auth.Id);
             return new ApiResponse<List<PromotionHistoryResponse>>("Failed to get promotion history", 500);
         }
     }
@@ -499,7 +500,7 @@ public async Task<IApiResponse<EligibilityForecastResponse>> GetEligibilityForec
         {
             NonAcademicPromotionApplication? application;
             if (!string.IsNullOrEmpty(applicationId))
-                application = await _applicationRepository.GetOneAsync(a => a.Id == applicationId && a.ApplicantId == auth.Id);
+                application = await _applicationRepository.GetOneAsync(a => a.Id == applicationId && a.ApplicantId == auth.Id && a.ApplicationStatus == ApplicationStatusTypes.Approved);
             else
                 application = await _applicationRepository.GetOneAsync(a =>
                     a.ApplicantId == auth.Id && a.ApplicationStatus == ApplicationStatusTypes.Approved);
@@ -514,16 +515,12 @@ public async Task<IApiResponse<EligibilityForecastResponse>> GetEligibilityForec
             var serviceRecord = await _serviceRepository.GetOneAsync(r => r.PromotionApplicationId == application.Id);
             var staff = await staffTask;
 
-            // Use UAPC performance as the final performance, falling back through committee chain
-            var performanceAtWorkPerformance = GetFinalPerformance(
-                performanceRecord?.UapcPerformance, performanceRecord?.AapscPerformance,
-                performanceRecord?.HouPerformance, performanceRecord?.ApplicantPerformance);
-            var knowledgeProfessionPerformance = GetFinalPerformance(
-                knowledgeRecord?.UapcPerformance, knowledgeRecord?.AapscPerformance,
-                knowledgeRecord?.HouPerformance, knowledgeRecord?.ApplicantPerformance);
-            var servicePerformance = GetFinalPerformance(
-                serviceRecord?.UapcPerformance, serviceRecord?.AapscPerformance,
-                serviceRecord?.HouPerformance, serviceRecord?.ApplicantPerformance);
+            var performanceAtWorkPerformance = NonAcademicGradeTotals.WorkPerformance(performanceRecord);
+            var knowledgeProfessionPerformance = NonAcademicGradeTotals.KnowledgePerformance(knowledgeRecord);
+            var servicePerformance = NonAcademicGradeTotals.ServicePerformance(serviceRecord);
+            var workScore = NonAcademicGradeTotals.Work(performanceRecord);
+            var knowledgeScore = NonAcademicGradeTotals.Knowledge(knowledgeRecord);
+            var serviceScore = NonAcademicGradeTotals.Services(serviceRecord);
 
             return new PromotionLetterResponse
             {
@@ -534,6 +531,10 @@ public async Task<IApiResponse<EligibilityForecastResponse>> GetEligibilityForec
                 NextPosition = application.PromotionPosition,
                 UnitName = application.ApplicantUnitName,
                 LetterDate = DateTime.UtcNow.ToString("MMMM dd, yyyy"),
+                PerformanceAtWorkScore = workScore,
+                KnowledgeProfessionScore = knowledgeScore,
+                ServiceScore = serviceScore,
+                OverallScore = (workScore + knowledgeScore + serviceScore) / 3,
                 PerformanceAtWorkPerformance = performanceAtWorkPerformance,
                 KnowledgeProfessionPerformance = knowledgeProfessionPerformance,
                 ServicePerformance = servicePerformance,
@@ -544,7 +545,7 @@ public async Task<IApiResponse<EligibilityForecastResponse>> GetEligibilityForec
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[GetPromotionLetter] Failed. By:{Auth}", auth.Serialize());
+            _logger.LogError(e, "[GetPromotionLetter] Failed. By:{Auth}", auth.Id);
             return new ApiResponse<PromotionLetterResponse>("Failed to get promotion letter", 500);
         }
     }
@@ -566,21 +567,12 @@ public async Task<IApiResponse<EligibilityForecastResponse>> GetEligibilityForec
         return result;
     }
 
-    private string GetFinalPerformance(params string?[] performances)
-    {
-        foreach (var perf in performances)
-        {
-            if (!string.IsNullOrEmpty(perf) && perf != PerformanceTypes.InAdequate)
-                return perf;
-        }
-        return PerformanceTypes.Adequate;
-    }
 
     // ────────────────────────────────────────────────────────────────────────
     // Application Documents (CV & Application Letter)
     // ────────────────────────────────────────────────────────────────────────
-    private static readonly string[] AllowedDocumentExtensions = [".pdf", ".doc", ".docx"];
-    private const long MaxDocumentSizeBytes = 15 * 1024 * 1024; // 15 MB
+    private static readonly string[] AllowedDocumentExtensions = [".pdf", ".png", ".jpg", ".jpeg", ".docx", ".xlsx"];
+    private const long MaxDocumentSizeBytes = 20 * 1024 * 1024; // 20 MB
 
     private static bool IsValidDocument(IFormFile file, out string error)
     {
@@ -592,13 +584,13 @@ public async Task<IApiResponse<EligibilityForecastResponse>> GetEligibilityForec
         }
         if (file.Length > MaxDocumentSizeBytes)
         {
-            error = "File exceeds the 15 MB size limit";
+            error = "File exceeds the 20 MB size limit";
             return false;
         }
         var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
         if (!AllowedDocumentExtensions.Contains(ext))
         {
-            error = "Only PDF or Word documents are allowed";
+            error = "Upload a valid PDF, PNG, JPEG, DOCX or XLSX attachment.";
             return false;
         }
         return true;
@@ -652,6 +644,8 @@ public async Task<IApiResponse<EligibilityForecastResponse>> GetEligibilityForec
                 return new ApiResponse<ApplicationDocumentsResponse>(
                     "Documents can only be updated while the application is in Draft or Returned status", 400);
 
+            await ApplicantUploadValidation.ValidateAsync(request);
+
             if (request.CurriculumVitae != null)
             {
                 if (!IsValidDocument(request.CurriculumVitae, out var cvError))
@@ -685,6 +679,10 @@ public async Task<IApiResponse<EligibilityForecastResponse>> GetEligibilityForec
             await _applicationRepository.UpdateAsync(application);
 
             return BuildDocumentsResponse(application).ToOkApiResponse("Application documents updated successfully");
+        }
+        catch (InvalidDataException ex)
+        {
+            return new ApiResponse<ApplicationDocumentsResponse>(ex.Message, 400);
         }
         catch (Exception ex)
         {

@@ -1,3 +1,6 @@
+import type { KnowledgeMaterialIndicator } from "@/types/academic";
+import { getEvidenceFileName, UPLOAD_ACCEPT, validateUploadFiles } from "@/lib/files";
+import { toast } from "sonner";
 import { useState } from "react";
 import { Upload, ChevronDown, ChevronUp, FileText, X, Trash2, Info, Clock, TrendingUp, Calendar, ImageIcon, FileIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
@@ -27,7 +30,7 @@ export interface PublicationData {
 
 interface PublicationCardProps {
   publication: PublicationData;
-  indicators: any[];
+  indicators: KnowledgeMaterialIndicator[];
   onUpdate: (publication: PublicationData) => void;
   onDelete: (id: string) => void;
   isReadOnly?: boolean;
@@ -58,7 +61,7 @@ export const PublicationCard = ({
   const [isExpanded, setIsExpanded] = useState(!publication.title);
   const [previewFile, setPreviewFile] = useState<{ url: string; name: string } | null>(null);
 
-  const handleFieldChange = (field: keyof PublicationData, value: any) => {
+  const handleFieldChange = <Field extends keyof PublicationData,>(field: Field, value: PublicationData[Field]) => {
     const updated = { ...publication, [field]: value };
     if (field === "publicationTypeId") {
       const indicator = indicators.find(i => i.id === value);
@@ -77,6 +80,9 @@ export const PublicationCard = ({
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files);
+      const error = validateUploadFiles(selectedFiles);
+      e.target.value = "";
+      if (error) { toast.error(error); return; }
       const updatedFiles = [...(publication.newFiles || []), ...selectedFiles];
       handleFieldChange("newFiles", updatedFiles);
     }
@@ -85,6 +91,9 @@ export const PublicationCard = ({
   const handlePresentationFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files);
+      const error = validateUploadFiles(selectedFiles);
+      e.target.value = "";
+      if (error) { toast.error(error); return; }
       const updatedFiles = [...(publication.newPresentationFiles || []), ...selectedFiles];
       handleFieldChange("newPresentationFiles", updatedFiles);
     }
@@ -312,13 +321,13 @@ export const PublicationCard = ({
                             <div key={`pres-existing-${idx}`} className="flex items-center justify-between p-2.5 bg-muted/40 rounded-xl border border-border/30 group/file shadow-sm hover:border-primary/30 transition-all">
                               <button
                                 type="button"
-                                onClick={() => setPreviewFile({ url: doc, name: doc.split('/').pop() || "Document" })}
+                                onClick={() => setPreviewFile({ url: doc, name: getEvidenceFileName(doc) || "Document" })}
                                 className="flex items-center gap-2 flex-1 text-left"
                               >
                                 <div className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center group-hover/file:scale-110 transition-transform">
                                   <FileText className="w-3.5 h-3.5 text-primary" />
                                 </div>
-                                <span className="text-xs font-medium text-foreground truncate max-w-[160px] font-light group-hover/file:text-primary transition-colors">{doc.split('/').pop()}</span>
+                                <span className="text-xs font-medium text-foreground truncate max-w-[160px] font-light group-hover/file:text-primary transition-colors">{getEvidenceFileName(doc)}</span>
                               </button>
                               {!isReadOnly && (
                                 <button
@@ -352,6 +361,7 @@ export const PublicationCard = ({
                             <div className="relative">
                               <input
                                 type="file"
+                        accept={UPLOAD_ACCEPT}
                                 id={`pres-upload-${publication.id}`}
                                 className="hidden"
                                 onChange={handlePresentationFileUpload}
@@ -420,13 +430,13 @@ export const PublicationCard = ({
                     <div key={`existing-${idx}`} className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border/30 group/file shadow-sm hover:border-primary/30 transition-all">
                       <button
                         type="button"
-                        onClick={() => setPreviewFile({ url: doc, name: doc.split('/').pop() || "Document" })}
+                        onClick={() => setPreviewFile({ url: doc, name: getEvidenceFileName(doc) || "Document" })}
                         className="flex items-center gap-3 flex-1 text-left"
                       >
                         <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center group-hover/file:scale-110 transition-transform">
                           <FileText className="w-4 h-4 text-primary" />
                         </div>
-                        <span className="text-xs font-medium text-foreground truncate max-w-[200px] font-light group-hover/file:text-primary transition-colors">{doc.split('/').pop()}</span>
+                        <span className="text-xs font-medium text-foreground truncate max-w-[200px] font-light group-hover/file:text-primary transition-colors">{getEvidenceFileName(doc)}</span>
                       </button>
                       {!isReadOnly && (
                         <button
@@ -460,6 +470,7 @@ export const PublicationCard = ({
                     <div className="relative">
                       <input
                         type="file"
+                        accept={UPLOAD_ACCEPT}
                         id={`file-upload-${publication.id}`}
                         className="hidden"
                         onChange={handleFileUpload}
@@ -512,4 +523,3 @@ export const PublicationCard = ({
     </div>
   );
 };
-

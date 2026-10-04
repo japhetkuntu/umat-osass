@@ -22,8 +22,7 @@ public class SendEmailActor : BaseActor
 
         try
         {
-            var serializedPayload = message.Data.Serialize();
-            _logger.LogInformation("Sending email with payload: {payload}", serializedPayload);
+            _logger.LogInformation("Sending email");
 
             // Publish the email message to the cluster
             var emailService =
@@ -35,11 +34,10 @@ public class SendEmailActor : BaseActor
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send email with payload: {payload}", message.Data.Serialize());
+            _logger.LogError(ex, "Failed to send email");
             throw;
         }
 
      
     }
 }
-

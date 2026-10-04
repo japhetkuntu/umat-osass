@@ -95,12 +95,12 @@ public class SendCommitteeEmailActor : BaseActor
                 if (response.IsSuccessful)
                 {
                     _logger.LogInformation("[SendCommitteeEmailActor] Successfully sent {CommitteeType} committee notification to {Email} for application {ApplicationId}",
-                        message.CommitteeType, contact.Email, message.ApplicationId);
+                        message.CommitteeType, "[redacted]", message.ApplicationId);
                 }
                 else
                 {
                     _logger.LogWarning("[SendCommitteeEmailActor] Failed to send {CommitteeType} committee notification to {Email}: {Message}",
-                        message.CommitteeType, contact.Email, response.Message);
+                        message.CommitteeType, "[redacted]", "[redacted]");
                 }
             }
         }

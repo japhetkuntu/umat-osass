@@ -16,7 +16,7 @@ namespace Umat.Osass.Admin.Api.Controllers;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/[controller]")]
 [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(ApiResponse<object>))]
-[Authorize(AuthenticationSchemes = $"{CommonConstants.AuthScheme.Bearer}")]
+[Authorize(AuthenticationSchemes = $"{CommonConstants.AuthScheme.Bearer}", Roles = "SuperAdmin,Admin,Moderator")]
 public class AuditLogsController : DefaultController
 {
     private readonly ILogger<AuditLogsController> _logger;

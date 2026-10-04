@@ -30,10 +30,10 @@ const ScoreGuide = () => {
         try {
             const [indicatorsRes, positionsRes] = await Promise.all([
                 academicService.getPublicationIndicators(),
-                academicService.getServicePositions(),
+                academicService.getServiceCategories(),
             ]);
             if (indicatorsRes.success) setPublicationIndicators(indicatorsRes.data);
-            if (positionsRes.success) setServicePositions(positionsRes.data);
+            if (positionsRes.success) setServicePositions(positionsRes.data.flatMap(category => category.positions.map(position => ({ ...position, serviceType: category.name }))));
             if (!indicatorsRes.success || !positionsRes.success) setLoadError(true);
         } catch (error) {
             console.error("Failed to load scoring reference data:", error);
@@ -47,8 +47,8 @@ const ScoreGuide = () => {
         fetchData();
     }, []);
 
-    const universityServices = servicePositions.filter((p) => p.serviceType === "University");
-    const nationalInternationalServices = servicePositions.filter((p) => p.serviceType !== "University");
+    const universityServices = servicePositions.filter((p) => /university|institution/i.test(p.serviceType));
+    const nationalInternationalServices = servicePositions.filter((p) => !/university|institution/i.test(p.serviceType));
 
     return (
         <div className="max-w-5xl mx-auto space-y-16 animate-fade-in pb-20">

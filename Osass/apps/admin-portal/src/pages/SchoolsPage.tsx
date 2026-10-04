@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTable, Column } from '@/components/common/DataTable';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
@@ -76,7 +75,7 @@ export default function SchoolsPage() {
   ];
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Schools"
         description="Manage university schools"
@@ -143,6 +142,6 @@ export default function SchoolsPage() {
         onConfirm={handleDelete}
         isDestructive
       />
-    </AdminLayout>
+    </>
   );
 }

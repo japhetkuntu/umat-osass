@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -118,7 +117,7 @@ export default function Dashboard() {
   const totalStaff = stats ? stats.totalAcademicStaff + stats.totalNonAcademicStaff : 0;
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Dashboard"
         description="Overview of university administration data"
@@ -187,7 +186,6 @@ export default function Dashboard() {
           </section>
         ))}
       </div>
-    </AdminLayout>
+    </>
   );
 }
-

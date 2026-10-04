@@ -10,11 +10,19 @@ using Umat.Osass.Identity.Api.Services.Implementations;
 using Umat.Osass.Identity.Api.Services.Interfaces;
 using Umat.Osass.Email.Sdk.Extensions;
 using Serilog;
+using Microsoft.AspNetCore.HttpOverrides;
+using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
 var services = builder.Services;
 var corsPolicyName = "ReservEase.Property.PolicyName";
+services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    foreach (var proxy in config.GetSection("AuthSecurity:KnownProxies").Get<string[]>() ?? [])
+        options.KnownProxies.Add(IPAddress.Parse(proxy));
+});
 
 
 
@@ -69,7 +77,7 @@ ServiceRegistrationExtensions.AddControllers(services);
 
 services.AddHttpLogging(options =>
    {
-       options.LoggingFields = HttpLoggingFields.All;
+       options.LoggingFields = HttpLoggingFields.RequestMethod | HttpLoggingFields.ResponseStatusCode;
        options.RequestBodyLogLimit = 4096;
        options.ResponseBodyLogLimit = 4096;
    });
@@ -79,6 +87,7 @@ services.AddActorSystem(c => config.GetSection(nameof(ActorConfig)).Bind(c));
 
 
 var app = builder.Build();
+app.UseForwardedHeaders();
 await ServiceRegistrationExtensions.ApplyMigrations(app.Services);
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -97,6 +106,7 @@ app.UseExceptionHandler(!app.Environment.IsProduction());
 app.UseRouting();
 
 app.UseCors(corsPolicyName);
+app.UseMiddleware<AuthenticationThrottleMiddleware>();
 
 app.UseAuthentication();
 

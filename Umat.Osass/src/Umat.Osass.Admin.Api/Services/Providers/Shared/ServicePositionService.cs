@@ -13,12 +13,14 @@ namespace Umat.Osass.Admin.Api.Services.Providers.Shared;
 
 public class ServicePositionService:IServicePositionService
 {
+    private readonly DeletionGuard _deletionGuard;
     private readonly ILogger<ServicePositionService> _logger;
     private readonly IIdentityPgRepository<ServicePosition> _servicePositionRepository;
     private readonly IIdentityPgRepository<ServiceCategory> _serviceCategoryRepository;
 
-    public ServicePositionService(ILogger<ServicePositionService> logger,IIdentityPgRepository<ServicePosition> servicePositionRepository, IIdentityPgRepository<ServiceCategory> serviceCategoryRepository)
+    public ServicePositionService(DeletionGuard deletionGuard, ILogger<ServicePositionService> logger,IIdentityPgRepository<ServicePosition> servicePositionRepository, IIdentityPgRepository<ServiceCategory> serviceCategoryRepository)
     {
+        _deletionGuard = deletionGuard;
         _logger = logger;
         _servicePositionRepository = servicePositionRepository;
         _serviceCategoryRepository = serviceCategoryRepository;
@@ -26,9 +28,12 @@ public class ServicePositionService:IServicePositionService
 
     public async Task<IApiResponse<ServicePositionResponse>> Add(ServicePositionRequest request, AuthData auth)
     {
+        if (!ScoreConfigurationValidation.IsValid(request))
+            return new ApiResponse<ServicePositionResponse>("Scores must be finite and nonnegative; multipliers must be between zero and one", 400);
+
         try
         {
-            _logger.LogInformation("Received request to add servicePosition with rawRequest:{Request} by {Auth}",request.Serialize(),auth.Serialize());
+            _logger.LogInformation("Received request to add servicePosition with rawRequest:{Request} by {Auth}","[redacted]",auth.Id);
             var servicePositionExist = await _servicePositionRepository.GetOneAsync(x => x.Name.ToLower() == request.Name.ToLower());
             if (servicePositionExist != null)
             {
@@ -47,16 +52,19 @@ public class ServicePositionService:IServicePositionService
         }
         catch (Exception e)
         {
-           _logger.LogError(e,"Error creating new servicePosition with rawRequest:{Request} by {Auth}",request.Serialize(),auth.Serialize());
+           _logger.LogError(e,"Error creating new servicePosition with rawRequest:{Request} by {Auth}","[redacted]",auth.Id);
            return new ApiResponse<ServicePositionResponse>("Failed to create new servicePosition",500);
         }
     }
 
     public async Task<IApiResponse<ServicePositionResponse>> Update(ServicePositionRequest request, string id, AuthData auth)
     {
+        if (!ScoreConfigurationValidation.IsValid(request))
+            return new ApiResponse<ServicePositionResponse>("Scores must be finite and nonnegative; multipliers must be between zero and one", 400);
+
         try
         {
-            _logger.LogInformation("Received request to update servicePosition with rawRequest:{Request} with Id: {Id} by {Auth}",request.Serialize(),id,auth.Serialize());
+            _logger.LogInformation("Received request to update servicePosition with rawRequest:{Request} with Id: {Id} by {Auth}","[redacted]",id,auth.Id);
             var servicePositionExist = await _servicePositionRepository.GetByIdAsync(id);
             if (servicePositionExist == null)
             {
@@ -77,16 +85,19 @@ public class ServicePositionService:IServicePositionService
         }
         catch (Exception e)
         {
-            _logger.LogError(e,"Error updating new servicePosition with rawRequest:{Request} with Id: {Id} by {Auth}",request.Serialize(),id,auth.Serialize());
+            _logger.LogError(e,"Error updating new servicePosition with rawRequest:{Request} with Id: {Id} by {Auth}","[redacted]",id,auth.Id);
             return new ApiResponse<ServicePositionResponse>("Failed to update servicePosition",500);
         }
     }
 
     public async Task<IApiResponse<ServicePositionResponse>> Delete(string id, AuthData auth)
     {
+        if (await _deletionGuard.HasReferences("ServicePosition", id))
+            return new ApiResponse<ServicePositionResponse>("Cannot delete a record that is still referenced", 409);
+
         try
         {
-            _logger.LogInformation("Received request to delete servicePosition with Id: {Id} by {Auth}",id,auth.Serialize());
+            _logger.LogInformation("Received request to delete servicePosition with Id: {Id} by {Auth}",id,auth.Id);
             var servicePositionExist = await _servicePositionRepository.GetByIdAsync(id);
             if (servicePositionExist == null)
             {
@@ -107,7 +118,7 @@ public class ServicePositionService:IServicePositionService
     {
         try
         {
-            _logger.LogInformation("Received request to get servicePosition with Id: {Id} by {Auth}",id,auth.Serialize());
+            _logger.LogInformation("Received request to get servicePosition with Id: {Id} by {Auth}",id,auth.Id);
             var servicePositionExist = await _servicePositionRepository.GetByIdAsync(id);
             if (servicePositionExist == null)
             {
@@ -130,7 +141,7 @@ public class ServicePositionService:IServicePositionService
     {
         try
         {
-            _logger.LogInformation("Received request to retrieve list of servicePositions with rawFilter: {Filter} by: {Auth}",filter.Serialize(),auth.Serialize());
+            _logger.LogInformation("Received request to retrieve list of servicePositions with rawFilter: {Filter} by: {Auth}","[redacted]",auth.Id);
                   var servicePositionQuery = _servicePositionRepository.GetQueryableAsync();
 
             if (!string.IsNullOrEmpty(filter.Search) )
@@ -167,7 +178,7 @@ public class ServicePositionService:IServicePositionService
         }
         catch (Exception e)
         {
-           _logger.LogError(e,"Error getting list of servicePositions with filter: {Filter}",filter.Serialize());
+           _logger.LogError(e,"Error getting list of servicePositions with filter: {Filter}","[redacted]");
            return new ApiResponse<PagedResult<ServicePositionResponse>>("Failed to get servicePositions list",500);
         }
     }

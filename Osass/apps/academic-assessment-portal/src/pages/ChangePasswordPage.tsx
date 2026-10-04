@@ -1,3 +1,4 @@
+import { isValidNewPassword } from "@osass/frontend-core/password";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -33,8 +34,8 @@ export default function ChangePasswordPage() {
       return;
     }
 
-    if (formData.newPassword.length < 8) {
-      toast.error("Password must be at least 8 characters.");
+    if (!isValidNewPassword(formData.newPassword)) {
+      toast.error("Password must be between 12 and 72 characters.");
       return;
     }
 
@@ -126,7 +127,9 @@ export default function ChangePasswordPage() {
                 <Input
                   id="new"
                   type={showPasswords.new ? "text" : "password"}
-                  placeholder="Enter new password (min. 8 characters)"
+                  placeholder="Enter new password (12–72 characters)"
+                  minLength={12}
+                  maxLength={72}
                   value={formData.newPassword}
                   onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
                   className="pr-10"

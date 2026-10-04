@@ -1,124 +1,15 @@
-import { ApiResponse } from "../types/auth";
+import { ApiClient, type ApiClientOptions, type RequestInterceptor } from "@osass/api-client";
 
-type RequestInterceptor = (config: RequestInit) => RequestInit | Promise<RequestInit>;
-type ResponseInterceptor = (response: Response) => Response | Promise<Response>;
-
-class ApiClient {
-    private requestInterceptors: RequestInterceptor[] = [];
-    private responseInterceptors: ResponseInterceptor[] = [];
-
-    constructor(private baseUrl: string) { }
-
-    addRequestInterceptor(interceptor: RequestInterceptor) {
-        this.requestInterceptors.push(interceptor);
-    }
-
-    addResponseInterceptor(interceptor: ResponseInterceptor) {
-        this.responseInterceptors.push(interceptor);
-    }
-
-    private async applyRequestInterceptors(config: RequestInit): Promise<RequestInit> {
-        let currentConfig = { ...config };
-        for (const interceptor of this.requestInterceptors) {
-            currentConfig = await interceptor(currentConfig);
-        }
-        return currentConfig;
-    }
-
-    private async applyResponseInterceptors(response: Response): Promise<Response> {
-        let currentResponse = response;
-        for (const interceptor of this.responseInterceptors) {
-            currentResponse = await interceptor(currentResponse);
-        }
-        return currentResponse;
-    }
-
-    async request<T>(path: string, config: RequestInit = {}): Promise<ApiResponse<T>> {
-        const url = `${this.baseUrl}${path}`;
-
-        // Default headers
-        const headers = new Headers(config.headers);
-        if (!headers.has("Content-Type") && !(config.body instanceof FormData)) {
-            headers.set("Content-Type", "application/json");
-        }
-
-        let interceptedConfig = await this.applyRequestInterceptors({
-            ...config,
-            headers,
-        });
-
-        try {
-            let response = await fetch(url, interceptedConfig);
-
-            if (response.status === 401) {
-                const newToken = await refreshAccessToken();
-                if (newToken) {
-                    const retryHeaders = new Headers(interceptedConfig.headers);
-                    retryHeaders.set("Authorization", `Bearer ${newToken}`);
-                    interceptedConfig = { ...interceptedConfig, headers: retryHeaders };
-                    response = await fetch(url, interceptedConfig);
-                }
-            }
-
-            response = await this.applyResponseInterceptors(response);
-
-            const text = await response.text();
-            let result: any = {};
-            try {
-                result = text ? JSON.parse(text) : {};
-            } catch (e) {
-                console.warn("Failed to parse API response as JSON:", text);
-                result = { message: text || "Empty response" };
-            }
-
-            // Intercepting success based on HTTP code if success property is missing
-            const isSuccess = response.ok || (result.code >= 200 && result.code < 300);
-
-            return {
-                ...result,
-                success: result.success ?? isSuccess,
-            };
-        } catch (error) {
-            console.error(`API Error [${url}]:`, error);
-            return {
-                code: 500,
-                message: "An unexpected error occurred.",
-                data: null as any,
-                success: false,
-            };
-        }
-    }
-
-    async get<T>(path: string, config: RequestInit = {}): Promise<ApiResponse<T>> {
-        return this.request<T>(path, { ...config, method: "GET" });
-    }
-
-    async post<T>(path: string, body?: any, config: RequestInit = {}): Promise<ApiResponse<T>> {
-        return this.request<T>(path, {
-            ...config,
-            method: "POST",
-            body: body instanceof FormData ? body : JSON.stringify(body),
-        });
-    }
-
-    async put<T>(path: string, body?: any, config: RequestInit = {}): Promise<ApiResponse<T>> {
-        return this.request<T>(path, {
-            ...config,
-            method: "PUT",
-            body: body instanceof FormData ? body : JSON.stringify(body),
-        });
-    }
-
-    async delete<T>(path: string, config: RequestInit = {}): Promise<ApiResponse<T>> {
-        return this.request<T>(path, { ...config, method: "DELETE" });
-    }
-}
 
 const IDENTITY_API_URL = import.meta.env.VITE_IDENTITY_API_URL || "http://localhost:5001/api/v1";
 const NON_ACADEMIC_API_URL = import.meta.env.VITE_NON_ACADEMIC_API_URL || "http://localhost:5006/api/v1";
 
-export const identityClient = new ApiClient(IDENTITY_API_URL);
-export const nonAcademicClient = new ApiClient(NON_ACADEMIC_API_URL);
+const clientOptions: ApiClientOptions = {
+  refreshAccessToken: () => refreshAccessToken(),
+};
+
+export const identityClient = new ApiClient(IDENTITY_API_URL, clientOptions);
+export const nonAcademicClient = new ApiClient(NON_ACADEMIC_API_URL, clientOptions);
 
 // Standard Request Interceptor: Add Auth Token
 const authInterceptor: RequestInterceptor = (config) => {

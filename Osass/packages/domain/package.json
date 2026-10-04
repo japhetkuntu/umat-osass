@@ -1,0 +1,13 @@
+{
+  "name": "@osass/domain",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "typecheck": "tsc -p tsconfig.json", "build": "npm run typecheck" },
+  "devDependencies": { "typescript": "^5.8.3" },
+  "exports": {
+    ".": "./src/index.ts",
+    "./performance": "./src/performance.ts",
+    "./status": "./src/status.ts"
+  }
+}

@@ -4,10 +4,11 @@ public class ImageFormatter
 {
     public static string GetFileNameFromUrl(string fileUrl)
     {
-        return string.IsNullOrWhiteSpace(fileUrl)
-            ? string.Empty
-            :
-            // Handles full URLs and plain file names
-            Path.GetFileName(new Uri(fileUrl, UriKind.RelativeOrAbsolute).LocalPath);
+        if (string.IsNullOrWhiteSpace(fileUrl))
+            return string.Empty;
+        var path = Uri.TryCreate(fileUrl, UriKind.Absolute, out var uri)
+            ? uri.LocalPath
+            : fileUrl.Split('?', '#')[0];
+        return Path.GetFileName(path);
     }
 }

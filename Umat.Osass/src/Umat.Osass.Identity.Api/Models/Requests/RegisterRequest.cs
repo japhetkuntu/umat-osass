@@ -10,7 +10,7 @@ public class RegisterRequest
     [Required]      public string FirstName { get; set; }
     [Required]    public string LastName { get; set; }
 
-    [Required]  public string Password { get; set; }
+    [Required, StringLength(72, MinimumLength = 12)] public string Password { get; set; }
     [Required]
     [Compare("Password", ErrorMessage = "Passwords do not match.")]
     public string ConfirmPassword { get; set; }

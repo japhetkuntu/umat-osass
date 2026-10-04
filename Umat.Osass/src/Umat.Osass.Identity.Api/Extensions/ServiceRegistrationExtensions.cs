@@ -157,9 +157,8 @@ public static class ServiceRegistrationExtensions
                 using var scope = serviceProvider.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
 
-                await db.Database.MigrateAsync();
+                await DatabaseMigration.MigrateAsync(db, () => DbInitializer.SeedAdminUsers(db));
                 Console.WriteLine("✅ Migrations applied successfully.");
-                await DbInitializer.SeedAdminUsers(db);
                 return; // Success, exit
             }
             catch (Exception ex)

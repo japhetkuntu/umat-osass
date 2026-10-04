@@ -13,20 +13,25 @@ namespace Umat.Osass.Admin.Api.Services.Providers.Shared;
 
 public class PublicationIndicatorService:IPublicationIndicatorService
 {
+    private readonly DeletionGuard _deletionGuard;
     private readonly ILogger<PublicationIndicatorService> _logger;
     private readonly IIdentityPgRepository<PublicationIndicator> _publicationIndicatorRepository;
 
-    public PublicationIndicatorService(ILogger<PublicationIndicatorService> logger,IIdentityPgRepository<PublicationIndicator> publicationIndicatorRepository)
+    public PublicationIndicatorService(DeletionGuard deletionGuard, ILogger<PublicationIndicatorService> logger,IIdentityPgRepository<PublicationIndicator> publicationIndicatorRepository)
     {
+        _deletionGuard = deletionGuard;
         _logger = logger;
         _publicationIndicatorRepository = publicationIndicatorRepository;
     }
 
     public async Task<IApiResponse<PublicationIndicatorResponse>> Add(PublicationIndicatorRequest request, AuthData auth)
     {
+        if (!ScoreConfigurationValidation.IsValid(request))
+            return new ApiResponse<PublicationIndicatorResponse>("Scores must be finite and nonnegative; multipliers must be between zero and one", 400);
+
         try
         {
-            _logger.LogInformation("Received request to add publicationIndicator with rawRequest:{Request} by {Auth}",request.Serialize(),auth.Serialize());
+            _logger.LogInformation("Received request to add publicationIndicator with rawRequest:{Request} by {Auth}","[redacted]",auth.Id);
             var publicationIndicatorExist = await _publicationIndicatorRepository.GetOneAsync(x => x.Name.ToLower() == request.Name.ToLower());
             if (publicationIndicatorExist != null)
             {
@@ -40,16 +45,19 @@ public class PublicationIndicatorService:IPublicationIndicatorService
         }
         catch (Exception e)
         {
-           _logger.LogError(e,"Error creating new publicationIndicator with rawRequest:{Request} by {Auth}",request.Serialize(),auth.Serialize());
+           _logger.LogError(e,"Error creating new publicationIndicator with rawRequest:{Request} by {Auth}","[redacted]",auth.Id);
            return new ApiResponse<PublicationIndicatorResponse>("Failed to create new publicationIndicator",500);
         }
     }
 
     public async Task<IApiResponse<PublicationIndicatorResponse>> Update(PublicationIndicatorRequest request, string id, AuthData auth)
     {
+        if (!ScoreConfigurationValidation.IsValid(request))
+            return new ApiResponse<PublicationIndicatorResponse>("Scores must be finite and nonnegative; multipliers must be between zero and one", 400);
+
         try
         {
-            _logger.LogInformation("Received request to update publicationIndicator with rawRequest:{Request} with Id: {Id} by {Auth}",request.Serialize(),id,auth.Serialize());
+            _logger.LogInformation("Received request to update publicationIndicator with rawRequest:{Request} with Id: {Id} by {Auth}","[redacted]",id,auth.Id);
             var publicationIndicatorExist = await _publicationIndicatorRepository.GetByIdAsync(id);
             if (publicationIndicatorExist == null)
             {
@@ -67,16 +75,19 @@ public class PublicationIndicatorService:IPublicationIndicatorService
         }
         catch (Exception e)
         {
-            _logger.LogError(e,"Error updating new publicationIndicator with rawRequest:{Request} with Id: {Id} by {Auth}",request.Serialize(),id,auth.Serialize());
+            _logger.LogError(e,"Error updating new publicationIndicator with rawRequest:{Request} with Id: {Id} by {Auth}","[redacted]",id,auth.Id);
             return new ApiResponse<PublicationIndicatorResponse>("Failed to update publicationIndicator",500);
         }
     }
 
     public async Task<IApiResponse<PublicationIndicatorResponse>> Delete(string id, AuthData auth)
     {
+        if (await _deletionGuard.HasReferences("PublicationIndicator", id))
+            return new ApiResponse<PublicationIndicatorResponse>("Cannot delete a record that is still referenced", 409);
+
         try
         {
-            _logger.LogInformation("Received request to delete publicationIndicator with Id: {Id} by {Auth}",id,auth.Serialize());
+            _logger.LogInformation("Received request to delete publicationIndicator with Id: {Id} by {Auth}",id,auth.Id);
             var publicationIndicatorExist = await _publicationIndicatorRepository.GetByIdAsync(id);
             if (publicationIndicatorExist == null)
             {
@@ -97,7 +108,7 @@ public class PublicationIndicatorService:IPublicationIndicatorService
     {
         try
         {
-            _logger.LogInformation("Received request to get publicationIndicator with Id: {Id} by {Auth}",id,auth.Serialize());
+            _logger.LogInformation("Received request to get publicationIndicator with Id: {Id} by {Auth}",id,auth.Id);
             var publicationIndicatorExist = await _publicationIndicatorRepository.GetByIdAsync(id);
             if (publicationIndicatorExist == null)
             {
@@ -118,7 +129,7 @@ public class PublicationIndicatorService:IPublicationIndicatorService
     {
         try
         {
-            _logger.LogInformation("Received request to retrieve list of publicationIndicators with rawFilter: {Filter} by: {Auth}",filter.Serialize(),auth.Serialize());
+            _logger.LogInformation("Received request to retrieve list of publicationIndicators with rawFilter: {Filter} by: {Auth}","[redacted]",auth.Id);
                   var publicationIndicatorQuery = _publicationIndicatorRepository.GetQueryableAsync();
 
             if (!string.IsNullOrEmpty(filter.Search) )
@@ -142,7 +153,7 @@ public class PublicationIndicatorService:IPublicationIndicatorService
         }
         catch (Exception e)
         {
-           _logger.LogError(e,"Error getting list of publicationIndicators with filter: {Filter}",filter.Serialize());
+           _logger.LogError(e,"Error getting list of publicationIndicators with filter: {Filter}","[redacted]");
            return new ApiResponse<PagedResult<PublicationIndicatorResponse>>("Failed to get publicationIndicators list",500);
         }
     }

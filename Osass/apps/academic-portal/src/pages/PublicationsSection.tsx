@@ -1,4 +1,6 @@
+import type { PublicationIndicator } from "@/types/academic";
 import { useState, useEffect } from "react";
+import { performancePreview } from "@osass/domain/performance";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, BookOpen, Plus, Info, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,7 +16,7 @@ const PublicationsSection = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [publications, setPublications] = useState<PublicationData[]>([]);
-  const [indicators, setIndicators] = useState<any[]>([]);
+  const [indicators, setIndicators] = useState<PublicationIndicator[]>([]);
   const [isReadOnly, setIsReadOnly] = useState(false);
 
   useEffect(() => {
@@ -31,7 +33,7 @@ const PublicationsSection = () => {
         }
 
         if (stateRes.success && stateRes.data.publications) {
-          setPublications(stateRes.data.publications.map((p: any) => ({
+          setPublications(stateRes.data.publications.map((p) => ({
             ...p,
             isPresented: p.isPresented || false,
             presentationVenue: p.presentationVenue || ""
@@ -141,7 +143,7 @@ const PublicationsSection = () => {
         // Refresh data to get permanent IDs
         const stateRes = await academicService.getPublicationState();
         if (stateRes.success && stateRes.data.publications) {
-          setPublications(stateRes.data.publications.map((p: any) => ({
+          setPublications(stateRes.data.publications.map((p) => ({
             ...p,
             isPresented: p.isPresented || false,
             presentationEvidence: p.presentationEvidence || []
@@ -173,10 +175,7 @@ const PublicationsSection = () => {
 
   const getPerformanceLevel = () => {
     if (publications.length === 0) return { label: "No Data", className: "text-muted-foreground", bg: "bg-muted/50" };
-    const avg = totalSelfScore / (publications.length || 1);
-    if (avg >= 15) return { label: "High", className: "text-secondary-dark", bg: "bg-secondary/10" };
-    if (avg >= 10) return { label: "Moderate", className: "text-primary", bg: "bg-primary/10" };
-    return { label: "Developing", className: "text-muted-foreground", bg: "bg-muted/10" };
+    return performancePreview(totalSelfScore, "academic-publications");
   };
 
   const perf = getPerformanceLevel();

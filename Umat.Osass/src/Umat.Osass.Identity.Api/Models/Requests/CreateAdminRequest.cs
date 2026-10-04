@@ -15,5 +15,6 @@ public class CreateAdminRequest
     public string Email { get; set; } = null!;
 
     [Required]
+    [RegularExpression("^(SuperAdmin|Admin|Moderator)$")]
     public string Role { get; set; } = null!;
 }

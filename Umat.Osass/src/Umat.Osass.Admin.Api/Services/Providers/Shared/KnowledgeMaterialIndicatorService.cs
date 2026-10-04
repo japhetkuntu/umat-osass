@@ -13,22 +13,27 @@ namespace Umat.Osass.Admin.Api.Services.Providers.Shared;
 
 public class KnowledgeMaterialIndicatorService : IKnowledgeMaterialIndicatorService
 {
+    private readonly DeletionGuard _deletionGuard;
     private readonly ILogger<KnowledgeMaterialIndicatorService> _logger;
     private readonly IIdentityPgRepository<KnowledgeMaterialIndicator> _repository;
 
-    public KnowledgeMaterialIndicatorService(
+    public KnowledgeMaterialIndicatorService(DeletionGuard deletionGuard,
         ILogger<KnowledgeMaterialIndicatorService> logger,
         IIdentityPgRepository<KnowledgeMaterialIndicator> repository)
     {
+        _deletionGuard = deletionGuard;
         _logger = logger;
         _repository = repository;
     }
 
     public async Task<IApiResponse<KnowledgeMaterialIndicatorResponse>> Add(KnowledgeMaterialIndicatorRequest request, AuthData auth)
     {
+        if (!ScoreConfigurationValidation.IsValid(request))
+            return new ApiResponse<KnowledgeMaterialIndicatorResponse>("Scores must be finite and nonnegative; multipliers must be between zero and one", 400);
+
         try
         {
-            _logger.LogInformation("Add KnowledgeMaterialIndicator: {Request} by {Auth}", request.Serialize(), auth.Serialize());
+            _logger.LogInformation("Add KnowledgeMaterialIndicator: {Request} by {Auth}", "[redacted]", auth.Id);
             var exists = await _repository.GetOneAsync(x => x.Name.ToLower() == request.Name.ToLower());
             if (exists != null)
                 return new ApiResponse<KnowledgeMaterialIndicatorResponse>("A knowledge material indicator with the same name already exists", 400);
@@ -43,16 +48,19 @@ public class KnowledgeMaterialIndicatorService : IKnowledgeMaterialIndicatorServ
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error adding KnowledgeMaterialIndicator: {Request} by {Auth}", request.Serialize(), auth.Serialize());
+            _logger.LogError(e, "Error adding KnowledgeMaterialIndicator: {Request} by {Auth}", "[redacted]", auth.Id);
             return new ApiResponse<KnowledgeMaterialIndicatorResponse>("Failed to add knowledge material indicator", 500);
         }
     }
 
     public async Task<IApiResponse<KnowledgeMaterialIndicatorResponse>> Update(KnowledgeMaterialIndicatorRequest request, string id, AuthData auth)
     {
+        if (!ScoreConfigurationValidation.IsValid(request))
+            return new ApiResponse<KnowledgeMaterialIndicatorResponse>("Scores must be finite and nonnegative; multipliers must be between zero and one", 400);
+
         try
         {
-            _logger.LogInformation("Update KnowledgeMaterialIndicator {Id}: {Request} by {Auth}", id, request.Serialize(), auth.Serialize());
+            _logger.LogInformation("Update KnowledgeMaterialIndicator {Id}: {Request} by {Auth}", id, "[redacted]", auth.Id);
             var entity = await _repository.GetByIdAsync(id);
             if (entity == null)
                 return new ApiResponse<KnowledgeMaterialIndicatorResponse>("Knowledge material indicator not found", 400);
@@ -70,16 +78,19 @@ public class KnowledgeMaterialIndicatorService : IKnowledgeMaterialIndicatorServ
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error updating KnowledgeMaterialIndicator {Id} by {Auth}", id, auth.Serialize());
+            _logger.LogError(e, "Error updating KnowledgeMaterialIndicator {Id} by {Auth}", id, auth.Id);
             return new ApiResponse<KnowledgeMaterialIndicatorResponse>("Failed to update knowledge material indicator", 500);
         }
     }
 
     public async Task<IApiResponse<KnowledgeMaterialIndicatorResponse>> Delete(string id, AuthData auth)
     {
+        if (await _deletionGuard.HasReferences("KnowledgeMaterialIndicator", id))
+            return new ApiResponse<KnowledgeMaterialIndicatorResponse>("Cannot delete a record that is still referenced", 409);
+
         try
         {
-            _logger.LogInformation("Delete KnowledgeMaterialIndicator {Id} by {Auth}", id, auth.Serialize());
+            _logger.LogInformation("Delete KnowledgeMaterialIndicator {Id} by {Auth}", id, auth.Id);
             var entity = await _repository.GetByIdAsync(id);
             if (entity == null)
                 return new ApiResponse<KnowledgeMaterialIndicatorResponse>("Knowledge material indicator not found", 400);
@@ -100,7 +111,7 @@ public class KnowledgeMaterialIndicatorService : IKnowledgeMaterialIndicatorServ
     {
         try
         {
-            _logger.LogInformation("Get KnowledgeMaterialIndicator {Id} by {Auth}", id, auth.Serialize());
+            _logger.LogInformation("Get KnowledgeMaterialIndicator {Id} by {Auth}", id, auth.Id);
             var entity = await _repository.GetByIdAsync(id);
             if (entity == null)
                 return new ApiResponse<KnowledgeMaterialIndicatorResponse>("Knowledge material indicator not found", 400);
@@ -119,7 +130,7 @@ public class KnowledgeMaterialIndicatorService : IKnowledgeMaterialIndicatorServ
     {
         try
         {
-            _logger.LogInformation("List KnowledgeMaterialIndicators filter:{Filter} by:{Auth}", filter.Serialize(), auth.Serialize());
+            _logger.LogInformation("List KnowledgeMaterialIndicators filter:{Filter} by:{Auth}", "[redacted]", auth.Id);
             var query = _repository.GetQueryableAsync();
 
             if (!string.IsNullOrEmpty(filter.Search))
@@ -138,7 +149,7 @@ public class KnowledgeMaterialIndicatorService : IKnowledgeMaterialIndicatorServ
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error listing KnowledgeMaterialIndicators filter:{Filter}", filter.Serialize());
+            _logger.LogError(e, "Error listing KnowledgeMaterialIndicators filter:{Filter}", "[redacted]");
             return new ApiResponse<PagedResult<KnowledgeMaterialIndicatorResponse>>("Failed to retrieve knowledge material indicators", 500);
         }
     }

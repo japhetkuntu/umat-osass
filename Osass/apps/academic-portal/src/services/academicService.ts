@@ -1,3 +1,4 @@
+import type { PublicationIndicator } from "../types/academic";
 import { ApiResponse } from "../types/auth";
 import {
     ApplicationCategoryState,
@@ -10,6 +11,7 @@ import {
     HistoricalApplication,
     StaffUpdateItem,
     PagedResult,
+    SubmittedApplicationResponse,
 } from "../types/academic";
 import { PromotionLetterData } from "../types/promotionLetter";
 import { EligibilityForecastResponse } from "../types/forecast";
@@ -36,20 +38,20 @@ class AcademicService {
         return await academicClient.get<ServiceResponse>("/Services");
     }
 
-    async updateTeaching(data: FormData): Promise<ApiResponse<any>> {
-        return await academicClient.post<any>("/Teachings", data);
+    async updateTeaching(data: FormData): Promise<ApiResponse<unknown>> {
+        return await academicClient.post<unknown>("/Teachings", data);
     }
 
-    async updatePublication(data: FormData): Promise<ApiResponse<any>> {
-        return await academicClient.post<any>("/Publications", data);
+    async updatePublication(data: FormData): Promise<ApiResponse<unknown>> {
+        return await academicClient.post<unknown>("/Publications", data);
     }
 
-    async updateService(data: FormData): Promise<ApiResponse<any>> {
-        return await academicClient.post<any>("/Services", data);
+    async updateService(data: FormData): Promise<ApiResponse<unknown>> {
+        return await academicClient.post<unknown>("/Services", data);
     }
 
-    async getPublicationIndicators(): Promise<ApiResponse<any[]>> {
-        return await academicClient.get<any[]>("/Publications/indicators");
+    async getPublicationIndicators(): Promise<ApiResponse<PublicationIndicator[]>> {
+        return await academicClient.get<PublicationIndicator[]>("/Publications/indicators");
     }
 
     async getServiceCategories(): Promise<ApiResponse<ServiceCategoryOption[]>> {
@@ -72,8 +74,8 @@ class AcademicService {
         return await academicClient.post<ApplicationDocuments>("/Applications/documents", data);
     }
 
-    async getSubmittedPreview(): Promise<ApiResponse<any>> {
-        return await academicClient.get<any>("/Applications/submitted-preview");
+    async getSubmittedPreview(): Promise<ApiResponse<SubmittedApplicationResponse>> {
+        return await academicClient.get<SubmittedApplicationResponse>("/Applications/submitted-preview");
     }
 
     async getPromotionHistory(): Promise<ApiResponse<HistoricalApplication[]>> {

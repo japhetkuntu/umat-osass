@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { performancePreview } from "@osass/domain/performance";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, BookOpen, Plus, Info, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ const KnowledgeProfessionSection = () => {
 
         if (stateRes.success && stateRes.data?.materials) {
           setMaterials(
-            stateRes.data.materials.map((m: any) => ({
+            stateRes.data.materials.map((m) => ({
               id: m.id,
               title: m.title,
               year: m.year,
@@ -131,7 +132,7 @@ const KnowledgeProfessionSection = () => {
         const stateRes = await nonAcademicService.getKnowledgeProfessionState();
         if (stateRes.success && stateRes.data?.materials) {
           setMaterials(
-            stateRes.data.materials.map((m: any) => ({
+            stateRes.data.materials.map((m) => ({
               id: m.id,
               title: m.title,
               year: m.year,
@@ -173,9 +174,7 @@ const KnowledgeProfessionSection = () => {
 
   const getPerformanceLevel = () => {
     if (materials.length === 0) return { label: "No Data", className: "text-muted-foreground", bg: "bg-muted/50" };
-    if (totalSelfScore >= 90) return { label: "High", className: "text-secondary-dark", bg: "bg-secondary/10" };
-    if (totalSelfScore >= 50) return { label: "Moderate", className: "text-primary", bg: "bg-primary/10" };
-    return { label: "Developing", className: "text-muted-foreground", bg: "bg-muted/10" };
+    return performancePreview(totalSelfScore, "non-academic-knowledge");
   };
 
   const perf = getPerformanceLevel();

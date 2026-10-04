@@ -6,7 +6,8 @@ import { ApplicationStatusBadge } from "@/components/promotion/ApplicationStatus
 import { useAuth } from "@/contexts/AuthContext";
 import { academicService } from "@/services/academicService";
 import { ApplicationCategoryState } from "@/types/academic";
-import { ApplicationStatus } from "@/types/auth";
+import { normalizeStatus, isReadOnlyStatus } from "@/lib/status";
+import { performanceLabel } from "@/lib/performance";
 import { toast } from "sonner";
 import { OnboardingBanner } from "@/components/common/OnboardingBanner";
 import { HelpTip } from "@/components/common/HelpTip";
@@ -45,8 +46,8 @@ const Dashboard = () => {
 
   if (!user) return null;
 
-  const applicationStatus = (eligibility?.activeApplication?.applicationStatus?.toLowerCase() || "not-started") as ApplicationStatus;
-  const isEligible = eligibility?.isEligible || false;
+  const applicationStatus = normalizeStatus(eligibility?.activeApplication?.applicationStatus);
+  const isEligible = eligibility?.isEligibleToApplyForNextPosition || false;
   const hasNextPosition = !!eligibility?.applicantNextPosition;
 
   const getActionButton = () => {
@@ -58,7 +59,15 @@ const Dashboard = () => {
         variant: "default" as const,
         color: "text-success"
       };
-    } else if (applicationStatus === "submitted") {
+    } else if (applicationStatus === "not-approved") {
+      return {
+        label: "View Decision",
+        icon: FileText,
+        onClick: () => navigate("/not-approved"),
+        variant: "default" as const,
+        color: "text-muted-foreground"
+      };
+    } else if (isReadOnlyStatus(applicationStatus)) {
       return {
         label: "View Application Status",
         icon: BarChart3,
@@ -75,6 +84,8 @@ const Dashboard = () => {
         color: "text-muted-foreground",
         disabled: true,
       };
+    } else if (!isEligible && applicationStatus === "not-started") {
+      return { label: "Check Eligibility", icon: Clock, onClick: () => navigate("/eligibility"), variant: "outline" as const, color: "text-warning" };
     } else {
       return {
         label: applicationStatus === "not-started" ? "Start Application" : "Continue Application",
@@ -156,7 +167,7 @@ const Dashboard = () => {
                     ) : (
                       <AlertCircle className="w-4 h-4 text-warning" />
                     )}
-                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Eligibility</p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Time in Rank Eligibility</p>
                   </div>
                   <p className="text-sm font-medium text-foreground">{isEligible ? "Met" : "Not Met"}</p>
                 </div>
@@ -215,10 +226,10 @@ const Dashboard = () => {
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Teaching</p>
                   </div>
                   <p className="text-lg font-medium text-foreground">
-                    {academicState?.teachingPerformance || "—"}
+                    {performanceLabel(academicState?.teachingPerformance)}
                   </p>
                   <button
-                    onClick={() => navigate("/application?section=teaching")}
+                    onClick={() => navigate("/application/teaching")}
                     className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
                   >
                     Edit <ArrowRight className="w-3 h-3" />
@@ -232,10 +243,10 @@ const Dashboard = () => {
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Publications</p>
                   </div>
                   <p className="text-lg font-medium text-foreground">
-                    {academicState?.publicationPerformance || "—"}
+                    {performanceLabel(academicState?.publicationPerformance)}
                   </p>
                   <button
-                    onClick={() => navigate("/application?section=publications")}
+                    onClick={() => navigate("/application/publications")}
                     className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
                   >
                     Edit <ArrowRight className="w-3 h-3" />
@@ -249,10 +260,10 @@ const Dashboard = () => {
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Service</p>
                   </div>
                   <p className="text-lg font-medium text-foreground">
-                    {academicState?.servicePerformance || "—"}
+                    {performanceLabel(academicState?.servicePerformance)}
                   </p>
                   <button
-                    onClick={() => navigate("/application?section=service")}
+                    onClick={() => navigate("/application/service")}
                     className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
                   >
                     Edit <ArrowRight className="w-3 h-3" />

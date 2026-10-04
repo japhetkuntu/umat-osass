@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -117,7 +116,7 @@ export default function AuditLogsPage() {
     !!filters.search;
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Audit Logs"
         description="Track all system activities across portals"
@@ -398,6 +397,6 @@ export default function AuditLogsPage() {
           </div>
         </div>
       )}
-    </AdminLayout>
+    </>
   );
 }

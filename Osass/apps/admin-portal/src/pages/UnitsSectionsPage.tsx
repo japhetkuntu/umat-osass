@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTable, Column } from '@/components/common/DataTable';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
@@ -98,7 +97,7 @@ export default function UnitsSectionsPage() {
   ];
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Units & Sections"
         description="Manage non-academic units and sections"
@@ -182,6 +181,6 @@ export default function UnitsSectionsPage() {
         onConfirm={handleDelete}
         isDestructive
       />
-    </AdminLayout>
+    </>
   );
 }

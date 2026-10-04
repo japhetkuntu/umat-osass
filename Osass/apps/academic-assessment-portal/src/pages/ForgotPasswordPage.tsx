@@ -1,3 +1,4 @@
+import { isValidNewPassword } from "@osass/frontend-core/password";
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -46,8 +47,8 @@ export default function ForgotPasswordPage() {
       toast.error("Passwords don't match. Please make sure both fields match.");
       return;
     }
-    if (otpData.newPassword.length < 8) {
-      toast.error("Password must be at least 8 characters.");
+    if (!isValidNewPassword(otpData.newPassword)) {
+      toast.error("Password must be between 12 and 72 characters.");
       return;
     }
     setIsLoading(true);
@@ -153,7 +154,9 @@ export default function ForgotPasswordPage() {
                   <Input
                     id="newPassword"
                     type={showPasswords.new ? "text" : "password"}
-                    placeholder="Enter new password"
+                    placeholder="Enter new password (12–72 characters)"
+                    minLength={12}
+                    maxLength={72}
                     value={otpData.newPassword}
                     onChange={(e) => setOtpData({ ...otpData, newPassword: e.target.value })}
                     className="pr-10"

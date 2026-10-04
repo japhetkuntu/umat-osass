@@ -34,7 +34,7 @@ public static class WebApplicationExtensions
                     return;
                 }
 
-                logger.LogError(contextFeature.Error, "Unhadled Exception Occured");
+                logger.LogError(contextFeature.Error, "Unhandled exception occurred");
 
                 var errors = Enumerable.Empty<ErrorResponse>();
                 if (returnStackTrace)
@@ -52,8 +52,6 @@ public static class WebApplicationExtensions
                     Errors: errors);
 
                 var respJson = response.Serialize();
-
-                context.Response.ContentLength = respJson.Length;
 
                 await context.Response.WriteAsync(respJson);
             });

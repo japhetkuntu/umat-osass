@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTable, Column } from '@/components/common/DataTable';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
@@ -137,7 +136,7 @@ export default function NonAcademicPositionsPage() {
   ];
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Non-Teaching Staff Positions"
         description="Manage non-teaching staff promotion tracks and eligibility criteria"
@@ -305,6 +304,6 @@ export default function NonAcademicPositionsPage() {
         onConfirm={handleDelete}
         isDestructive
       />
-    </AdminLayout>
+    </>
   );
 }

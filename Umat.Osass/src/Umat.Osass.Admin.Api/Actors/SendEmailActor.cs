@@ -22,24 +22,22 @@ public class SendEmailActor : BaseActor
 
         try
         {
-            var serializedPayload = message.Data.Serialize();
-            _logger.LogInformation("Sending email with payload: {payload}", serializedPayload);
+            _logger.LogInformation("Sending email with payload: {payload}", "[redacted]");
 
             // Publish the email message to the cluster
             var emailService =
                          _serviceProvider.CreateScope().ServiceProvider.GetService<IEmailService>();
             var response = await emailService!.SendEmail(message.Data);
-            _logger.LogInformation("Email sent successfully with response: {response}", response);
+            _logger.LogInformation("Email send completed");
            
 
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send email with payload: {payload}", message.Data.Serialize());
+            _logger.LogError(ex, "Failed to send email with payload: {payload}", "[redacted]");
             throw;
         }
 
      
     }
 }
-

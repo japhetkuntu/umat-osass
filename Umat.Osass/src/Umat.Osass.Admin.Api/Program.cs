@@ -1,102 +1,89 @@
 using Mapster;
-using Microsoft.AspNetCore.HttpLogging;
+using Microsoft.AspNetCore.HttpOverrides;
+using Serilog;
 using Umat.Osass.Admin.Api.Extensions;
 using Umat.Osass.Admin.Api.Options;
-using Serilog;
 using Umat.Osass.Common.Sdk.Options;
 using Umat.Osass.Email.Sdk.Extensions;
 using Umat.Osass.PostgresDb.Sdk.Extensions;
-using Umat.Osass.Redis.Sdk.Extensions;
 using Umat.Osass.Storage.Sdk.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
 var services = builder.Services;
-var corsPolicyName = "ReservEase.Property.PolicyName";
+const string corsPolicyName = "OsassCors";
 
-
-
-// Load the common configuration file for all environments
 config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
-
-
+builder.Host.UseSerilog((context, loggerConfiguration) => loggerConfiguration
+    .ReadFrom.Configuration(context.Configuration)
+    .WriteTo.Console());
 
 //SDK services registrations
-builder.Services.AddIdentityPostgresSdk(builder.Configuration,"IdentityConnection");
-builder.Services.AddAcademicPromotionPostgresSdk(builder.Configuration,"AcademicConnection");
-builder.Services.AddNonAcademicPromotionPostgresSdk(builder.Configuration,"NonAcademicConnection");
-builder.Services.AddEmailServiceProvider(builder.Configuration);
-builder.Services.AddStorageService(builder.Configuration);
-services.AddRedisDatabase<PromotionRedisConfig>(builder.Configuration);
-
-
-
+services.AddIdentityPostgresSdk(config, "IdentityConnection");
+services.AddAcademicPromotionPostgresSdk(config, "AcademicConnection");
+services.AddNonAcademicPromotionPostgresSdk(config, "NonAcademicConnection");
+services.AddEmailServiceProvider(config);
+services.AddStorageService(config);
 
 //config registration
 services.Configure<BearerTokenConfig>(config.GetSection(nameof(BearerTokenConfig)));
 services.Configure<ExtraConfig>(config.GetSection(nameof(ExtraConfig)));
 
-
 //register custom services
 services.AddCustomServices();
-
-// Add logger service to the container.
-Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console()
-    .WriteTo.File("/logs/app-log.txt", rollingInterval: RollingInterval.Day)
-    .CreateLogger();
-builder.Host.UseSerilog();
 
 //Add custom validaiton
 services.AddInputModelValidation();
 
+services.AddMapster();
+services.AddBearerAuth(config);
 
-builder.Services.AddMapster();
-builder.Services.AddBearerAuth(config);
-
-
+var swaggerEnabled = config.GetValue("Swagger:Enabled", builder.Environment.IsDevelopment());
 services.AddEndpointsApiExplorer();
-services.AddSwaggerGen();
+if (swaggerEnabled) services.AddSwaggerGen();
 services.AddHealthChecks();
-services.AddCors(options => options
-        .AddPolicy(corsPolicyName, policy => policy
-            .AllowAnyOrigin()
-            .AllowAnyHeader()
-            .AllowAnyMethod()));
 
+var allowedOrigins = (config["Cors:AllowedOrigins"] ?? string.Empty)
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+services.AddCors(options => options.AddPolicy(corsPolicyName, policy =>
+{
+    if (allowedOrigins.Length > 0)
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
+    else
+        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+}));
+
+services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 services.AddHttpClient();
 ServiceRegistrationExtensions.AddControllers(services);
-
-services.AddHttpLogging(options =>
-   {
-       options.LoggingFields = HttpLoggingFields.All;
-       options.RequestBodyLogLimit = 4096;
-       options.ResponseBodyLogLimit = 4096;
-   });
 services.AddApiVersioning(1);
-
 services.AddActorSystem(c => config.GetSection(nameof(ActorConfig)).Bind(c));
 
-
 var app = builder.Build();
-await ServiceRegistrationExtensions.ApplyMigrations(app.Services);
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+
+if (allowedOrigins.Length == 0)
+    app.Logger.LogWarning("Cors:AllowedOrigins is not configured; allowing requests from any origin");
+
+app.UseForwardedHeaders();
+
+if (swaggerEnabled)
 {
-    // app.UseSwagger();
-    // app.UseSwaggerUI();
-    app.UseDeveloperExceptionPage();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
-app.UseSwagger();
-app.UseSwaggerUI();
 
 app.UseActorSystem();
 
-app.UseExceptionHandler(!app.Environment.IsProduction());
+app.UseExceptionHandler(app.Environment.IsDevelopment());
 
 app.UseRouting();
 

@@ -230,14 +230,7 @@ export interface AddAssessmentCommentRequest {
 }
 
 // API Response Type
-export interface ApiResponse<T> {
-  message: string;
-  code: number;
-  data?: T;
-  subCode?: string;
-  errors?: { field: string; errorMessage: string }[];
-  success?: boolean;
-}
+export type { ApiResponse } from "@osass/domain";
 
 // Authentication Types
 export interface StaffLoginMetaData {

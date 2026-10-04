@@ -20,7 +20,7 @@ public class TeachingRequestData
 {
     public string? Id { get; set; } = null;
 
-    [Required] public double? Score { get; set; } = 0;
+    [Required, Range(0, 10)] public double? Score { get; set; } = 0;
 
     public string? Remark { get; set; }
     public List<IFormFile> Evidence { get; set; } = [];

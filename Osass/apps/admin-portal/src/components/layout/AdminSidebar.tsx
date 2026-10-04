@@ -104,12 +104,6 @@ export function AdminSidebar() {
     },
   ];
 
-  // Every page renders its own <AdminLayout>, so this component fully unmounts and remounts on
-  // every navigation - any "expanded" state stored here cannot survive a link click. Rather than
-  // fight that by lifting state elsewhere, embrace it: default a group's expansion to whether it
-  // contains the active route (so navigating to a sub-item always leaves its own group open on the
-  // freshly-mounted sidebar), and let manual toggles override that default only for the current
-  // page view.
   const [manualToggles, setManualToggles] = useState<Record<string, boolean>>({});
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 

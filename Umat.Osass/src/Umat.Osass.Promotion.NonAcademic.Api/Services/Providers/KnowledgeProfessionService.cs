@@ -1,3 +1,4 @@
+using Umat.Osass.Promotion.Domain;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Umat.Osass.Common.Sdk.Models;
@@ -45,14 +46,35 @@ public class KnowledgeProfessionService : IKnowledgeProfessionService
     {
         try
         {
-            _logger.LogInformation("[UpdateKnowledgeProfessionState] By:{Auth}", auth.Serialize());
+            _logger.LogInformation("[UpdateKnowledgeProfessionState] By:{Auth}", auth.Id);
+
+            await ApplicantUploadValidation.ValidateAsync(request);
 
             var application =
                 await _applicationRepository.GetOneAsync(a => a.IsActive && a.ApplicantId == auth.Id)
                 ?? await _applicationService.CreateNonAcademicPromotionApplication(auth.Id);
 
+            if (application.ApplicationStatus != ApplicationStatusTypes.Draft &&
+                application.ApplicationStatus != ApplicationStatusTypes.Returned)
+                return new ApiResponse<KnowledgeProfessionResponse>("Submitted applications cannot be edited", 409);
+
             var record = await _knowledgeRepository.GetOneAsync(
                 r => r.ApplicantId == auth.Id && r.PromotionApplicationId == application.Id);
+
+            foreach (var material in request.Materials)
+            {
+                var indicator = await _indicatorRepository.GetByIdAsync(material.MaterialTypeId);
+                if (indicator == null || material.AuthorCount < 1)
+                    return new ApiResponse<KnowledgeProfessionResponse>("Choose a valid material type and author count", 400);
+                var previous = record?.Materials.FirstOrDefault(item => item.Id == material.Id);
+                var hasEvidence = material.PresentationEvidence.Count > 0 ||
+                    (previous?.PresentationEvidence.Any(file => !material.RemovedPresentationEvidence.Select(GetFileNameFromUrl).Contains(GetFileNameFromUrl(file))) ?? false);
+                var maximum = KnowledgeScoringService.ComputeMaterialScore(indicator.Score, indicator.ScoreForPresentation,
+                    indicator.Name.Contains("book", StringComparison.OrdinalIgnoreCase), material.AuthorCount, material.IsFirstAuthor,
+                    material.IsPrincipalAuthor, material.IsPresented && hasEvidence);
+                if (material.Score > maximum)
+                    return new ApiResponse<KnowledgeProfessionResponse>("Material score exceeds its author-weighted maximum", 400);
+            }
 
             if (record == null)
             {
@@ -75,9 +97,7 @@ public class KnowledgeProfessionService : IKnowledgeProfessionService
                     throw new InvalidOperationException($"Invalid material type {req.MaterialTypeId}");
 
                 var isBook = indicator.Name.Contains("book", StringComparison.OrdinalIgnoreCase);
-                var presentationBonus = indicator.ScoreForPresentation > 0
-                    ? indicator.ScoreForPresentation
-                    : KnowledgeScoringService.PresentationBonus;
+                var presentationBonus = indicator.ScoreForPresentation;
 
                 var systemScore = KnowledgeScoringService.ComputeMaterialScore(
                     indicator.Score,
@@ -86,7 +106,7 @@ public class KnowledgeProfessionService : IKnowledgeProfessionService
                     req.AuthorCount,
                     req.IsFirstAuthor,
                     req.IsPrincipalAuthor,
-                    req.IsPresented);
+                    false);
 
                 var existing = record.Materials.FirstOrDefault(m => m.Id == req.Id);
 
@@ -105,9 +125,9 @@ public class KnowledgeProfessionService : IKnowledgeProfessionService
                         IsFirstAuthor = req.IsFirstAuthor,
                         IsPrincipalAuthor = req.IsPrincipalAuthor,
                         IsPresented = req.IsPresented,
-                        PresentationBonus = req.IsPresented ? KnowledgeScoringService.PresentationBonus : 0,
-                        SystemGeneratedScore = systemScore,
-                        AuthorWeightedScore = systemScore,
+                        PresentationBonus = req.IsPresented && presentationEvidence.Count > 0 ? presentationBonus : 0,
+                        SystemGeneratedScore = systemScore + (req.IsPresented && presentationEvidence.Count > 0 ? presentationBonus : 0),
+                        AuthorWeightedScore = systemScore + (req.IsPresented && presentationEvidence.Count > 0 ? presentationBonus : 0),
                         ApplicantScore = req.Score,
                         ApplicantRemarks = req.Remark,
                         SupportingEvidence = evidence,
@@ -137,7 +157,7 @@ public class KnowledgeProfessionService : IKnowledgeProfessionService
                     existing.IsFirstAuthor = req.IsFirstAuthor;
                     existing.IsPrincipalAuthor = req.IsPrincipalAuthor;
                     existing.IsPresented = req.IsPresented;
-                    existing.PresentationBonus = req.IsPresented ? KnowledgeScoringService.PresentationBonus : 0;
+
                     existing.SystemGeneratedScore = systemScore;
                     existing.AuthorWeightedScore = systemScore;
                     existing.ApplicantScore = req.Score;
@@ -154,6 +174,9 @@ public class KnowledgeProfessionService : IKnowledgeProfessionService
                         var newPresentEvidence = await UploadFiles(req.PresentationEvidence);
                         existing.PresentationEvidence.AddRange(newPresentEvidence);
                     }
+                    existing.PresentationBonus = req.IsPresented && existing.PresentationEvidence.Count > 0 ? presentationBonus : 0;
+                    existing.SystemGeneratedScore = systemScore + existing.PresentationBonus;
+                    existing.AuthorWeightedScore = existing.SystemGeneratedScore;
                 }
             }
 
@@ -164,7 +187,7 @@ public class KnowledgeProfessionService : IKnowledgeProfessionService
             record.UpdatedAt = DateTime.UtcNow;
             record.UpdatedBy = $"{auth.FirstName} {auth.LastName}";
 
-            var allScores = record.Materials.Select(m => m.AuthorWeightedScore + (m.IsPresented && m.PresentationEvidence.Count > 0 ? m.PresentationBonus : 0));
+            var allScores = record.Materials.Select(m => m.AuthorWeightedScore);
             var totalScore = KnowledgeScoringService.ComputeTotalKnowledgeScore(allScores);
             record.ApplicantPerformance = PerformanceComputationService.ComputeKnowledgeProfessionPerformance(totalScore);
 
@@ -172,9 +195,13 @@ public class KnowledgeProfessionService : IKnowledgeProfessionService
 
             return new KnowledgeProfessionResponse
             {
-                PerformanceLevel = record.ApplicantPerformance,
+                PerformanceLevel = NonAcademicGradeTotals.KnowledgePerformance(record, 0),
                 Materials = record.Materials.Select(MapItem).ToList()
             }.ToOkApiResponse("Knowledge and profession updated successfully");
+        }
+        catch (InvalidDataException ex)
+        {
+            return new ApiResponse<KnowledgeProfessionResponse>(ex.Message, 400);
         }
         catch (InvalidOperationException ex)
         {
@@ -182,7 +209,7 @@ public class KnowledgeProfessionService : IKnowledgeProfessionService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[UpdateKnowledgeProfessionState] Failed. By:{Auth}", auth.Serialize());
+            _logger.LogError(e, "[UpdateKnowledgeProfessionState] Failed. By:{Auth}", auth.Id);
             return new ApiResponse<KnowledgeProfessionResponse>("Failed to update knowledge and profession", 500);
         }
     }
@@ -208,21 +235,20 @@ public class KnowledgeProfessionService : IKnowledgeProfessionService
 
             return new KnowledgeProfessionResponse
             {
-                PerformanceLevel = record.ApplicantPerformance,
+                PerformanceLevel = NonAcademicGradeTotals.KnowledgePerformance(record, 0),
                 Materials = record.Materials.Select(MapItem).ToList()
             }.ToOkApiResponse("Knowledge and profession retrieved successfully");
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[GetKnowledgeProfessionState] Failed. By:{Auth}", auth.Serialize());
+            _logger.LogError(e, "[GetKnowledgeProfessionState] Failed. By:{Auth}", auth.Id);
             return new ApiResponse<KnowledgeProfessionResponse>("Failed to retrieve knowledge and profession", 500);
         }
     }
 
     public static double CalculateTotalScore(KnowledgeProfessionRecord record)
     {
-        var scores = record.Materials.Select(m =>
-            m.AuthorWeightedScore + (m.IsPresented && m.PresentationEvidence.Count > 0 ? m.PresentationBonus : 0));
+        var scores = record.Materials.Select(m => m.ApplicantScore ?? m.AuthorWeightedScore);
         return KnowledgeScoringService.ComputeTotalKnowledgeScore(scores);
     }
 
@@ -242,8 +268,8 @@ public class KnowledgeProfessionService : IKnowledgeProfessionService
     private static string GetFileNameFromUrl(string url)
     {
         if (string.IsNullOrWhiteSpace(url)) return string.Empty;
-        try { return new Uri(url).Segments.LastOrDefault() ?? string.Empty; }
-        catch { return string.Empty; }
+        var path = Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.AbsolutePath : url.Split('?')[0];
+        return Uri.UnescapeDataString(Path.GetFileName(path));
     }
 
     private KnowledgeProfessionResponseData MapItem(KnowledgeProfessionItem m) =>

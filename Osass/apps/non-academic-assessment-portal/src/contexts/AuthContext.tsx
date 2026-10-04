@@ -3,6 +3,7 @@ import { CommitteeMemberInfo, StaffLoginMetaData, CommitteeMembership } from "@/
 import { authService } from "@/services/authService";
 import assessmentApi from "@/services/assessmentApi";
 import { toast } from "sonner";
+import { queryClient } from "@/lib/queryClient";
 
 interface AuthUser extends StaffLoginMetaData {
   committees: CommitteeMembership[];
@@ -20,7 +21,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Helper to extract user from response
-const extractUserData = (data: any): StaffLoginMetaData | null => {
+const extractUserData = (data: Partial<StaffLoginMetaData> & { metaData?: StaffLoginMetaData; rank?: string }): StaffLoginMetaData | null => {
   try {
     const meta = data.metaData;
     if (meta) return meta;
@@ -50,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<AuthUser | null>(null);
 
-  const fetchCommitteeInfo = async (): Promise<CommitteeMembership[]> => {
+  const fetchCommitteeInfo = async (): Promise<CommitteeMembership[] | null> => {
     try {
       const response = await assessmentApi.getMemberInfo();
       if (response.code >= 200 && response.code < 300 && response.data) {
@@ -59,32 +60,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       console.error("Failed to fetch committee info");
     }
-    return [];
+    return null;
+  };
+
+  const completeLogin = async (userData: StaffLoginMetaData | null): Promise<boolean> => {
+    if (!userData) {
+      toast.error("Unable to retrieve user information");
+      authService.logout();
+      return false;
+    }
+
+    const committees = await fetchCommitteeInfo();
+    if (committees === null) {
+      toast.error("Unable to load your committee memberships. Please try again.");
+      authService.logout();
+      return false;
+    }
+
+    if (committees.length === 0) {
+      toast.error("You are not a member of any assessment committee");
+      authService.logout();
+      return false;
+    }
+
+    setUser({ ...userData, committees });
+    setIsAuthenticated(true);
+    return true;
   };
 
   useEffect(() => {
+    const isSessionInvalid = (code: number) => code === 401 || code === 403;
+
     const checkAuth = async () => {
-      const token = authService.getToken();
-      if (token) {
-        try {
-          const profileRes = await authService.getProfile();
-          if (profileRes.success && profileRes.data) {
-            const userData = extractUserData(profileRes.data);
-            if (userData) {
-              const committees = await fetchCommitteeInfo();
-              setUser({ ...userData, committees });
-              setIsAuthenticated(true);
-            } else {
-              authService.logout();
-            }
-          } else {
+      try {
+        if (!authService.getToken()) return;
+
+        let profileRes = await authService.getProfile();
+        if (!profileRes.success && !isSessionInvalid(profileRes.code)) {
+          // Network error or 5xx: retry once before giving up, never clear the session for it.
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          profileRes = await authService.getProfile();
+        }
+
+        if (profileRes.success && profileRes.data) {
+          const userData = extractUserData(profileRes.data);
+          if (!userData) {
             authService.logout();
+            return;
           }
-        } catch {
+          const committees = await fetchCommitteeInfo();
+          if (committees === null) return;
+          setUser({ ...userData, committees });
+          setIsAuthenticated(true);
+        } else if (isSessionInvalid(profileRes.code)) {
           authService.logout();
         }
+      } catch {
+        // Unexpected failure: leave stored tokens untouched
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
     checkAuth();
   }, []);
@@ -94,34 +129,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await authService.login(email, password);
       if (res.success && res.data?.accessToken) {
-        const userData = extractUserData(res.data);
-        if (!userData) {
-          toast.error("Unable to retrieve user information");
-          return false;
-        }
-
-        const committees = await fetchCommitteeInfo();
-        
-        if (committees.length === 0) {
-          toast.error("You are not a member of any assessment committee");
-          authService.logout();
-          setIsLoading(false);
-          return false;
-        }
-
-        setUser({ ...userData, committees });
-        setIsAuthenticated(true);
-        setIsLoading(false);
-        return true;
-      } else {
-        toast.error(res.message || "Invalid credentials");
-        setIsLoading(false);
-        return false;
+        return await completeLogin(extractUserData(res.data));
       }
+      toast.error(res.message || "Invalid credentials");
+      return false;
     } catch (error) {
       toast.error("An unexpected error occurred during sign in");
-      setIsLoading(false);
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -130,39 +146,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await authService.loginWithGoogle(idToken);
       if (res.success && res.data?.accessToken) {
-        const userData = extractUserData(res.data);
-        if (!userData) {
-          toast.error("Unable to retrieve user information");
-          return false;
-        }
-
-        const committees = await fetchCommitteeInfo();
-
-        if (committees.length === 0) {
-          toast.error("You are not a member of any assessment committee");
-          authService.logout();
-          setIsLoading(false);
-          return false;
-        }
-
-        setUser({ ...userData, committees });
-        setIsAuthenticated(true);
-        setIsLoading(false);
-        return true;
-      } else {
-        toast.error(res.message || "Unable to sign in with Google");
-        setIsLoading(false);
-        return false;
+        return await completeLogin(extractUserData(res.data));
       }
+      toast.error(res.message || "Unable to sign in with Google");
+      return false;
     } catch (error) {
       toast.error("An unexpected error occurred during Google sign in");
-      setIsLoading(false);
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const logout = () => {
     authService.logout();
+    queryClient.clear();
     setUser(null);
     setIsAuthenticated(false);
   };

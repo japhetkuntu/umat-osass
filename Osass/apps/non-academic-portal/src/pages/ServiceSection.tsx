@@ -1,4 +1,6 @@
+import type { NonAcademicServiceResponseData } from "@/types/academic";
 import { useState, useEffect } from "react";
+import { performancePreview } from "@osass/domain/performance";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Users, Plus, Building, Globe, Info, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,7 +39,7 @@ const ServiceSection = () => {
         }
 
         if (stateRes.success && stateRes.data) {
-          const mapToRecord = (s: any): ServiceRecordData => ({
+          const mapToRecord = (s: NonAcademicServiceResponseData): ServiceRecordData => ({
             id: s.id,
             serviceTitle: s.serviceTitle,
             serviceTypeId: s.serviceTypeId,
@@ -172,7 +174,7 @@ const ServiceSection = () => {
         toast.success("Service records updated successfully");
         const stateRes = await nonAcademicService.getServiceState();
         if (stateRes.success && stateRes.data) {
-          const mapToRecord = (s: any): ServiceRecordData => ({
+          const mapToRecord = (s: NonAcademicServiceResponseData): ServiceRecordData => ({
             id: s.id,
             serviceTitle: s.serviceTitle,
             serviceTypeId: s.serviceTypeId,
@@ -206,9 +208,7 @@ const ServiceSection = () => {
   const totalScore = universityScore + nationalScore;
 
   const getPerformanceLevel = (score: number) => {
-    if (score >= 40) return { label: "Excellent", className: "text-secondary", bg: "bg-secondary/10" };
-    if (score >= 25) return { label: "Good", className: "text-primary", bg: "bg-primary/10" };
-    return { label: "Developing", className: "text-muted-foreground", bg: "bg-muted/10" };
+    return performancePreview(score, "non-academic-service");
   };
 
   const perf = getPerformanceLevel(totalScore);

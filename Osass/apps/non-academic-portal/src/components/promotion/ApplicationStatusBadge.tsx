@@ -1,16 +1,9 @@
+import { normalizeStatus } from "@osass/domain/status";
+import type { ApplicationStatus } from "@osass/domain/status";
+export type { ApplicationStatus } from "@osass/domain/status";
 import { cn } from "@/lib/utils";
 import { Clock, CheckCircle2, AlertCircle, FileEdit, Send, FilePen } from "lucide-react";
 
-export type ApplicationStatus =
-  | "not-started"
-  | "in-progress"
-  | "submitted"
-  | "under-review"
-  | "decision-pending"
-  | "approved"
-  | "not-approved"
-  | "returned"
-  | "draft";
 
 interface ApplicationStatusBadgeProps {
   status: ApplicationStatus;
@@ -86,7 +79,7 @@ export const ApplicationStatusBadge = ({
   size = "md"
 }: ApplicationStatusBadgeProps) => {
   // Normalize status and provide fallback
-  const normalizedStatus = (status || "").toLowerCase() as ApplicationStatus;
+  const normalizedStatus = normalizeStatus(status);
   const config = statusConfig[normalizedStatus] || statusConfig["not-started"];
   const Icon = config.icon;
 

@@ -1,3 +1,4 @@
+import { performanceRank } from "@/lib/performance";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Clock, BookOpen, BarChart3, Users, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, X } from "lucide-react";
@@ -48,15 +49,7 @@ const Eligibility = () => {
   const nextRank = eligibility?.applicationRequirment?.name || eligibility?.applicantNextPosition || "";
   const hasNextPosition = !!nextRank;
 
-  const getPerformanceLevel = (p: string | undefined) => {
-    if (!p || p === "Not Started") return 0;
-    const label = p.toLowerCase();
-    if (label.includes("high") || label.includes("excellent")) return 3;
-    if (label.includes("good")) return 2;
-    if (label.includes("adequate")) return 1;
-    if (label.includes("inadequate")) return 0;
-    return 0;
-  };
+  const getPerformanceLevel = performanceRank;
 
   const getPerformanceStatus = (p: string | undefined) => {
     const level = getPerformanceLevel(p);

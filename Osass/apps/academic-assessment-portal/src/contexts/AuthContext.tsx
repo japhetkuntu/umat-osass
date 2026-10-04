@@ -20,7 +20,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Helper to extract user from response
-const extractUserData = (data: any): StaffLoginMetaData | null => {
+const extractUserData = (data: Partial<StaffLoginMetaData> & { metaData?: StaffLoginMetaData; rank?: string }): StaffLoginMetaData | null => {
   try {
     const meta = data.metaData;
     if (meta) return meta;

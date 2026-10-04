@@ -8,13 +8,13 @@ public  class PgPagedResult<T>
         TotalCount = totalCount <= 0 ? count : totalCount;
         PageIndex = pageIndex;
         PageSize = pageSize;
-        var pageCount = (double)TotalCount / pageSize;
+        var pageCount = pageSize > 0 ? (double)TotalCount / pageSize : 0;
         TotalPages = (int)Math.Ceiling(pageCount);
         Results = results;
         LowerBoundSize = pageSize * pageIndex - pageSize + 1;
 
         var upperBoundSize = pageSize * pageIndex;
-        UpperBoundSize = upperBoundSize > (int)count ? (int)count : upperBoundSize;
+        UpperBoundSize = (int)Math.Min(upperBoundSize, TotalCount);
         Count = count;
 
     }

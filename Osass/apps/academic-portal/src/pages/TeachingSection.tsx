@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { performancePreview } from "@osass/domain/performance";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, GraduationCap, Loader2, Save, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -59,7 +60,7 @@ const TEACHING_CATEGORIES = [
     title: "Student Assessment",
     description: "Formal feedback and evaluations provided by students",
   },
-];
+] as const;
 
 interface CategoryData {
   id: string | null;
@@ -94,7 +95,7 @@ const TeachingSection = () => {
         const data = res.data;
         const updated: Record<string, CategoryData> = {};
         TEACHING_CATEGORIES.forEach((cat) => {
-          const backendData = (data as any)[cat.id];
+          const backendData = data[cat.id];
           updated[cat.id] = {
             id: backendData?.id || null,
             score: backendData?.score ?? null,
@@ -232,15 +233,10 @@ const TeachingSection = () => {
 
   const completedCategories = Object.values(categoryData).filter((c) => c.score !== null).length;
   const totalScore = Object.values(categoryData).reduce((sum, c) => sum + (c.score || 0), 0);
-  const averageScore = completedCategories > 0 ? (totalScore / completedCategories).toFixed(1) : "—";
 
   const getPerformanceLevel = () => {
     if (completedCategories === 0) return { label: "Pending", className: "text-muted-foreground", bg: "bg-muted/50" };
-    const avg = totalScore / completedCategories;
-    if (avg >= 8) return { label: "Excellent", className: "text-success", bg: "bg-success/10" };
-    if (avg >= 6) return { label: "Proficient", className: "text-primary", bg: "bg-primary/10" };
-    if (avg >= 4) return { label: "Satisfactory", className: "text-warning", bg: "bg-warning/10" };
-    return { label: "Developing", className: "text-destructive", bg: "bg-destructive/10" };
+    return performancePreview(totalScore, "academic-teaching");
   };
 
   const perf = getPerformanceLevel();
@@ -273,8 +269,8 @@ const TeachingSection = () => {
 
           <div className="flex items-center gap-4 bg-card/50 backdrop-blur-sm p-4 rounded-2xl border border-border/50 shadow-sm">
             <div className="text-right">
-              <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Average Score</p>
-              <p className={cn("text-2xl font-bold", perf.className)}>{averageScore}</p>
+              <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Total Score</p>
+              <p className={cn("text-2xl font-bold", perf.className)}>{totalScore.toFixed(1)}/100</p>
             </div>
             <div className={cn("px-4 py-2 rounded-xl text-xs font-black uppercase tracking-tighter", perf.bg, perf.className)}>
               {perf.label}

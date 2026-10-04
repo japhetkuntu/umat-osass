@@ -19,6 +19,7 @@ namespace Umat.Osass.Admin.Api.Services.Providers.Shared;
 
 public class StaffService : IStaffService
 {
+    private readonly DeletionGuard _deletionGuard;
     private readonly ILogger<StaffService> _logger;
     private readonly IIdentityPgRepository<Staff> _staffRepository;
     private readonly IIdentityPgRepository<Department> _departmentRepository;
@@ -27,7 +28,7 @@ public class StaffService : IStaffService
     private readonly EmailConfig _emailConfig;
     private readonly ActorSystem _actorSystem;
 
-    public StaffService(
+    public StaffService(DeletionGuard deletionGuard,
         ILogger<StaffService> logger,
         IIdentityPgRepository<Staff> staffRepository,
         IIdentityPgRepository<Department> departmentRepository,
@@ -36,6 +37,7 @@ public class StaffService : IStaffService
         IOptions<EmailConfig> emailConfig,
         ActorSystem actorSystem)
     {
+        _deletionGuard = deletionGuard;
         _logger = logger;
         _staffRepository = staffRepository;
         _departmentRepository = departmentRepository;
@@ -49,7 +51,7 @@ public class StaffService : IStaffService
     {
         try
         {
-            _logger.LogInformation("Received request to add staff with rawRequest:{Request} by {Auth}", request.Serialize(), auth.Serialize());
+            _logger.LogInformation("Received request to add staff with rawRequest:{Request} by {Auth}", "[redacted]", auth.Id);
 
             var staffExist = await _staffRepository.GetOneAsync(x => x.StaffId == request.StaffId);
             if (staffExist != null)
@@ -106,7 +108,7 @@ public class StaffService : IStaffService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error creating new staff with rawRequest:{Request} by {Auth}", request.Serialize(), auth.Serialize());
+            _logger.LogError(e, "Error creating new staff with rawRequest:{Request} by {Auth}", "[redacted]", auth.Id);
             return new ApiResponse<StaffResponse>("Failed to create new staff", 500);
         }
     }
@@ -115,7 +117,7 @@ public class StaffService : IStaffService
     {
         try
         {
-            _logger.LogInformation("Received request to update staff with rawRequest:{Request} with Id: {Id} by {Auth}", request.Serialize(), id, auth.Serialize());
+            _logger.LogInformation("Received request to update staff with rawRequest:{Request} with Id: {Id} by {Auth}", "[redacted]", id, auth.Id);
 
             var staffExist = await _staffRepository.GetByIdAsync(id);
             if (staffExist == null)
@@ -163,16 +165,19 @@ public class StaffService : IStaffService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error updating staff with rawRequest:{Request} with Id: {Id} by {Auth}", request.Serialize(), id, auth.Serialize());
+            _logger.LogError(e, "Error updating staff with rawRequest:{Request} with Id: {Id} by {Auth}", "[redacted]", id, auth.Id);
             return new ApiResponse<StaffResponse>("Failed to update staff", 500);
         }
     }
 
     public async Task<IApiResponse<StaffResponse>> Delete(string id, AuthData auth)
     {
+        if (await _deletionGuard.HasReferences("Staff", id))
+            return new ApiResponse<StaffResponse>("Cannot delete a record that is still referenced", 409);
+
         try
         {
-            _logger.LogInformation("Received request to delete staff with Id: {Id} by {Auth}", id, auth.Serialize());
+            _logger.LogInformation("Received request to delete staff with Id: {Id} by {Auth}", id, auth.Id);
 
             var staffExist = await _staffRepository.GetByIdAsync(id);
             if (staffExist == null)
@@ -196,7 +201,7 @@ public class StaffService : IStaffService
     {
         try
         {
-            _logger.LogInformation("Received request to get staff with Id: {Id} by {Auth}", id, auth.Serialize());
+            _logger.LogInformation("Received request to get staff with Id: {Id} by {Auth}", id, auth.Id);
 
             var staffExist = await _staffRepository.GetByIdAsync(id);
             if (staffExist == null)
@@ -231,7 +236,7 @@ public class StaffService : IStaffService
     {
         try
         {
-            _logger.LogInformation("Received request to retrieve list of staff with rawFilter: {Filter} by: {Auth}", filter.Serialize(), auth.Serialize());
+            _logger.LogInformation("Received request to retrieve list of staff with rawFilter: {Filter} by: {Auth}", "[redacted]", auth.Id);
 
             var staffQuery = _staffRepository.GetQueryableAsync();
 
@@ -294,7 +299,7 @@ public class StaffService : IStaffService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error getting list of staff with filter: {Filter}", filter.Serialize());
+            _logger.LogError(e, "Error getting list of staff with filter: {Filter}", "[redacted]");
             return new ApiResponse<PagedResult<StaffResponse>>("Failed to get staff list", 500);
         }
     }

@@ -1,3 +1,4 @@
+using Umat.Osass.Promotion.Domain;
 using Umat.Osass.AcademicPromotion.Sdk.Services;
 using Umat.Osass.Common.Sdk.Models;
 using Umat.Osass.PostgresDb.Sdk.Common;
@@ -50,13 +51,19 @@ public class ServiceCategoryService : IServiceCategoryService
         {
             _logger.LogInformation(
                 "[UpdateServiceCategoryState] Request:{Request} By:{Auth}",
-                request.Serialize(),
-                auth.Serialize());
+                "[redacted]",
+                auth.Id);
+
+            await ApplicantUploadValidation.ValidateAsync(request);
 
             var application =
                 await _applicationRepository.GetOneAsync(
                     a => a.IsActive && a.ApplicantId == auth.Id)
                 ?? await _applicationService.CreateAcademicPromotionApplication(auth.Id);
+
+            if (application.ApplicationStatus != ApplicationStatusTypes.Draft &&
+                application.ApplicationStatus != ApplicationStatusTypes.Returned)
+                return new ApiResponse<ServiceResponse>("Submitted applications cannot be edited", 409);
 
             var serviceRecord =
                 await _serviceRepository.GetOneAsync(
@@ -92,11 +99,15 @@ public class ServiceCategoryService : IServiceCategoryService
 
             return new ServiceResponse
             {
-                PerformanceLevel = serviceRecord.ApplicantPerformance,
+                PerformanceLevel = AcademicGradeTotals.ServicePerformance(serviceRecord, 0),
                 Services = serviceRecord.Services
                     .Select(MapServiceData)
                     .ToList()
             }.ToOkApiResponse("Service category updated successfully");
+        }
+        catch (InvalidDataException ex)
+        {
+            return new ApiResponse<ServiceResponse>(ex.Message, 400);
         }
         catch (InvalidOperationException ex)
         {
@@ -107,7 +118,7 @@ public class ServiceCategoryService : IServiceCategoryService
             _logger.LogError(
                 e,
                 "[UpdateServiceCategoryState] Failed By:{Auth}",
-                auth.Serialize());
+                auth.Id);
 
             return new ApiResponse<ServiceResponse>(
                 "Failed to update service category",
@@ -129,7 +140,7 @@ public class ServiceCategoryService : IServiceCategoryService
         {
             _logger.LogInformation(
                 "[GetServiceCategoryState] Fetching service records for {Auth}",
-                auth.Serialize());
+                auth.Id);
             AcademicPromotionApplication? application;
             if (!string.IsNullOrEmpty(id))
             {
@@ -157,7 +168,7 @@ public class ServiceCategoryService : IServiceCategoryService
 
             return new ServiceResponse
             {
-                PerformanceLevel = serviceRecord.ApplicantPerformance,
+                PerformanceLevel = AcademicGradeTotals.ServicePerformance(serviceRecord, 0),
                 Services = serviceRecord.Services
                     .Select(MapServiceData)
                     .ToList()
@@ -168,7 +179,7 @@ public class ServiceCategoryService : IServiceCategoryService
             _logger.LogError(
                 e,
                 "[GetServiceCategoryState] Failed for {Auth}",
-                auth.Serialize());
+                auth.Id);
 
             return new ApiResponse<ServiceResponse>(
                 "Failed to retrieve service category",

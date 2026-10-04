@@ -22,7 +22,7 @@ public class SendNotificationActor : BaseActor
     {
         try
         {
-            _logger.LogInformation("[SendNotificationActor] Sending staff registration email to {Email}", message.Payload.RecipientEmail);
+            _logger.LogInformation("[SendNotificationActor] Sending staff registration email to {Email}", "[redacted]");
 
             using var scope = _serviceProvider.CreateScope();
             var emailNotificationService = scope.ServiceProvider.GetRequiredService<IEmailNotificationService>();
@@ -31,13 +31,13 @@ public class SendNotificationActor : BaseActor
             if (!response.IsSuccessful)
             {
                 _logger.LogWarning("[SendNotificationActor] Staff registration email failed for {Email}: {Message}",
-                    message.Payload.RecipientEmail, response.Message);
+                    "[redacted]", "[redacted]");
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[SendNotificationActor] Error sending staff registration email to {Email}",
-                message.Payload.RecipientEmail);
+                "[redacted]");
         }
     }
 
@@ -45,7 +45,7 @@ public class SendNotificationActor : BaseActor
     {
         try
         {
-            _logger.LogInformation("[SendNotificationActor] Sending committee assignment email to {Email}", message.Payload.RecipientEmail);
+            _logger.LogInformation("[SendNotificationActor] Sending committee assignment email to {Email}", "[redacted]");
 
             using var scope = _serviceProvider.CreateScope();
             var emailNotificationService = scope.ServiceProvider.GetRequiredService<IEmailNotificationService>();
@@ -54,13 +54,13 @@ public class SendNotificationActor : BaseActor
             if (!response.IsSuccessful)
             {
                 _logger.LogWarning("[SendNotificationActor] Committee assignment email failed for {Email}: {Message}",
-                    message.Payload.RecipientEmail, response.Message);
+                    "[redacted]", "[redacted]");
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[SendNotificationActor] Error sending committee assignment email to {Email}",
-                message.Payload.RecipientEmail);
+                "[redacted]");
         }
     }
 }

@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Umat.Osass.Promotion.NonAcademic.Api.Models.Requests;
 
 /// <summary>
@@ -21,6 +23,7 @@ public class UpdatePerformanceAtWorkRequest
 public class PerformanceWorkRequestData
 {
     public string? Id { get; set; }
+    [Range(0, 10)]
     public required double Score { get; set; }
     public string? Remark { get; set; }
     public List<IFormFile> Evidence { get; set; } = [];

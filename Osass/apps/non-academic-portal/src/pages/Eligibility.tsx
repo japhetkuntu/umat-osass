@@ -1,3 +1,4 @@
+import { normalizePerformanceLevel } from "@/lib/performance";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Clock, BookOpen, BarChart3, Users, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, X } from "lucide-react";
@@ -44,19 +45,11 @@ const Eligibility = () => {
   const yearsInRank = eligibility?.totalNumberOfYearsInCurrentPosition || 0;
   const yearsRequired = eligibility?.applicationRequirment?.minimumNumberOfYearsFromLastPromotion || eligibility?.totalNumberOfYearsRequiredInNextPosition || 4;
   const pubsRequired = eligibility?.applicationRequirment?.minimumNumberOfKnowledgeMaterials || 0;
-  const refereedRequired = eligibility?.applicationRequirment?.minimumNumberOfRefereedJournal || 0;
+  const refereedRequired = eligibility?.applicationRequirment?.minimumNumberOfJournals || 0;
   const nextRank = eligibility?.applicationRequirment?.name || eligibility?.applicantNextPosition || "";
   const hasNextPosition = !!nextRank;
 
-  const getPerformanceLevel = (p: string | undefined) => {
-    if (!p || p === "Not Started") return 0;
-    const label = p.toLowerCase();
-    if (label.includes("high") || label.includes("excellent")) return 3;
-    if (label.includes("good")) return 2;
-    if (label.includes("adequate")) return 1;
-    if (label.includes("inadequate")) return 0;
-    return 0;
-  };
+  const getPerformanceLevel = (value: string | undefined) => ({ High: 3, Good: 2, Adequate: 1, Inadequate: 0 }[normalizePerformanceLevel(value)] ?? 0);
 
   const getPerformanceStatus = (p: string | undefined) => {
     const level = getPerformanceLevel(p);

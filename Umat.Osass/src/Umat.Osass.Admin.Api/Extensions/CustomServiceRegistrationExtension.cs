@@ -14,6 +14,7 @@ public static class CustomServiceRegistrationExtension
     public static IServiceCollection AddCustomServices(this IServiceCollection services)
     {
         
+            services.AddScoped<DeletionGuard>();
             services.AddScoped<ISchoolService, SchoolService>();
             services.AddScoped<IFacultyService, FacultyService>();
             services.AddScoped<IDepartmentService, DepartmentService>();

@@ -1,128 +1,57 @@
-import { ApiResponse } from "../types/auth";
+import { ApiClient, type ApiClientOptions, type RequestInterceptor } from "@osass/api-client";
 
-type RequestInterceptor = (config: RequestInit) => RequestInit | Promise<RequestInit>;
-type ResponseInterceptor = (response: Response) => Response | Promise<Response>;
 
-class ApiClient {
-    private requestInterceptors: RequestInterceptor[] = [];
-    private responseInterceptors: ResponseInterceptor[] = [];
+const TOKEN_KEY = "osass_token";
+const REFRESH_TOKEN_KEY = "osass_refresh_token";
 
-    constructor(private baseUrl: string) { }
+const REQUEST_TIMEOUT_MS = 30_000;
+const UPLOAD_TIMEOUT_MS = 120_000;
 
-    addRequestInterceptor(interceptor: RequestInterceptor) {
-        this.requestInterceptors.push(interceptor);
+// Paths whose 401 means "bad credentials" or "refresh rejected", never "token expired".
+const AUTH_PATH_PATTERN = /\/(login|refreshtoken)/i;
+
+type AuthExpiredHandler = () => void;
+let authExpiredHandler: AuthExpiredHandler | null = null;
+
+/** Registers the callback invoked when the session can no longer be refreshed. Returns an unsubscribe function. */
+export const setAuthExpiredHandler = (handler: AuthExpiredHandler | null) => {
+    authExpiredHandler = handler;
+    return () => {
+        if (authExpiredHandler === handler) authExpiredHandler = null;
+    };
+};
+
+const resolveApiUrl = (value: string | undefined, devFallback: string, envName: string): string => {
+    if (value) return value;
+    if (!import.meta.env.DEV) {
+        console.error(`${envName} is not configured for this build; API calls will fail. Set it at build time.`);
     }
+    return devFallback;
+};
 
-    addResponseInterceptor(interceptor: ResponseInterceptor) {
-        this.responseInterceptors.push(interceptor);
-    }
+const IDENTITY_API_URL = resolveApiUrl(import.meta.env.VITE_IDENTITY_API_URL, "http://localhost:5001/api/v1", "VITE_IDENTITY_API_URL");
+const ACADEMIC_API_URL = resolveApiUrl(import.meta.env.VITE_ACADEMIC_API_URL, "http://localhost:5004/api/v1", "VITE_ACADEMIC_API_URL");
 
-    private async applyRequestInterceptors(config: RequestInit): Promise<RequestInit> {
-        let currentConfig = { ...config };
-        for (const interceptor of this.requestInterceptors) {
-            currentConfig = await interceptor(currentConfig);
-        }
-        return currentConfig;
-    }
+const clientOptions: ApiClientOptions = {
+  shouldRefresh: path => !AUTH_PATH_PATTERN.test(path),
+  refreshAccessToken: () => refreshAccessToken(),
+  catchRequestInterceptorErrors: true,
+  includeStatus: true,
+  fillCode: true,
+  appendValidationErrors: true,
+  requestTimeoutMs: REQUEST_TIMEOUT_MS,
+  uploadTimeoutMs: UPLOAD_TIMEOUT_MS,
+  rethrowCallerAbort: true,
+  networkError: { code: 0, status: 0, message: "Unable to reach the server. Please check your connection and try again." },
+  timeoutMessage: "The request timed out. Please check your connection and try again.",
+};
 
-    private async applyResponseInterceptors(response: Response): Promise<Response> {
-        let currentResponse = response;
-        for (const interceptor of this.responseInterceptors) {
-            currentResponse = await interceptor(currentResponse);
-        }
-        return currentResponse;
-    }
-
-    async request<T>(path: string, config: RequestInit = {}): Promise<ApiResponse<T>> {
-        const url = `${this.baseUrl}${path}`;
-
-        // Default headers
-        const headers = new Headers(config.headers);
-        if (!headers.has("Content-Type") && !(config.body instanceof FormData)) {
-            headers.set("Content-Type", "application/json");
-        }
-
-        let interceptedConfig = await this.applyRequestInterceptors({
-            ...config,
-            headers,
-        });
-
-        try {
-            let response = await fetch(url, interceptedConfig);
-
-            if (response.status === 401) {
-                const newToken = await refreshAccessToken();
-                if (newToken) {
-                    const retryHeaders = new Headers(interceptedConfig.headers);
-                    retryHeaders.set("Authorization", `Bearer ${newToken}`);
-                    interceptedConfig = { ...interceptedConfig, headers: retryHeaders };
-                    response = await fetch(url, interceptedConfig);
-                }
-            }
-
-            response = await this.applyResponseInterceptors(response);
-
-            const text = await response.text();
-            let result: any = {};
-            try {
-                result = text ? JSON.parse(text) : {};
-            } catch (e) {
-                console.warn("Failed to parse API response as JSON:", text);
-                result = { message: text || "Empty response" };
-            }
-
-            // Intercepting success based on HTTP code if success property is missing
-            const isSuccess = response.ok || (result.code >= 200 && result.code < 300);
-
-            return {
-                ...result,
-                success: result.success ?? isSuccess,
-            };
-        } catch (error) {
-            console.error(`API Error [${url}]:`, error);
-            return {
-                code: 500,
-                message: "An unexpected error occurred.",
-                data: null as any,
-                success: false,
-            };
-        }
-    }
-
-    async get<T>(path: string, config: RequestInit = {}): Promise<ApiResponse<T>> {
-        return this.request<T>(path, { ...config, method: "GET" });
-    }
-
-    async post<T>(path: string, body?: any, config: RequestInit = {}): Promise<ApiResponse<T>> {
-        return this.request<T>(path, {
-            ...config,
-            method: "POST",
-            body: body instanceof FormData ? body : JSON.stringify(body),
-        });
-    }
-
-    async put<T>(path: string, body?: any, config: RequestInit = {}): Promise<ApiResponse<T>> {
-        return this.request<T>(path, {
-            ...config,
-            method: "PUT",
-            body: body instanceof FormData ? body : JSON.stringify(body),
-        });
-    }
-
-    async delete<T>(path: string, config: RequestInit = {}): Promise<ApiResponse<T>> {
-        return this.request<T>(path, { ...config, method: "DELETE" });
-    }
-}
-
-const IDENTITY_API_URL = import.meta.env.VITE_IDENTITY_API_URL || "http://localhost:5001/api/v1";
-const ACADEMIC_API_URL = import.meta.env.VITE_ACADEMIC_API_URL || "http://localhost:5004/api/v1";
-
-export const identityClient = new ApiClient(IDENTITY_API_URL);
-export const academicClient = new ApiClient(ACADEMIC_API_URL);
+export const identityClient = new ApiClient(IDENTITY_API_URL, clientOptions);
+export const academicClient = new ApiClient(ACADEMIC_API_URL, clientOptions);
 
 // Standard Request Interceptor: Add Auth Token
 const authInterceptor: RequestInterceptor = (config) => {
-    const token = localStorage.getItem("osass_token");
+    const token = localStorage.getItem(TOKEN_KEY);
     if (token) {
         const headers = new Headers(config.headers);
         headers.set("Authorization", `Bearer ${token}`);
@@ -139,9 +68,19 @@ academicClient.addRequestInterceptor(authInterceptor);
 // retried with the new token once the refresh resolves (see request() above).
 let refreshPromise: Promise<string | null> | null = null;
 
+const expireSession = () => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    if (authExpiredHandler) {
+        authExpiredHandler();
+    } else if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+    }
+};
+
 const performRefresh = async (): Promise<string | null> => {
-    const refreshToken = localStorage.getItem("osass_refresh_token");
-    const accessToken = localStorage.getItem("osass_token");
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+    const accessToken = localStorage.getItem(TOKEN_KEY);
 
     if (!refreshToken || !accessToken) {
         return null;
@@ -157,21 +96,23 @@ const performRefresh = async (): Promise<string | null> => {
         if (refreshResponse.ok) {
             const data = await refreshResponse.json();
             if (data.success && data.data?.accessToken) {
-                localStorage.setItem("osass_token", data.data.accessToken);
+                localStorage.setItem(TOKEN_KEY, data.data.accessToken);
                 if (data.data.refreshToken) {
-                    localStorage.setItem("osass_refresh_token", data.data.refreshToken);
+                    localStorage.setItem(REFRESH_TOKEN_KEY, data.data.refreshToken);
                 }
                 return data.data.accessToken;
             }
+        }
+
+        // Only an explicit rejection of the refresh token ends the session;
+        // 5xx responses and network errors must not log the user out.
+        if (refreshResponse.status === 401 || refreshResponse.status === 403) {
+            expireSession();
         }
     } catch (error) {
         console.error("Token refresh failed:", error);
     }
 
-    // Refresh failed - logout user
-    localStorage.removeItem("osass_token");
-    localStorage.removeItem("osass_refresh_token");
-    window.location.href = "/login";
     return null;
 };
 

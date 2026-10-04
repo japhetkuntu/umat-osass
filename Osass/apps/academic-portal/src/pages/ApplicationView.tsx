@@ -1,3 +1,4 @@
+import { normalizeStatus } from "@/lib/status";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Lock, Download, GraduationCap, BookOpen, Users, Loader2 } from "lucide-react";
@@ -9,12 +10,13 @@ import { toast } from "sonner";
 
 const ApplicationView = () => {
   const navigate = useNavigate();
-  const { user, logout, eligibility } = useAuth();
+  const { user, eligibility } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [data, setData] = useState<{
-    teaching: any[];
-    publications: any[];
-    service: { university: any[]; national: any[] };
+    teaching: { name: string; score: number; remark: string | null }[];
+    publications: { title: string; year: number; score: number; applicantScore: number }[];
+    service: { university: { title: string; score: number }[]; national: { title: string; score: number }[] };
   }>({
     teaching: [],
     publications: [],
@@ -24,54 +26,21 @@ const ApplicationView = () => {
   useEffect(() => {
     const fetchAllData = async () => {
       try {
-        const [teachingRes, pubRes, serviceRes, positionsRes] = await Promise.all([
-          academicService.getTeachingState(),
-          academicService.getPublicationState(),
-          academicService.getServiceState(),
-          academicService.getServicePositions()
-        ]);
-
-        const teachingCategories = [
-          { id: "lectureLoad", name: "Lecture Load" },
-          { id: "abilityToAdaptToTeaching", name: "Ability to Adapt Teaching" },
-          { id: "regularityAndPunctuality", name: "Regularity and Punctuality" },
-          { id: "qualityOfLectureMaterial", name: "Quality of Lecture Material" },
-          { id: "performanceOfStudentInExam", name: "Student Exam Performance" },
-          { id: "abilityToCompleteSyllabus", name: "Syllabus Coverage" },
-          { id: "qualityOfExamQuestionAndMarkingScheme", name: "Assessment Quality" },
-          { id: "punctualityInSettingExamQuestion", name: "Exam Punctuality" },
-          { id: "supervisionOfProjectWorkAndThesis", name: "Supervision" },
-          { id: "studentReactionToAndAssessmentOfTeaching", name: "Student Assessment" },
-        ];
-
-        const teachingData = teachingRes.success ? teachingCategories.map(cat => ({
-          name: cat.name,
-          score: (teachingRes.data as any)[cat.id]?.score || 0,
-          remark: (teachingRes.data as any)[cat.id]?.remark || ""
-        })) : [];
-
-        const pubData = pubRes.success ? pubRes.data.publications : [];
-
-        let universityService: any[] = [];
-        let nationalService: any[] = [];
-
-        if (serviceRes.success && positionsRes.success) {
-          serviceRes.data.universityCommunity?.forEach((s: any) => {
-            universityService.push({ title: s.serviceTitle, score: s.score });
-          });
-
-          serviceRes.data.nationalInternationalCommunity?.forEach((s: any) => {
-            nationalService.push({ title: s.serviceTitle, score: s.score });
-          });
-        }
-
+        const response = await academicService.getSubmittedPreview();
+        if (!response.success) throw new Error(response.message || "Unable to load submitted application");
+        const preview = response.data;
+        const services = preview.serviceApplication?.serviceApplicationData ?? [];
         setData({
-          teaching: teachingData,
-          publications: pubData,
-          service: { university: universityService, national: nationalService }
+          teaching: (preview.teachingApplication?.teachingApplicationData ?? []).map(category => ({ name: category.category, score: category.score, remark: category.remark })),
+          publications: (preview.publicationApplication?.publicationApplicationData ?? []).map(publication => ({ title: publication.title, year: publication.year, score: publication.systemScore, applicantScore: publication.score })),
+          service: {
+            university: services.filter(service => !/national|international/i.test(service.categoryName)),
+            national: services.filter(service => /national|international/i.test(service.categoryName)),
+          },
         });
       } catch (error) {
         console.error("Failed to fetch application breakdown:", error);
+        setLoadError(true);
       } finally {
         setLoading(false);
       }
@@ -81,7 +50,7 @@ const ApplicationView = () => {
   }, []);
 
   const activeApp = eligibility?.activeApplication;
-  const applicationStatus = (activeApp?.applicationStatus || "submitted") as any;
+  const applicationStatus = normalizeStatus(activeApp?.applicationStatus || "submitted");
 
   const handleDownloadPDF = () => {
     toast.info("PDF download isn't available yet. Please check back soon.");
@@ -97,6 +66,13 @@ const ApplicationView = () => {
       </div>
     );
   }
+
+  if (loadError) return (
+    <div className="page-container"><main className="content-container">
+      <p role="alert">Unable to load your submitted application. Please refresh this page to try again.</p>
+      <Button onClick={() => navigate("/progress")}>Back to Progress</Button>
+    </main></div>
+  );
 
   return (
     <div className="page-container">
@@ -184,7 +160,7 @@ const ApplicationView = () => {
                 key={index}
                 className="bg-muted/50 rounded-lg p-4 border border-border/50"
               >
-                <h3 className="font-medium text-foreground mb-1">{pub.serviceTitle || pub.title}</h3>
+                <h3 className="font-medium text-foreground mb-1">{pub.title}</h3>
                 <p className="text-sm text-muted-foreground mb-3">
                   Year: {pub.year || "N/A"}
                 </p>

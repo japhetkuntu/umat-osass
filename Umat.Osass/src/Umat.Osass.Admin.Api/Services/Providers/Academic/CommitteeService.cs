@@ -46,7 +46,7 @@ public class CommitteeService : ICommitteeService
     {
         try
         {
-            _logger.LogInformation("Received request to add committee member with rawRequest:{Request} by {Auth}", request.Serialize(), auth.Serialize());
+            _logger.LogInformation("Received request to add committee member with rawRequest:{Request} by {Auth}", "[redacted]", auth.Id);
 
             var staff = await _staffRepository.GetByIdAsync(request.StaffId);
             if (staff == null)
@@ -84,7 +84,7 @@ public class CommitteeService : ICommitteeService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error creating committee member with rawRequest:{Request} by {Auth}", request.Serialize(), auth.Serialize());
+            _logger.LogError(e, "Error creating committee member with rawRequest:{Request} by {Auth}", "[redacted]", auth.Id);
             return new ApiResponse<CommitteeResponse>("Failed to create committee member", 500);
         }
     }
@@ -93,7 +93,7 @@ public class CommitteeService : ICommitteeService
     {
         try
         {
-            _logger.LogInformation("Received request to update committee member with rawRequest:{Request} with Id: {Id} by {Auth}", request.Serialize(), id, auth.Serialize());
+            _logger.LogInformation("Received request to update committee member with rawRequest:{Request} with Id: {Id} by {Auth}", "[redacted]", id, auth.Id);
 
             var updatedMember = await _committeeRepository.GetByIdAsync(id);
             if (updatedMember == null)
@@ -128,7 +128,7 @@ public class CommitteeService : ICommitteeService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error updating committee member with rawRequest:{Request} with Id: {Id} by {Auth}", request.Serialize(), id, auth.Serialize());
+            _logger.LogError(e, "Error updating committee member with rawRequest:{Request} with Id: {Id} by {Auth}", "[redacted]", id, auth.Id);
             return new ApiResponse<CommitteeResponse>("Failed to update committee member", 500);
         }
     }
@@ -137,7 +137,7 @@ public class CommitteeService : ICommitteeService
     {
         try
         {
-            _logger.LogInformation("Received request to delete committee member with Id: {Id} by {Auth}", id, auth.Serialize());
+            _logger.LogInformation("Received request to delete committee member with Id: {Id} by {Auth}", id, auth.Id);
 
             var memberExist = await _committeeRepository.GetByIdAsync(id);
             if (memberExist == null)
@@ -159,7 +159,7 @@ public class CommitteeService : ICommitteeService
     {
         try
         {
-            _logger.LogInformation("Received request to get committee member with Id: {Id} by {Auth}", id, auth.Serialize());
+            _logger.LogInformation("Received request to get committee member with Id: {Id} by {Auth}", id, auth.Id);
 
             var memberExist = await _committeeRepository.GetByIdAsync(id);
             if (memberExist == null)
@@ -181,7 +181,7 @@ public class CommitteeService : ICommitteeService
     {
         try
         {
-            _logger.LogInformation("Received request to retrieve list of committee members with rawFilter: {Filter} by: {Auth}", filter.Serialize(), auth.Serialize());
+            _logger.LogInformation("Received request to retrieve list of committee members with rawFilter: {Filter} by: {Auth}", "[redacted]", auth.Id);
 
             var query = _committeeRepository.GetQueryableAsync();
 
@@ -211,7 +211,7 @@ public class CommitteeService : ICommitteeService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error getting list of committee members with filter: {Filter}", filter.Serialize());
+            _logger.LogError(e, "Error getting list of committee members with filter: {Filter}", "[redacted]");
             return new ApiResponse<PagedResult<CommitteeResponse>>("Failed to get committee members list", 500);
         }
     }

@@ -1,0 +1,10 @@
+{
+  "name": "@osass/frontend-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./files": "./src/files.ts",
+    "./password": "./src/password.ts"
+  }
+}

@@ -13,12 +13,14 @@ namespace Umat.Osass.Admin.Api.Services.Providers.Shared;
 
 public class ServiceCategoryService:IServiceCategoryService
 {
+    private readonly DeletionGuard _deletionGuard;
     private readonly ILogger<ServiceCategoryService> _logger;
     private readonly IIdentityPgRepository<ServiceCategory> _serviceCategoryRepository;
     private readonly IIdentityPgRepository<ServicePosition> _servicePositionRepository;
 
-    public ServiceCategoryService(ILogger<ServiceCategoryService> logger,IIdentityPgRepository<ServiceCategory> serviceCategoryRepository, IIdentityPgRepository<ServicePosition> servicePositionRepository)
+    public ServiceCategoryService(DeletionGuard deletionGuard, ILogger<ServiceCategoryService> logger,IIdentityPgRepository<ServiceCategory> serviceCategoryRepository, IIdentityPgRepository<ServicePosition> servicePositionRepository)
     {
+        _deletionGuard = deletionGuard;
         _logger = logger;
         _serviceCategoryRepository = serviceCategoryRepository;
         _servicePositionRepository = servicePositionRepository;
@@ -26,9 +28,12 @@ public class ServiceCategoryService:IServiceCategoryService
 
     public async Task<IApiResponse<ServiceCategoryResponse>> Add(ServiceCategoryRequest request, AuthData auth)
     {
+        if (!ScoreConfigurationValidation.IsValid(request))
+            return new ApiResponse<ServiceCategoryResponse>("Scores must be finite and nonnegative; multipliers must be between zero and one", 400);
+
         try
         {
-            _logger.LogInformation("Received request to add serviceCategory with rawRequest:{Request} by {Auth}",request.Serialize(),auth.Serialize());
+            _logger.LogInformation("Received request to add serviceCategory with rawRequest:{Request} by {Auth}","[redacted]",auth.Id);
             var serviceCategoryExist = await _serviceCategoryRepository.GetOneAsync(x => x.Name.ToLower() == request.Name.ToLower());
             if (serviceCategoryExist != null)
             {
@@ -43,16 +48,19 @@ public class ServiceCategoryService:IServiceCategoryService
         }
         catch (Exception e)
         {
-           _logger.LogError(e,"Error creating new serviceCategory with rawRequest:{Request} by {Auth}",request.Serialize(),auth.Serialize());
+           _logger.LogError(e,"Error creating new serviceCategory with rawRequest:{Request} by {Auth}","[redacted]",auth.Id);
            return new ApiResponse<ServiceCategoryResponse>("Failed to create new serviceCategory",500);
         }
     }
 
     public async Task<IApiResponse<ServiceCategoryResponse>> Update(ServiceCategoryRequest request, string id, AuthData auth)
     {
+        if (!ScoreConfigurationValidation.IsValid(request))
+            return new ApiResponse<ServiceCategoryResponse>("Scores must be finite and nonnegative; multipliers must be between zero and one", 400);
+
         try
         {
-            _logger.LogInformation("Received request to update serviceCategory with rawRequest:{Request} with Id: {Id} by {Auth}",request.Serialize(),id,auth.Serialize());
+            _logger.LogInformation("Received request to update serviceCategory with rawRequest:{Request} with Id: {Id} by {Auth}","[redacted]",id,auth.Id);
             var serviceCategoryExist = await _serviceCategoryRepository.GetByIdAsync(id);
             if (serviceCategoryExist == null)
             {
@@ -74,16 +82,19 @@ public class ServiceCategoryService:IServiceCategoryService
         }
         catch (Exception e)
         {
-            _logger.LogError(e,"Error updating new serviceCategory with rawRequest:{Request} with Id: {Id} by {Auth}",request.Serialize(),id,auth.Serialize());
+            _logger.LogError(e,"Error updating new serviceCategory with rawRequest:{Request} with Id: {Id} by {Auth}","[redacted]",id,auth.Id);
             return new ApiResponse<ServiceCategoryResponse>("Failed to update serviceCategory",500);
         }
     }
 
     public async Task<IApiResponse<ServiceCategoryResponse>> Delete(string id, AuthData auth)
     {
+        if (await _deletionGuard.HasReferences("ServiceCategory", id))
+            return new ApiResponse<ServiceCategoryResponse>("Cannot delete a record that is still referenced", 409);
+
         try
         {
-            _logger.LogInformation("Received request to delete serviceCategory with Id: {Id} by {Auth}",id,auth.Serialize());
+            _logger.LogInformation("Received request to delete serviceCategory with Id: {Id} by {Auth}",id,auth.Id);
             var serviceCategoryExist = await _serviceCategoryRepository.GetByIdAsync(id);
             if (serviceCategoryExist == null)
             {
@@ -110,7 +121,7 @@ public class ServiceCategoryService:IServiceCategoryService
     {
         try
         {
-            _logger.LogInformation("Received request to get serviceCategory with Id: {Id} by {Auth}",id,auth.Serialize());
+            _logger.LogInformation("Received request to get serviceCategory with Id: {Id} by {Auth}",id,auth.Id);
             var serviceCategoryExist = await _serviceCategoryRepository.GetByIdAsync(id);
             if (serviceCategoryExist == null)
             {
@@ -131,7 +142,7 @@ public class ServiceCategoryService:IServiceCategoryService
     {
         try
         {
-            _logger.LogInformation("Received request to retrieve list of serviceCategories with rawFilter: {Filter} by: {Auth}",filter.Serialize(),auth.Serialize());
+            _logger.LogInformation("Received request to retrieve list of serviceCategories with rawFilter: {Filter} by: {Auth}","[redacted]",auth.Id);
                   var serviceCategoryQuery = _serviceCategoryRepository.GetQueryableAsync();
 
             if (!string.IsNullOrEmpty(filter.Search) )
@@ -156,7 +167,7 @@ public class ServiceCategoryService:IServiceCategoryService
         }
         catch (Exception e)
         {
-           _logger.LogError(e,"Error getting list of serviceCategories with filter: {Filter}",filter.Serialize());
+           _logger.LogError(e,"Error getting list of serviceCategories with filter: {Filter}","[redacted]");
            return new ApiResponse<PagedResult<ServiceCategoryResponse>>("Failed to get serviceCategories list",500);
         }
     }

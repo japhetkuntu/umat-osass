@@ -14,7 +14,7 @@ namespace Umat.Osass.Admin.Api.Controllers.Shared;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/[controller]")]
 [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(ApiResponse<object>))]
-[Authorize(AuthenticationSchemes = $"{CommonConstants.AuthScheme.Bearer}")]
+[Authorize(AuthenticationSchemes = $"{CommonConstants.AuthScheme.Bearer}", Roles = "SuperAdmin,Admin,Moderator")]
 public class DepartmentsController : DefaultController
 {
     private readonly ILogger<DepartmentsController> _logger;
@@ -26,6 +26,7 @@ public class DepartmentsController : DefaultController
         _departmentService = departmentService;
     }
     
+    [Authorize(Roles = "SuperAdmin,Admin")]
     [HttpPost()]
     [Produces(MediaTypeNames.Application.Json)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ApiResponse<DepartmentResponse>))]
@@ -36,6 +37,7 @@ public class DepartmentsController : DefaultController
         return StatusCode(response.Code, response);
     }
     
+    [Authorize(Roles = "SuperAdmin,Admin")]
     [HttpPut("{id}")]
     [Produces(MediaTypeNames.Application.Json)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ApiResponse<DepartmentResponse>))]
@@ -65,6 +67,7 @@ public class DepartmentsController : DefaultController
         return StatusCode(response.Code, response);
     }
 
+    [Authorize(Roles = "SuperAdmin,Admin")]
     [HttpDelete("{id}")]
     [Produces(MediaTypeNames.Application.Json)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ApiResponse<DepartmentResponse>))]
@@ -77,4 +80,3 @@ public class DepartmentsController : DefaultController
 
 
 }
-

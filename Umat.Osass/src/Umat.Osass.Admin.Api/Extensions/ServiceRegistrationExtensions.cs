@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -7,13 +8,11 @@ using Akka.DependencyInjection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Versioning;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Umat.Osass.Admin.Api.Actors;
 using Umat.Osass.Admin.Api.Options;
 using Umat.Osass.Common.Sdk.Models;
 using Umat.Osass.Common.Sdk.Options;
-using Umat.Osass.PostgresDb.Sdk.ApplicationContexts;
 
 namespace Umat.Osass.Admin.Api.Extensions;
 
@@ -27,6 +26,10 @@ public static class ServiceRegistrationExtensions
             configuration.GetSection(nameof(BearerTokenConfig)).Bind(bearerTokenConfig);
         var bearerConfig = new BearerTokenConfig();
         bearerTokenConfigAction.Invoke(bearerConfig);
+        if (string.IsNullOrWhiteSpace(bearerConfig.AdminSigningKey) ||
+            bearerConfig.AdminSigningKey == bearerConfig.ApplicantSigningKey ||
+            bearerConfig.AdminSigningKey == bearerConfig.SigningKey)
+            throw new InvalidOperationException("Admin authentication requires a distinct signing key");
 
         services.AddAuthentication(x =>
             {
@@ -41,6 +44,8 @@ public static class ServiceRegistrationExtensions
                     ValidateIssuer = true,
                     ValidIssuer = bearerConfig.Issuer,
                     ValidateIssuerSigningKey = true,
+                    RoleClaimType = ClaimTypes.Role,
+                    NameClaimType = ClaimTypes.Name,
                     IssuerSigningKeys = new List<SecurityKey>()
                     {
                         new SymmetricSecurityKey(Encoding.UTF8.GetBytes(bearerConfig.AdminSigningKey))
@@ -76,11 +81,6 @@ public static class ServiceRegistrationExtensions
                 .Create(actorSystemName, actorSystemSetup);
 
             TopLevelActors.RegisterActor<MainActor>(actorSystem);
-
-            //TopLevelActors.RegisterActorWithRouter<SendCallbackActor>(
-            //    actorSystem,
-            //    actorConfig.SendCallbackActorConfig.NumberOfInstances,
-            //    actorConfig.SendCallbackActorConfig.UpperBound);
 
             return actorSystem;
         });
@@ -141,44 +141,4 @@ public static class ServiceRegistrationExtensions
 
         return services;
     }
-        
-    public static async Task ApplyMigrations(IServiceProvider serviceProvider)
-    {
-        int maxRetries = 10;
-        int delayMs = 5000; // Start with 5 seconds
-        int maxDelayMs = 60000; // Cap at 60 seconds
-
-        for (int attempt = 1; attempt <= maxRetries; attempt++)
-        {
-            try
-            {
-                
-                
-                using var scope = serviceProvider.CreateScope();
-                var identityDb = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
-                await identityDb.Database.MigrateAsync();
-                var academicDb = scope.ServiceProvider.GetRequiredService<AcademicPromotionDbContext>();
-                await academicDb.Database.MigrateAsync();
-                var nonAcademicDb = scope.ServiceProvider.GetRequiredService<NonAcademicPromotionDbContext>();
-                await nonAcademicDb.Database.MigrateAsync();
-                Console.WriteLine("✅ Migrations applied successfully.");
-                return; // Success, exit
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"⚠️  Migration attempt {attempt}/{maxRetries} failed: {ex.Message}");
-                
-                if (attempt == maxRetries)
-                {
-                    Console.WriteLine($"❌ Failed to apply migrations after {maxRetries} attempts.");
-                    throw;
-                }
-
-                // Wait before retrying with exponential backoff
-                await Task.Delay(delayMs);
-                delayMs = Math.Min(delayMs * 2, maxDelayMs); // Double delay, max 60s
-            }
-        }
-    }
-
 }

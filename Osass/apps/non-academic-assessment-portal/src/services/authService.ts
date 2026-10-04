@@ -15,7 +15,7 @@ class AuthService {
     }
 
     async loginWithGoogle(idToken: string): Promise<ApiResponse<LoginResponse>> {
-        const result = await identityClient.post<LoginResponse>("/Staffs/login/google", {
+        const result = await identityClient.post<LoginResponse>("/Staffs/login/non-academic/google", {
             accessToken: idToken,
             authType: "Google",
         });

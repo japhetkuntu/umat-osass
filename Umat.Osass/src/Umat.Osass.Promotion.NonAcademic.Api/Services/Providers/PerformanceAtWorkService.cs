@@ -1,3 +1,4 @@
+using Umat.Osass.Promotion.Domain;
 using Umat.Osass.Common.Sdk.Models;
 using Umat.Osass.NonAcademicPromotion.Sdk.Services;
 using Umat.Osass.PostgresDb.Sdk.Common;
@@ -41,11 +42,17 @@ public class PerformanceAtWorkService : IPerformanceAtWorkService
         {
             _logger.LogInformation(
                 "[UpdatePerformanceAtWorkState] Request:{Request} By:{Auth}",
-                request.Serialize(), auth.Serialize());
+                "[redacted]", auth.Id);
+
+            await ApplicantUploadValidation.ValidateAsync(request);
 
             var application =
                 await _applicationRepository.GetOneAsync(a => a.IsActive && a.ApplicantId == auth.Id)
                 ?? await _applicationService.CreateNonAcademicPromotionApplication(auth.Id);
+
+            if (application.ApplicationStatus != ApplicationStatusTypes.Draft &&
+                application.ApplicationStatus != ApplicationStatusTypes.Returned)
+                return new ApiResponse<PerformanceAtWorkResponse>("Submitted applications cannot be edited", 409);
 
             var record = await _performanceRepository.GetOneAsync(
                 r => r.ApplicantId == auth.Id && r.PromotionApplicationId == application.Id);
@@ -98,13 +105,17 @@ public class PerformanceAtWorkService : IPerformanceAtWorkService
 
             return FormatResponse(record).ToOkApiResponse("Performance at work updated successfully");
         }
+        catch (InvalidDataException ex)
+        {
+            return new ApiResponse<PerformanceAtWorkResponse>(ex.Message, 400);
+        }
         catch (InvalidOperationException ex)
         {
             return new ApiResponse<PerformanceAtWorkResponse>(ex.Message, 400);
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[UpdatePerformanceAtWorkState] Failed. By:{Auth}", auth.Serialize());
+            _logger.LogError(e, "[UpdatePerformanceAtWorkState] Failed. By:{Auth}", auth.Id);
             return new ApiResponse<PerformanceAtWorkResponse>("Failed to update performance at work", 500);
         }
     }
@@ -113,7 +124,7 @@ public class PerformanceAtWorkService : IPerformanceAtWorkService
     {
         try
         {
-            _logger.LogInformation("[GetPerformanceAtWorkState] For {Auth}", auth.Serialize());
+            _logger.LogInformation("[GetPerformanceAtWorkState] For {Auth}", auth.Id);
 
             NonAcademicPromotionApplication? application;
             if (!string.IsNullOrEmpty(id))
@@ -134,7 +145,7 @@ public class PerformanceAtWorkService : IPerformanceAtWorkService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[GetPerformanceAtWorkState] Failed. By:{Auth}", auth.Serialize());
+            _logger.LogError(e, "[GetPerformanceAtWorkState] Failed. By:{Auth}", auth.Id);
             return new ApiResponse<PerformanceAtWorkResponse>("Failed to retrieve performance at work", 500);
         }
     }
@@ -230,8 +241,8 @@ public class PerformanceAtWorkService : IPerformanceAtWorkService
     private static string GetFileNameFromUrl(string url)
     {
         if (string.IsNullOrWhiteSpace(url)) return string.Empty;
-        var uri = new Uri(url);
-        return uri.Segments.LastOrDefault() ?? string.Empty;
+        var path = Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.AbsolutePath : url.Split('?')[0];
+        return Uri.UnescapeDataString(Path.GetFileName(path));
     }
 
     private PerformanceAtWorkResponse FormatResponse(PerformanceAtWorkRecord record)
@@ -253,7 +264,7 @@ public class PerformanceAtWorkService : IPerformanceAtWorkService
         {
             CompletedCategories = record.TotalCategoriesAssessed,
             AverageScore = CalculateAverage(record),
-            PerformanceLevel = record.ApplicantPerformance,
+            PerformanceLevel = NonAcademicGradeTotals.WorkPerformance(record, 0),
             AccuracyOnSchedule = Map(record.AccuracyOnSchedule),
             QualityOfWork = Map(record.QualityOfWork),
             PunctualityAndRegularity = Map(record.PunctualityAndRegularity),

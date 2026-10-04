@@ -2,7 +2,8 @@
     "name": "osass",
     "private": true,
     "workspaces": [
-        "apps/*"
+        "apps/*",
+        "packages/*"
     ],
     "scripts": {
         "dev:assessment": "npm run dev -w @osass/academic-assessment",
@@ -14,7 +15,16 @@
         "build:admin": "npm run build -w @osass/admin",
         "build:non-academic": "npm run build -w @osass/non-academic",
         "build:non-academic-assessment": "npm run build -w @osass/non-academic-assessment",
-        "lint": "npm run lint -ws",
-        "test": "npm run test -ws"
+        "build": "npm run build --workspaces --if-present",
+        "typecheck": "npm run typecheck --workspaces --if-present",
+        "lint": "npm run lint --workspaces --if-present && npm run lint:packages",
+        "lint:packages": "eslint --config eslint.packages.config.js packages/api-client/src packages/domain/src packages/frontend-core/src",
+        "test": "npm run test --workspaces --if-present -- --passWithNoTests"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.32.0",
+        "eslint": "^9.32.0",
+        "globals": "^15.15.0",
+        "typescript-eslint": "^8.38.0"
     }
 }

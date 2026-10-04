@@ -1,3 +1,4 @@
+import { isValidNewPassword } from "@osass/frontend-core/password";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { GraduationCap, Mail, ArrowLeft, CheckCircle2, Key, Eye, EyeOff } from "lucide-react";
@@ -59,10 +60,10 @@ const ForgotPassword = () => {
       });
       return;
     }
-    if (otpData.newPassword.length < 8) {
+    if (!isValidNewPassword(otpData.newPassword)) {
       toast({
-        title: "Password too short",
-        description: "Your new password must be at least 8 characters.",
+        title: "Invalid password length",
+        description: "Your new password must be between 12 and 72 characters.",
         variant: "destructive",
       });
       return;
@@ -162,8 +163,10 @@ const ForgotPassword = () => {
                   <Input
                     id="newPassword"
                     type={showPasswords.new ? "text" : "password"}
-                    placeholder="Enter new password"
+                    placeholder="Enter new password (12–72 characters)"
                     className="pr-10"
+                    minLength={12}
+                    maxLength={72}
                     value={otpData.newPassword}
                     onChange={(e) => setOtpData({ ...otpData, newPassword: e.target.value })}
                     required

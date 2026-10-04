@@ -144,24 +144,24 @@ export interface CommitteeMember extends BaseEntity {
 // Dashboard Stats (aggregated client-side for now)
 export interface DashboardStats {
   // Organization
-  totalSchools: number;
-  totalFaculties: number;
-  totalDepartments: number;
-  totalUnits: number;
+  totalSchools: number | null;
+  totalFaculties: number | null;
+  totalDepartments: number | null;
+  totalUnits: number | null;
   // Academic
-  totalAcademicStaff: number;
-  totalAcademicPositions: number;
-  totalServicePositions: number;
-  totalPublicationIndicators: number;
-  totalAcademicCommitteeMembers: number;
+  totalAcademicStaff: number | null;
+  totalAcademicPositions: number | null;
+  totalServicePositions: number | null;
+  totalPublicationIndicators: number | null;
+  totalAcademicCommitteeMembers: number | null;
   // Non-Academic
-  totalNonAcademicStaff: number;
-  totalNonAcademicPositions: number;
-  totalNonAcademicCommitteeMembers: number;
-  totalKnowledgeMaterialIndicators: number;
+  totalNonAcademicStaff: number | null;
+  totalNonAcademicPositions: number | null;
+  totalNonAcademicCommitteeMembers: number | null;
+  totalKnowledgeMaterialIndicators: number | null;
   // Combined
-  totalStaff: number;
-  totalCommitteeMembers: number;
+  totalStaff: number | null;
+  totalCommitteeMembers: number | null;
 }
 
 // Form types — match backend request models

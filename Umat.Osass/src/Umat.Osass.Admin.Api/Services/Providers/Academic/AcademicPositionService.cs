@@ -1,3 +1,5 @@
+using Umat.Osass.Promotion.Domain;
+using Umat.Osass.Admin.Api.Services.Providers.Shared;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Umat.Osass.Admin.Api.Extensions;
@@ -13,11 +15,13 @@ namespace Umat.Osass.Admin.Api.Services.Providers.Academic;
 
 public class AcademicPositionService:IAcademicPositionService
 {
+    private readonly DeletionGuard _deletionGuard;
     private readonly ILogger<AcademicPositionService> _logger;
     private readonly IAcademicPromotionPgRepository<AcademicPromotionPosition> _academicPositionRepository;
 
-    public AcademicPositionService(ILogger<AcademicPositionService> logger,IAcademicPromotionPgRepository<AcademicPromotionPosition> academicPositionRepository)
+    public AcademicPositionService(DeletionGuard deletionGuard, ILogger<AcademicPositionService> logger,IAcademicPromotionPgRepository<AcademicPromotionPosition> academicPositionRepository)
     {
+        _deletionGuard = deletionGuard;
         _logger = logger;
         _academicPositionRepository = academicPositionRepository;
     }
@@ -26,7 +30,8 @@ public class AcademicPositionService:IAcademicPositionService
     {
         try
         {
-            _logger.LogInformation("Received request to add academicPosition with rawRequest:{Request} by {Auth}",request.Serialize(),auth.Serialize());
+            request.PerformanceCriteria = request.PerformanceCriteria.Select(PerformanceGrade.NormalizeCriteria).ToList();
+            _logger.LogInformation("Received request to add academicPosition with rawRequest:{Request} by {Auth}","[redacted]",auth.Id);
             var academicPositionExist = await _academicPositionRepository.GetOneAsync(x => x.Name.ToLower() == request.Name.ToLower());
             if (academicPositionExist != null)
             {
@@ -40,7 +45,7 @@ public class AcademicPositionService:IAcademicPositionService
         }
         catch (Exception e)
         {
-           _logger.LogError(e,"Error creating new academicPosition with rawRequest:{Request} by {Auth}",request.Serialize(),auth.Serialize());
+           _logger.LogError(e,"Error creating new academicPosition with rawRequest:{Request} by {Auth}","[redacted]",auth.Id);
            return new ApiResponse<AcademicPositionResponse>("Failed to create new academicPosition",500);
         }
     }
@@ -49,7 +54,8 @@ public class AcademicPositionService:IAcademicPositionService
     {
         try
         {
-            _logger.LogInformation("Received request to update academicPosition with rawRequest:{Request} with Id: {Id} by {Auth}",request.Serialize(),id,auth.Serialize());
+            request.PerformanceCriteria = request.PerformanceCriteria.Select(PerformanceGrade.NormalizeCriteria).ToList();
+            _logger.LogInformation("Received request to update academicPosition with rawRequest:{Request} with Id: {Id} by {Auth}","[redacted]",id,auth.Id);
             var academicPositionExist = await _academicPositionRepository.GetByIdAsync(id);
             if (academicPositionExist == null)
             {
@@ -69,16 +75,19 @@ public class AcademicPositionService:IAcademicPositionService
         }
         catch (Exception e)
         {
-            _logger.LogError(e,"Error updating new academicPosition with rawRequest:{Request} with Id: {Id} by {Auth}",request.Serialize(),id,auth.Serialize());
+            _logger.LogError(e,"Error updating new academicPosition with rawRequest:{Request} with Id: {Id} by {Auth}","[redacted]",id,auth.Id);
             return new ApiResponse<AcademicPositionResponse>("Failed to update academicPosition",500);
         }
     }
 
     public async Task<IApiResponse<AcademicPositionResponse>> Delete(string id, AuthData auth)
     {
+        if (await _deletionGuard.HasReferences("AcademicPosition", id))
+            return new ApiResponse<AcademicPositionResponse>("Cannot delete a record that is still referenced", 409);
+
         try
         {
-            _logger.LogInformation("Received request to delete academicPosition with Id: {Id} by {Auth}",id,auth.Serialize());
+            _logger.LogInformation("Received request to delete academicPosition with Id: {Id} by {Auth}",id,auth.Id);
             var academicPositionExist = await _academicPositionRepository.GetByIdAsync(id);
             if (academicPositionExist == null)
             {
@@ -99,7 +108,7 @@ public class AcademicPositionService:IAcademicPositionService
     {
         try
         {
-            _logger.LogInformation("Received request to get academicPosition with Id: {Id} by {Auth}",id,auth.Serialize());
+            _logger.LogInformation("Received request to get academicPosition with Id: {Id} by {Auth}",id,auth.Id);
             var academicPositionExist = await _academicPositionRepository.GetByIdAsync(id);
             if (academicPositionExist == null)
             {
@@ -120,7 +129,7 @@ public class AcademicPositionService:IAcademicPositionService
     {
         try
         {
-            _logger.LogInformation("Received request to retrieve list of academicPositions with rawFilter: {Filter} by: {Auth}",filter.Serialize(),auth.Serialize());
+            _logger.LogInformation("Received request to retrieve list of academicPositions with rawFilter: {Filter} by: {Auth}","[redacted]",auth.Id);
                   var academicPositionQuery = _academicPositionRepository.GetQueryableAsync();
 
             if (!string.IsNullOrEmpty(filter.Search) )
@@ -144,7 +153,7 @@ public class AcademicPositionService:IAcademicPositionService
         }
         catch (Exception e)
         {
-           _logger.LogError(e,"Error getting list of academicPositions with filter: {Filter}",filter.Serialize());
+           _logger.LogError(e,"Error getting list of academicPositions with filter: {Filter}","[redacted]");
            return new ApiResponse<PagedResult<AcademicPositionResponse>>("Failed to get academicPositions list",500);
         }
     }

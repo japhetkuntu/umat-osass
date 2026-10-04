@@ -6,4 +6,7 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="../Umat.Osass.Promotion.Domain/Umat.Osass.Promotion.Domain.csproj" />
+    </ItemGroup>
 </Project>

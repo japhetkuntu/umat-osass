@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTable, Column } from '@/components/common/DataTable';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
@@ -143,7 +142,7 @@ export default function NonAcademicStaffPage() {
   ];
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Non-Teaching Staff"
         description="Manage non-teaching staff members"
@@ -345,6 +344,6 @@ export default function NonAcademicStaffPage() {
         onConfirm={handleDelete}
         isDestructive
       />
-    </AdminLayout>
+    </>
   );
 }

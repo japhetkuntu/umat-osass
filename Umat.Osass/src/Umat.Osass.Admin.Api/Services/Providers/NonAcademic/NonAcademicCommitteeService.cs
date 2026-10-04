@@ -37,7 +37,7 @@ public class NonAcademicCommitteeService : INonAcademicCommitteeService
     {
         try
         {
-            _logger.LogInformation("Received request to add non-academic committee member with rawRequest:{Request} by {Auth}", request.Serialize(), auth.Serialize());
+            _logger.LogInformation("Received request to add non-academic committee member with rawRequest:{Request} by {Auth}", "[redacted]", auth.Id);
 
             var staff = await _staffRepository.GetByIdAsync(request.StaffId);
             if (staff == null)
@@ -76,7 +76,7 @@ public class NonAcademicCommitteeService : INonAcademicCommitteeService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error creating non-academic committee member with rawRequest:{Request} by {Auth}", request.Serialize(), auth.Serialize());
+            _logger.LogError(e, "Error creating non-academic committee member with rawRequest:{Request} by {Auth}", "[redacted]", auth.Id);
             return new ApiResponse<NonAcademicCommitteeResponse>("Failed to create committee member", 500);
         }
     }
@@ -85,7 +85,7 @@ public class NonAcademicCommitteeService : INonAcademicCommitteeService
     {
         try
         {
-            _logger.LogInformation("Received request to update non-academic committee member with Id:{Id} by {Auth}", id, auth.Serialize());
+            _logger.LogInformation("Received request to update non-academic committee member with Id:{Id} by {Auth}", id, auth.Id);
 
             var member = await _committeeRepository.GetByIdAsync(id);
             if (member == null)
@@ -111,7 +111,7 @@ public class NonAcademicCommitteeService : INonAcademicCommitteeService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error updating non-academic committee member with Id:{Id} by {Auth}", id, auth.Serialize());
+            _logger.LogError(e, "Error updating non-academic committee member with Id:{Id} by {Auth}", id, auth.Id);
             return new ApiResponse<NonAcademicCommitteeResponse>("Failed to update committee member", 500);
         }
     }
@@ -120,7 +120,7 @@ public class NonAcademicCommitteeService : INonAcademicCommitteeService
     {
         try
         {
-            _logger.LogInformation("Received request to delete non-academic committee member with Id:{Id} by {Auth}", id, auth.Serialize());
+            _logger.LogInformation("Received request to delete non-academic committee member with Id:{Id} by {Auth}", id, auth.Id);
 
             var member = await _committeeRepository.GetByIdAsync(id);
             if (member == null)
@@ -142,7 +142,7 @@ public class NonAcademicCommitteeService : INonAcademicCommitteeService
     {
         try
         {
-            _logger.LogInformation("Received request to get non-academic committee member with Id:{Id} by {Auth}", id, auth.Serialize());
+            _logger.LogInformation("Received request to get non-academic committee member with Id:{Id} by {Auth}", id, auth.Id);
 
             var member = await _committeeRepository.GetByIdAsync(id);
             if (member == null)
@@ -163,7 +163,7 @@ public class NonAcademicCommitteeService : INonAcademicCommitteeService
     {
         try
         {
-            _logger.LogInformation("Received request to list non-academic committee members with filter:{Filter} by {Auth}", filter.Serialize(), auth.Serialize());
+            _logger.LogInformation("Received request to list non-academic committee members with filter:{Filter} by {Auth}", "[redacted]", auth.Id);
 
             var query = _committeeRepository.GetQueryableAsync();
 
@@ -192,7 +192,7 @@ public class NonAcademicCommitteeService : INonAcademicCommitteeService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error listing non-academic committee members with filter:{Filter}", filter.Serialize());
+            _logger.LogError(e, "Error listing non-academic committee members with filter:{Filter}", "[redacted]");
             return new ApiResponse<PagedResult<NonAcademicCommitteeResponse>>("Failed to get committee members list", 500);
         }
     }

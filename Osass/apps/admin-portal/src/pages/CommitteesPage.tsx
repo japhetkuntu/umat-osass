@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTable, Column } from '@/components/common/DataTable';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
@@ -152,7 +151,7 @@ export default function CommitteesPage() {
   };
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Committees"
         description="Manage promotion committee members and assignments"
@@ -327,6 +326,6 @@ export default function CommitteesPage() {
         onConfirm={handleDelete}
         isDestructive
       />
-    </AdminLayout>
+    </>
   );
 }

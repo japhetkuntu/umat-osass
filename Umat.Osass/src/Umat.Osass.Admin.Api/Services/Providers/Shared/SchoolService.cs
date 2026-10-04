@@ -13,11 +13,13 @@ namespace Umat.Osass.Admin.Api.Services.Providers.Shared;
 
 public class SchoolService:ISchoolService
 {
+    private readonly DeletionGuard _deletionGuard;
     private readonly ILogger<SchoolService> _logger;
     private readonly IIdentityPgRepository<School> _schoolRepository;
 
-    public SchoolService(ILogger<SchoolService> logger,IIdentityPgRepository<School> schoolRepository)
+    public SchoolService(DeletionGuard deletionGuard, ILogger<SchoolService> logger,IIdentityPgRepository<School> schoolRepository)
     {
+        _deletionGuard = deletionGuard;
         _logger = logger;
         _schoolRepository = schoolRepository;
     }
@@ -26,7 +28,7 @@ public class SchoolService:ISchoolService
     {
         try
         {
-            _logger.LogInformation("Received request to add school with rawRequest:{Request} by {Auth}",request.Serialize(),auth.Serialize());
+            _logger.LogInformation("Received request to add school with rawRequest:{Request} by {Auth}","[redacted]",auth.Id);
             var schoolExist = await _schoolRepository.GetOneAsync(x => x.Name.ToLower() == request.Name.ToLower());
             if (schoolExist != null)
             {
@@ -40,7 +42,7 @@ public class SchoolService:ISchoolService
         }
         catch (Exception e)
         {
-           _logger.LogError(e,"Error creating new school with rawRequest:{Request} by {Auth}",request.Serialize(),auth.Serialize());
+           _logger.LogError(e,"Error creating new school with rawRequest:{Request} by {Auth}","[redacted]",auth.Id);
            return new ApiResponse<SchoolResponse>("Failed to create new school",500);
         }
     }
@@ -49,7 +51,7 @@ public class SchoolService:ISchoolService
     {
         try
         {
-            _logger.LogInformation("Received request to update school with rawRequest:{Request} with Id: {Id} by {Auth}",request.Serialize(),id,auth.Serialize());
+            _logger.LogInformation("Received request to update school with rawRequest:{Request} with Id: {Id} by {Auth}","[redacted]",id,auth.Id);
             var schoolExist = await _schoolRepository.GetByIdAsync(id);
             if (schoolExist == null)
             {
@@ -65,16 +67,19 @@ public class SchoolService:ISchoolService
         }
         catch (Exception e)
         {
-            _logger.LogError(e,"Error updating new school with rawRequest:{Request} with Id: {Id} by {Auth}",request.Serialize(),id,auth.Serialize());
+            _logger.LogError(e,"Error updating new school with rawRequest:{Request} with Id: {Id} by {Auth}","[redacted]",id,auth.Id);
             return new ApiResponse<SchoolResponse>("Failed to update school",500);
         }
     }
 
     public async Task<IApiResponse<SchoolResponse>> Delete(string id, AuthData auth)
     {
+        if (await _deletionGuard.HasReferences("School", id))
+            return new ApiResponse<SchoolResponse>("Cannot delete a record that is still referenced", 409);
+
         try
         {
-            _logger.LogInformation("Received request to delete school with Id: {Id} by {Auth}",id,auth.Serialize());
+            _logger.LogInformation("Received request to delete school with Id: {Id} by {Auth}",id,auth.Id);
             var schoolExist = await _schoolRepository.GetByIdAsync(id);
             if (schoolExist == null)
             {
@@ -95,7 +100,7 @@ public class SchoolService:ISchoolService
     {
         try
         {
-            _logger.LogInformation("Received request to get school with Id: {Id} by {Auth}",id,auth.Serialize());
+            _logger.LogInformation("Received request to get school with Id: {Id} by {Auth}",id,auth.Id);
             var schoolExist = await _schoolRepository.GetByIdAsync(id);
             if (schoolExist == null)
             {
@@ -116,7 +121,7 @@ public class SchoolService:ISchoolService
     {
         try
         {
-            _logger.LogInformation("Received request to retrieve list of schools with rawFilter: {Filter} by: {Auth}",filter.Serialize(),auth.Serialize());
+            _logger.LogInformation("Received request to retrieve list of schools with rawFilter: {Filter} by: {Auth}","[redacted]",auth.Id);
                   var schoolQuery = _schoolRepository.GetQueryableAsync();
 
             if (!string.IsNullOrEmpty(filter.Search) )
@@ -140,7 +145,7 @@ public class SchoolService:ISchoolService
         }
         catch (Exception e)
         {
-           _logger.LogError(e,"Error getting list of schools with filter: {Filter}",filter.Serialize());
+           _logger.LogError(e,"Error getting list of schools with filter: {Filter}","[redacted]");
            return new ApiResponse<PagedResult<SchoolResponse>>("Failed to get schools list",500);
         }
     }

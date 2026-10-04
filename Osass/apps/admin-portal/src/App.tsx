@@ -1,3 +1,4 @@
+import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -42,24 +43,26 @@ const App = () => (
               <Route path="/login" element={<LoginPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
-              <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/schools" element={<ProtectedRoute><SchoolsPage /></ProtectedRoute>} />
-              <Route path="/faculties" element={<ProtectedRoute><FacultiesPage /></ProtectedRoute>} />
-              <Route path="/departments" element={<ProtectedRoute><DepartmentsPage /></ProtectedRoute>} />
-              <Route path="/academic-staff" element={<ProtectedRoute><AcademicStaffPage /></ProtectedRoute>} />
-              <Route path="/non-academic-staff" element={<ProtectedRoute><NonAcademicStaffPage /></ProtectedRoute>} />
-              <Route path="/academic-positions" element={<ProtectedRoute><AcademicPositionsPage /></ProtectedRoute>} />
-              <Route path="/service-categories" element={<ProtectedRoute><ServiceCategoriesPage /></ProtectedRoute>} />
-              <Route path="/service-positions" element={<ProtectedRoute><ServicePositionsPage /></ProtectedRoute>} />
-              <Route path="/publication-types" element={<ProtectedRoute><PublicationTypesPage /></ProtectedRoute>} />
-              <Route path="/committees" element={<ProtectedRoute><CommitteesPage /></ProtectedRoute>} />
-              <Route path="/staff-updates" element={<ProtectedRoute><StaffUpdatesPage /></ProtectedRoute>} />
-              <Route path="/audit-logs" element={<ProtectedRoute><AuditLogsPage /></ProtectedRoute>} />
-              <Route path="/non-academic-committees" element={<ProtectedRoute><NonAcademicCommitteesPage /></ProtectedRoute>} />
-              <Route path="/non-academic-positions" element={<ProtectedRoute><NonAcademicPositionsPage /></ProtectedRoute>} />
-              <Route path="/units-sections" element={<ProtectedRoute><UnitsSectionsPage /></ProtectedRoute>} />
-              <Route path="/knowledge-material-types" element={<ProtectedRoute><KnowledgeMaterialTypesPage /></ProtectedRoute>} />
+              <Route element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/schools" element={<SchoolsPage />} />
+              <Route path="/faculties" element={<FacultiesPage />} />
+              <Route path="/departments" element={<DepartmentsPage />} />
+              <Route path="/academic-staff" element={<AcademicStaffPage />} />
+              <Route path="/non-academic-staff" element={<NonAcademicStaffPage />} />
+              <Route path="/academic-positions" element={<AcademicPositionsPage />} />
+              <Route path="/service-categories" element={<ServiceCategoriesPage />} />
+              <Route path="/service-positions" element={<ServicePositionsPage />} />
+              <Route path="/publication-types" element={<PublicationTypesPage />} />
+              <Route path="/committees" element={<CommitteesPage />} />
+              <Route path="/staff-updates" element={<StaffUpdatesPage />} />
+              <Route path="/audit-logs" element={<AuditLogsPage />} />
+              <Route path="/non-academic-committees" element={<NonAcademicCommitteesPage />} />
+              <Route path="/non-academic-positions" element={<NonAcademicPositionsPage />} />
+              <Route path="/units-sections" element={<UnitsSectionsPage />} />
+              <Route path="/knowledge-material-types" element={<KnowledgeMaterialTypesPage />} />
               <Route path="/admins" element={<ProtectedRoute requiredRole="SuperAdmin"><AdminsPage /></ProtectedRoute>} />
+              </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>

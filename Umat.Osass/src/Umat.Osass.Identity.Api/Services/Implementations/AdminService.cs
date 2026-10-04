@@ -92,7 +92,7 @@ public class AdminService : IAdminService
         try
         {
             _logger.LogInformation("[.RefreshTokenAsync] Received request to refresh token with request {request}",
-                request.Serialize());
+                "[redacted]");
             var claimToken = new AuthClaimData
             {
                 Token = request.AccessToken, Audience = _bearerTokenConfig.Audience, Issuer = _bearerTokenConfig.Issuer,
@@ -147,7 +147,7 @@ public class AdminService : IAdminService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Failed to refreshed token request {request}", request.Serialize());
+            _logger.LogError(e, "Failed to refreshed token request {request}", "[redacted]");
             return new ApiResponse<AdminTokenResponse>("Oops something went wrong", 500);
         }
     }
@@ -225,10 +225,14 @@ public class AdminService : IAdminService
             }
             email = email.ToLower();
 
+            if (!await AccountAttemptGuard.AllowAsync(_redisService.Database, "admin-reset", email, 3, 1800))
+                return new ApiResponse<ResetPasswordResponse>("Too many attempts. Please try again later.", 429);
+
             var admin = await _adminRepository.GetOneAsync(x => x.Email.Equals(email));
             if (admin == null)
             {
-                return new ApiResponse<ResetPasswordResponse>("Admin not found", 400);
+                return new ResetPasswordResponse { Email = email, UniqueId = Guid.NewGuid().ToString("N") }
+                    .ToOkApiResponse("If the account exists, a verification email has been sent.");
             }
 
             //send a verification email to admin
@@ -267,7 +271,7 @@ public class AdminService : IAdminService
                 UniqueId = verificationCode
             };
 
-            return response.ToOkApiResponse("Password reset successfully");
+            return response.ToOkApiResponse("If the account exists, a verification email has been sent.");
         }
         catch (Exception e)
         {
@@ -280,11 +284,12 @@ public class AdminService : IAdminService
     {
         try
         {
-            _logger.LogInformation("Resetting password with request {@request}", request.Serialize());
+            _logger.LogInformation("Resetting password with request {@request}", "[redacted]");
 
             var cacheKey = $"{ResetPasswordPrefix}-{request.UniqueId}";
-            var adminCache = await _redisService.GetAsync<ResetPasswordCache>(cacheKey);
-            if (adminCache == null || adminCache.OtpCode != request.OtpCode)
+            var adminCache = await ResetAttemptGuard.ConsumeAsync<ResetPasswordCache>(
+                _redisService.Database, cacheKey, request.OtpCode, nameof(ResetPasswordCache.OtpCode));
+            if (adminCache == null)
             {
                 return new ApiResponse<AdminTokenResponse>("Invalid or expired verification code", 400);
             }
@@ -340,7 +345,7 @@ public class AdminService : IAdminService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[ResetPasswordAsync] Failed to reset password with request {@request}", request.Serialize());
+            _logger.LogError(e, "[ResetPasswordAsync] Failed to reset password with request {@request}", "[redacted]");
             return new ApiResponse<AdminTokenResponse>("Failed to reset password", 500);
         }
     }
@@ -348,7 +353,7 @@ public class AdminService : IAdminService
     {
         try
         {
-            _logger.LogInformation("Custom login with request {@request}", request.Serialize());
+            _logger.LogInformation("Custom login with request {@request}", "[redacted]");
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
                 return new ApiResponse<AdminTokenResponse>("Email or password is missing", 400);
@@ -357,6 +362,8 @@ public class AdminService : IAdminService
             request.Email = request.Email.ToLower();
 
             var admin = await _adminRepository.GetOneAsync(x => x.Email.Equals(request.Email));
+            if (!await AccountAttemptGuard.AllowAsync(_redisService.Database, "admin-login", request.Email, 10, 900))
+                return new ApiResponse<AdminTokenResponse>("Too many attempts. Please try again later.", 429);
             if (admin == null || !BCrypt.Net.BCrypt.Verify(request.Password, admin.Password!))
             {
                 return new ApiResponse<AdminTokenResponse>("Invalid username or password", 400);

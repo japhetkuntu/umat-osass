@@ -14,7 +14,7 @@ namespace Umat.Osass.Admin.Api.Controllers.Shared;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/[controller]")]
 [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(ApiResponse<object>))]
-[Authorize(AuthenticationSchemes = $"{CommonConstants.AuthScheme.Bearer}")]
+[Authorize(AuthenticationSchemes = $"{CommonConstants.AuthScheme.Bearer}", Roles = "SuperAdmin,Admin,Moderator")]
 public class StaffsController : DefaultController
 {
     private readonly ILogger<StaffsController> _logger;
@@ -26,6 +26,7 @@ public class StaffsController : DefaultController
         _staffService = staffService;
     }
     
+    [Authorize(Roles = "SuperAdmin,Admin")]
     [HttpPost()]
     [Produces(MediaTypeNames.Application.Json)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ApiResponse<StaffResponse>))]
@@ -36,6 +37,7 @@ public class StaffsController : DefaultController
         return StatusCode(response.Code, response);
     }
     
+    [Authorize(Roles = "SuperAdmin,Admin")]
     [HttpPut("{id}")]
     [Produces(MediaTypeNames.Application.Json)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ApiResponse<StaffResponse>))]
@@ -66,6 +68,7 @@ public class StaffsController : DefaultController
         return StatusCode(response.Code, response);
     }
 
+    [Authorize(Roles = "SuperAdmin,Admin")]
     [HttpDelete("{id}")]
     [Produces(MediaTypeNames.Application.Json)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ApiResponse<StaffResponse>))]

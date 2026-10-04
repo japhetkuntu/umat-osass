@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTable, Column } from '@/components/common/DataTable';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
@@ -91,7 +90,7 @@ export default function KnowledgeMaterialTypesPage() {
   ];
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Knowledge Material Types"
         description="Manage knowledge material categories and scoring values for non-teaching staff"
@@ -188,6 +187,6 @@ export default function KnowledgeMaterialTypesPage() {
         onConfirm={handleDelete}
         isDestructive
       />
-    </AdminLayout>
+    </>
   );
 }

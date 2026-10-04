@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageHeader } from '@/components/common/PageHeader';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { RichTextEditor } from '@/components/common/RichTextEditor';
@@ -178,7 +177,7 @@ export default function StaffUpdatesPage() {
   };
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Staff Updates"
         description="Manage announcements and updates visible on the Teaching Staff Portal"
@@ -477,6 +476,6 @@ export default function StaffUpdatesPage() {
         isDestructive
         confirmLabel="Delete"
       />
-    </AdminLayout>
+    </>
   );
 }

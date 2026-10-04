@@ -1,3 +1,5 @@
+using Umat.Osass.Promotion.Domain;
+using Umat.Osass.Admin.Api.Services.Providers.Shared;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Umat.Osass.Admin.Api.Extensions;
@@ -13,13 +15,15 @@ namespace Umat.Osass.Admin.Api.Services.Providers.NonAcademic;
 
 public class NonAcademicPositionService : INonAcademicPositionService
 {
+    private readonly DeletionGuard _deletionGuard;
     private readonly ILogger<NonAcademicPositionService> _logger;
     private readonly INonAcademicPromotionPgRepository<NonAcademicPromotionPosition> _positionRepository;
 
-    public NonAcademicPositionService(
+    public NonAcademicPositionService(DeletionGuard deletionGuard,
         ILogger<NonAcademicPositionService> logger,
         INonAcademicPromotionPgRepository<NonAcademicPromotionPosition> positionRepository)
     {
+        _deletionGuard = deletionGuard;
         _logger = logger;
         _positionRepository = positionRepository;
     }
@@ -28,7 +32,8 @@ public class NonAcademicPositionService : INonAcademicPositionService
     {
         try
         {
-            _logger.LogInformation("Received request to add non-academic position with rawRequest:{Request} by {Auth}", request.Serialize(), auth.Serialize());
+            request.PerformanceCriteria = request.PerformanceCriteria.Select(PerformanceGrade.NormalizeCriteria).ToList();
+            _logger.LogInformation("Received request to add non-academic position with rawRequest:{Request} by {Auth}", "[redacted]", auth.Id);
 
             var existing = await _positionRepository.GetOneAsync(x => x.Name.ToLower() == request.Name.ToLower());
             if (existing != null)
@@ -46,7 +51,7 @@ public class NonAcademicPositionService : INonAcademicPositionService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error creating non-academic position with rawRequest:{Request} by {Auth}", request.Serialize(), auth.Serialize());
+            _logger.LogError(e, "Error creating non-academic position with rawRequest:{Request} by {Auth}", "[redacted]", auth.Id);
             return new ApiResponse<NonAcademicPositionResponse>("Failed to create position", 500);
         }
     }
@@ -55,7 +60,8 @@ public class NonAcademicPositionService : INonAcademicPositionService
     {
         try
         {
-            _logger.LogInformation("Received request to update non-academic position with Id:{Id} by {Auth}", id, auth.Serialize());
+            request.PerformanceCriteria = request.PerformanceCriteria.Select(PerformanceGrade.NormalizeCriteria).ToList();
+            _logger.LogInformation("Received request to update non-academic position with Id:{Id} by {Auth}", id, auth.Id);
 
             var position = await _positionRepository.GetByIdAsync(id);
             if (position == null)
@@ -79,16 +85,19 @@ public class NonAcademicPositionService : INonAcademicPositionService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error updating non-academic position with Id:{Id} by {Auth}", id, auth.Serialize());
+            _logger.LogError(e, "Error updating non-academic position with Id:{Id} by {Auth}", id, auth.Id);
             return new ApiResponse<NonAcademicPositionResponse>("Failed to update position", 500);
         }
     }
 
     public async Task<IApiResponse<NonAcademicPositionResponse>> Delete(string id, AuthData auth)
     {
+        if (await _deletionGuard.HasReferences("NonAcademicPosition", id))
+            return new ApiResponse<NonAcademicPositionResponse>("Cannot delete a record that is still referenced", 409);
+
         try
         {
-            _logger.LogInformation("Received request to delete non-academic position with Id:{Id} by {Auth}", id, auth.Serialize());
+            _logger.LogInformation("Received request to delete non-academic position with Id:{Id} by {Auth}", id, auth.Id);
 
             var position = await _positionRepository.GetByIdAsync(id);
             if (position == null)
@@ -110,7 +119,7 @@ public class NonAcademicPositionService : INonAcademicPositionService
     {
         try
         {
-            _logger.LogInformation("Received request to get non-academic position with Id:{Id} by {Auth}", id, auth.Serialize());
+            _logger.LogInformation("Received request to get non-academic position with Id:{Id} by {Auth}", id, auth.Id);
 
             var position = await _positionRepository.GetByIdAsync(id);
             if (position == null)
@@ -130,7 +139,7 @@ public class NonAcademicPositionService : INonAcademicPositionService
     {
         try
         {
-            _logger.LogInformation("Received request to list non-academic positions with filter:{Filter} by {Auth}", filter.Serialize(), auth.Serialize());
+            _logger.LogInformation("Received request to list non-academic positions with filter:{Filter} by {Auth}", "[redacted]", auth.Id);
 
             var query = _positionRepository.GetQueryableAsync();
 
@@ -151,7 +160,7 @@ public class NonAcademicPositionService : INonAcademicPositionService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error listing non-academic positions with filter:{Filter}", filter.Serialize());
+            _logger.LogError(e, "Error listing non-academic positions with filter:{Filter}", "[redacted]");
             return new ApiResponse<PagedResult<NonAcademicPositionResponse>>("Failed to get positions list", 500);
         }
     }

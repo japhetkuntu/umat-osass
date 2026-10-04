@@ -1,9 +1,10 @@
+import type { KnowledgeMaterialIndicator, ServicePositionIndicator, SubmittedApplicationResponse } from "../types/academic";
 import { ApiResponse } from "../types/auth";
 import {
     ApplicationCategoryState,
-    TeachingResponse,
-    PublicationResponse,
-    ServiceResponse,
+    PerformanceAtWorkResponse as TeachingResponse,
+    KnowledgeProfessionResponse as PublicationResponse,
+    NonAcademicServiceResponse as ServiceResponse,
     OverallReview,
     HistoricalApplication,
     StaffUpdateItem,
@@ -11,7 +12,7 @@ import {
 } from "../types/academic";
 import { PromotionLetterData } from "../types/promotionLetter";
 import { EligibilityForecastResponse } from "../types/forecast";
-import { academicClient } from "./apiClient";
+import { nonAcademicClient as academicClient } from "./apiClient";
 
 class AcademicService {
     async getApplicationCategoryState(): Promise<ApiResponse<ApplicationCategoryState>> {
@@ -23,43 +24,43 @@ class AcademicService {
     }
 
     async getTeachingState(): Promise<ApiResponse<TeachingResponse>> {
-        return await academicClient.get<TeachingResponse>("/Teachings");
+        return await academicClient.get<TeachingResponse>("/PerformanceAtWork");
     }
 
     async getPublicationState(): Promise<ApiResponse<PublicationResponse>> {
-        return await academicClient.get<PublicationResponse>("/Publications");
+        return await academicClient.get<PublicationResponse>("/KnowledgeProfession");
     }
 
     async getServiceState(): Promise<ApiResponse<ServiceResponse>> {
-        return await academicClient.get<ServiceResponse>("/Services");
+        return await academicClient.get<ServiceResponse>("/NonAcademicService");
     }
 
-    async updateTeaching(data: FormData): Promise<ApiResponse<any>> {
-        return await academicClient.post<any>("/Teachings", data);
+    async updateTeaching(data: FormData): Promise<ApiResponse<unknown>> {
+        return await academicClient.post<unknown>("/PerformanceAtWork", data);
     }
 
-    async updatePublication(data: FormData): Promise<ApiResponse<any>> {
-        return await academicClient.post<any>("/Publications", data);
+    async updatePublication(data: FormData): Promise<ApiResponse<unknown>> {
+        return await academicClient.post<unknown>("/KnowledgeProfession", data);
     }
 
-    async updateService(data: FormData): Promise<ApiResponse<any>> {
-        return await academicClient.post<any>("/Services", data);
+    async updateService(data: FormData): Promise<ApiResponse<unknown>> {
+        return await academicClient.post<unknown>("/NonAcademicService", data);
     }
 
-    async getPublicationIndicators(): Promise<ApiResponse<any[]>> {
-        return await academicClient.get<any[]>("/Publications/indicators");
+    async getPublicationIndicators(): Promise<ApiResponse<KnowledgeMaterialIndicator[]>> {
+        return await academicClient.get<KnowledgeMaterialIndicator[]>("/KnowledgeProfession/indicators");
     }
 
-    async getServicePositions(): Promise<ApiResponse<any[]>> {
-        return await academicClient.get<any[]>("/Services/positions");
+    async getServicePositions(): Promise<ApiResponse<ServicePositionIndicator[]>> {
+        return await academicClient.get<ServicePositionIndicator[]>("/NonAcademicService/positions");
     }
 
     async submitApplication(): Promise<ApiResponse<boolean>> {
         return await academicClient.post<boolean>("/Applications/submit");
     }
 
-    async getSubmittedPreview(): Promise<ApiResponse<any>> {
-        return await academicClient.get<any>("/Applications/submitted-preview");
+    async getSubmittedPreview(): Promise<ApiResponse<SubmittedApplicationResponse>> {
+        return await academicClient.get<SubmittedApplicationResponse>("/Applications/submitted-preview");
     }
 
     async getPromotionHistory(): Promise<ApiResponse<HistoricalApplication[]>> {

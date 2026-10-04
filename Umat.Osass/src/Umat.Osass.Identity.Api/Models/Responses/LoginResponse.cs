@@ -63,7 +63,7 @@ namespace Umat.Osass.Identity.Api.Models.Responses
         public string LastName { get; set; }
         public string FullName => $"{FirstName} {LastName}";
         public string Role { get; set; }
-
-        
+        public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
     }
 }

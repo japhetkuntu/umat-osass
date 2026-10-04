@@ -91,6 +91,8 @@ public class PgRepository<T,TContext> : IPgRepository<T,TContext> where T : clas
         Expression<Func<T, bool>>? filter = null)
     {
         filter ??= _ => true;
+        pageIndex = Math.Max(pageIndex, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
 
         var query = _dbSet.Where(filter);
 
@@ -114,11 +116,16 @@ public class PgRepository<T,TContext> : IPgRepository<T,TContext> where T : clas
         string sortColumn,
         string sortDir)
     {
+        var member = typeof(T).GetProperties()
+            .FirstOrDefault(p => string.Equals(p.Name, sortColumn, StringComparison.OrdinalIgnoreCase)
+                                 && p.GetIndexParameters().Length == 0);
+        if (member == null) return query;
+
         var parameter = Expression.Parameter(typeof(T), "x");
-        var property = Expression.PropertyOrField(parameter, sortColumn);
+        var property = Expression.Property(parameter, member);
         var lambda = Expression.Lambda(property, parameter);
 
-        var methodName = sortDir.ToLower() == "desc" ? "OrderByDescending" : "OrderBy";
+        var methodName = string.Equals(sortDir, "desc", StringComparison.OrdinalIgnoreCase) ? "OrderByDescending" : "OrderBy";
 
         var method = typeof(Queryable).GetMethods()
             .First(m => m.Name == methodName 

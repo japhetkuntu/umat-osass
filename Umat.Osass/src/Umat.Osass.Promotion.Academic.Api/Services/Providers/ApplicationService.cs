@@ -1,3 +1,4 @@
+using Umat.Osass.Promotion.Domain;
 
 using Akka.Actor;
 using Mapster;
@@ -71,7 +72,7 @@ public class ApplicationService : IApplicationService
         {
             _logger.LogInformation(
                 "[GetPromotionPositionEligibilityStatus] Getting promotion position eligibility status with rawRequest:{Auth}",
-                auth.Serialize());
+                auth.Id);
 
             var activeApplicationRes =
                 await _applicationRepository.GetOneAsync(a => a.IsActive && a.ApplicantId == auth.Id);
@@ -171,7 +172,7 @@ public class ApplicationService : IApplicationService
         {
             _logger.LogInformation(
                 "[ApplicationCategoryState] Getting application category state with rawRequest:{Request}",
-                auth.Serialize());
+                auth.Id);
             AcademicPromotionApplication? activeApplicationRes;
             if (!string.IsNullOrEmpty(id))
             {
@@ -206,9 +207,9 @@ public class ApplicationService : IApplicationService
                 NumberOfRecordsForTeaching = teachingRes?.TotalCategoriesAssessed ?? 0,
                 NumberOfRecordsForPublication = publicationRes?.Publications.Count ?? 0,
                 NumberOfRecordsForService = serviceRes?.Services.Count ?? 0,
-                TeachingPerformance =  teachingRes?.ApplicantPerformance?? PerformanceTypes.InAdequate,
-                ServicePerformance = serviceRes?.ApplicantPerformance?? PerformanceTypes.InAdequate,
-                PublicationPerformance = publicationRes?.ApplicantPerformance ?? PerformanceTypes.InAdequate,
+                TeachingPerformance =  AcademicGradeTotals.TeachingPerformance(teachingRes),
+                ServicePerformance = AcademicGradeTotals.ServicePerformance(serviceRes),
+                PublicationPerformance = AcademicGradeTotals.PublicationPerformance(publicationRes),
                 TeachingCategoryId = teachingRes?.Id ?? string.Empty,
                 PublicationCategoryId = publicationRes?.Id ?? string.Empty,
                 ServiceCategoryId = serviceRes?.Id ?? string.Empty,
@@ -233,7 +234,7 @@ public class ApplicationService : IApplicationService
         {
             _logger.LogError(e,
                 "[ApplicationCategoryState]  failed to get application category statuses with rawRequest:{Request}",
-                auth.Serialize());
+                auth.Id);
             return new ApiResponse<ApplicationCategoryStateResponse>("Failed to get application statuses", 500);
         }
     }
@@ -304,7 +305,7 @@ public class ApplicationService : IApplicationService
         var academicPromotionAdded = await _applicationRepository.AddAsync(academicApplication);
         _logger.LogInformation(
             "[CreateAcademicPromotionApplication] Response after creating application: {Application}, status:{Status}",
-            academicApplication.Serialize(), academicPromotionAdded);
+            academicApplication.Id, academicPromotionAdded);
         return academicApplication;
     }
 
@@ -344,7 +345,7 @@ public class ApplicationService : IApplicationService
                     ? null
                     : new TeachingOverview
                     {
-                        Performance = teaching.ApplicantPerformance,
+                        Performance = AcademicGradeTotals.TeachingPerformance(teaching),
                         AverageScore = CalculateTeachingAverage(teaching),
                         TotalCategoriesAssessed = teaching.TotalCategoriesAssessed
                     },
@@ -353,19 +354,19 @@ public class ApplicationService : IApplicationService
                     ? null
                     : new PublicationOverview
                     {
-                        Performance = publication.ApplicantPerformance,
+                        Performance = AcademicGradeTotals.PublicationPerformance(publication),
                         TotalPublicationsAdded = publication.Publications.Count,
-                        TotalApplicantScore = publication.Publications.Sum(x => x.ApplicantScore ?? 0),
-                        TotalSystemGeneratedScore = publication.Publications.Sum(x => x.SystemGeneratedScore)
+                        TotalApplicantScore = AcademicGradeTotals.Publications(publication),
+                        TotalSystemGeneratedScore = publication.Publications.Sum(item => item.SystemGeneratedScore - item.PresentationBonus + AcademicGradeTotals.PresentationBonus(item))
                     },
 
                 Service = service == null
                     ? null
                     : new ServiceOverview
                     {
-                        Performance = service.ApplicantPerformance,
+                        Performance = AcademicGradeTotals.ServicePerformance(service),
                         TotalRecords = service.Services.Count,
-                        TotalScore = service.Services.Sum(x => x.ApplicantScore ?? 0)
+                        TotalScore = AcademicGradeTotals.Services(service)
                     }
             };
 
@@ -384,31 +385,8 @@ public class ApplicationService : IApplicationService
     /// <summary>
     /// Computes the average score across all teaching subcategories
     /// </summary>
-    private static double CalculateTeachingAverage(TeachingRecord teaching)
-    {
-        var scores = new List<double>();
-
-        void Add(TeachingData? data)
-        {
-            if (data != null)
-                scores.Add(data.ApplicantScore ?? 0);
-        }
-
-        Add(teaching.LectureLoad);
-        Add(teaching.AbilityToAdaptToTeaching);
-        Add(teaching.RegularityAndPunctuality);
-        Add(teaching.QualityOfLectureMaterial);
-        Add(teaching.PerformanceOfStudentInExam);
-        Add(teaching.AbilityToCompleteSyllabus);
-        Add(teaching.QualityOfExamQuestionAndMarkingScheme);
-        Add(teaching.PunctualityInSettingExamQuestion);
-        Add(teaching.SupervisionOfProjectWorkAndThesis);
-        Add(teaching.StudentReactionToAndAssessmentOfTeaching);
-
-        return scores.Any()
-            ? Math.Round(scores.Average(), 2)
-            : 0;
-    }
+    private static double CalculateTeachingAverage(TeachingRecord teaching) =>
+        AcademicGradeTotals.Teaching(teaching);
 
     public async Task<IApiResponse<SubmittedApplicationResponse>> SubmittedApplicationPreview(AuthData auth,
         string? id = null)
@@ -648,9 +626,9 @@ public class ApplicationService : IApplicationService
                     s.ApplicantId == auth.Id && s.PromotionApplicationId == application.Id);
                 
                 // Get performance levels from each category
-                var teachingPerformance = teaching?.ApplicantPerformance ?? PerformanceTypes.InAdequate;
-                var publicationPerformance = publication?.ApplicantPerformance ?? PerformanceTypes.InAdequate;
-                var servicePerformance = service?.ApplicantPerformance ?? PerformanceTypes.InAdequate;
+                var teachingPerformance = AcademicGradeTotals.TeachingPerformance(teaching);
+                var publicationPerformance = AcademicGradeTotals.PublicationPerformance(publication);
+                var servicePerformance = AcademicGradeTotals.ServicePerformance(service);
                 
                 // Set performance in response
                 historyResponse.Performance = new ApplicationPerformance
@@ -757,9 +735,9 @@ public class ApplicationService : IApplicationService
             var overallScore = (teachingScore + publicationScore + serviceScore) / 3;
             
             // Get performance levels (prefer UAPC, then FAPC, then DAPC, then Applicant)
-            var teachingPerformance = GetFinalPerformance(teaching?.UapcPerformance, teaching?.FapcPerformance, teaching?.DapcPerformance, teaching?.ApplicantPerformance);
-            var publicationPerformance = GetFinalPerformance(publication?.UapcPerformance, publication?.FapcPerformance, publication?.DapcPerformance, publication?.ApplicantPerformance);
-            var servicePerformance = GetFinalPerformance(service?.UapcPerformance, service?.FapcPerformance, service?.DapcPerformance, service?.ApplicantPerformance);
+            var teachingPerformance = AcademicGradeTotals.TeachingPerformance(teaching);
+            var publicationPerformance = AcademicGradeTotals.PublicationPerformance(publication);
+            var servicePerformance = AcademicGradeTotals.ServicePerformance(service);
             
             // Get overall performance based on average
             var overallPerformance = DetermineOverallPerformance(teachingPerformance, publicationPerformance, servicePerformance);
@@ -817,85 +795,21 @@ public class ApplicationService : IApplicationService
         }
     }
 
-    private double CalculateTotalTeachingScore(TeachingRecord? teaching)
-    {
-        if (teaching == null) return 0;
-        
-        double total = 0;
-        var count = 0;
-        
-        var scores = new[]
-        {
-            teaching.LectureLoad?.UapcScore ?? teaching.LectureLoad?.FapcScore ?? teaching.LectureLoad?.DapcScore ?? teaching.LectureLoad?.ApplicantScore,
-            teaching.AbilityToAdaptToTeaching?.UapcScore ?? teaching.AbilityToAdaptToTeaching?.FapcScore ?? teaching.AbilityToAdaptToTeaching?.DapcScore ?? teaching.AbilityToAdaptToTeaching?.ApplicantScore,
-            teaching.RegularityAndPunctuality?.UapcScore ?? teaching.RegularityAndPunctuality?.FapcScore ?? teaching.RegularityAndPunctuality?.DapcScore ?? teaching.RegularityAndPunctuality?.ApplicantScore,
-            teaching.QualityOfLectureMaterial?.UapcScore ?? teaching.QualityOfLectureMaterial?.FapcScore ?? teaching.QualityOfLectureMaterial?.DapcScore ?? teaching.QualityOfLectureMaterial?.ApplicantScore,
-            teaching.PerformanceOfStudentInExam?.UapcScore ?? teaching.PerformanceOfStudentInExam?.FapcScore ?? teaching.PerformanceOfStudentInExam?.DapcScore ?? teaching.PerformanceOfStudentInExam?.ApplicantScore,
-            teaching.AbilityToCompleteSyllabus?.UapcScore ?? teaching.AbilityToCompleteSyllabus?.FapcScore ?? teaching.AbilityToCompleteSyllabus?.DapcScore ?? teaching.AbilityToCompleteSyllabus?.ApplicantScore,
-            teaching.QualityOfExamQuestionAndMarkingScheme?.UapcScore ?? teaching.QualityOfExamQuestionAndMarkingScheme?.FapcScore ?? teaching.QualityOfExamQuestionAndMarkingScheme?.DapcScore ?? teaching.QualityOfExamQuestionAndMarkingScheme?.ApplicantScore,
-            teaching.PunctualityInSettingExamQuestion?.UapcScore ?? teaching.PunctualityInSettingExamQuestion?.FapcScore ?? teaching.PunctualityInSettingExamQuestion?.DapcScore ?? teaching.PunctualityInSettingExamQuestion?.ApplicantScore,
-            teaching.SupervisionOfProjectWorkAndThesis?.UapcScore ?? teaching.SupervisionOfProjectWorkAndThesis?.FapcScore ?? teaching.SupervisionOfProjectWorkAndThesis?.DapcScore ?? teaching.SupervisionOfProjectWorkAndThesis?.ApplicantScore,
-            teaching.StudentReactionToAndAssessmentOfTeaching?.UapcScore ?? teaching.StudentReactionToAndAssessmentOfTeaching?.FapcScore ?? teaching.StudentReactionToAndAssessmentOfTeaching?.DapcScore ?? teaching.StudentReactionToAndAssessmentOfTeaching?.ApplicantScore,
-        };
-        
-        foreach (var score in scores)
-        {
-            if (score.HasValue)
-            {
-                total += score.Value;
-                count++;
-            }
-        }
-        
-        return count > 0 ? (total / count) * 10 / 5 : 0; // Normalize to 10-point scale
-    }
+    private double CalculateTotalTeachingScore(TeachingRecord? teaching) =>
+        AcademicGradeTotals.Teaching(teaching);
 
-    private double CalculateTotalPublicationScore(Publication? publication)
-    {
-        if (publication?.Publications == null) return 0;
-        
-        var total = publication.Publications.Sum(p => 
-            p.UapcScore ?? p.FapcScore ?? p.DapcScore ?? p.ApplicantScore ?? p.SystemGeneratedScore);
-        
-        // Normalize to 10-point scale (assuming max is around 50)
-        return Math.Min(total / 5, 10);
-    }
+    private double CalculateTotalPublicationScore(Publication? publication) =>
+        AcademicGradeTotals.Publications(publication);
 
-    private double CalculateTotalServiceScore(ServiceRecord? service)
-    {
-        if (service == null) return 0;
+    private double CalculateTotalServiceScore(ServiceRecord? service) =>
+        AcademicGradeTotals.Services(service);
 
-        var total = service.Services?.Sum(s =>
-            s.UapcScore ?? s.FapcScore ?? s.DapcScore ?? s.ApplicantScore ?? s.SystemGeneratedScore) ?? 0;
-
-        // Normalize to 10-point scale
-        return Math.Min(total / 5, 10);
-    }
-
-    private string GetFinalPerformance(params string?[] performances)
-    {
-        foreach (var perf in performances)
-        {
-            if (!string.IsNullOrEmpty(perf) && perf != PerformanceTypes.InAdequate)
-                return perf;
-        }
-        return PerformanceTypes.Adequate;
-    }
 
     private string DetermineOverallPerformance(string teaching, string publication, string service)
     {
-        var levels = new Dictionary<string, int>
-        {
-            { PerformanceTypes.High, 4 },
-            { PerformanceTypes.Good, 3 },
-            { PerformanceTypes.Adequate, 2 },
-            { PerformanceTypes.InAdequate, 1 }
-        };
-        
-        var avgLevel = (levels.GetValueOrDefault(teaching, 2) + 
-                        levels.GetValueOrDefault(publication, 2) + 
-                        levels.GetValueOrDefault(service, 2)) / 3.0;
-        
+        var avgLevel = ((int)PerformanceGrade.Parse(teaching) + (int)PerformanceGrade.Parse(publication) +
+                        (int)PerformanceGrade.Parse(service)) / 3.0;
+
         if (avgLevel >= 3.5) return "Excellent";
         if (avgLevel >= 2.5) return "Very Good";
         if (avgLevel >= 1.5) return "Good";
@@ -1115,8 +1029,8 @@ public class ApplicationService : IApplicationService
     // ────────────────────────────────────────────────────────────────────────
     // Application Documents (CV & Application Letter)
     // ────────────────────────────────────────────────────────────────────────
-    private static readonly string[] AllowedDocumentExtensions = [".pdf", ".doc", ".docx"];
-    private const long MaxDocumentSizeBytes = 15 * 1024 * 1024; // 15 MB
+    private static readonly string[] AllowedDocumentExtensions = [".pdf", ".png", ".jpg", ".jpeg", ".docx", ".xlsx"];
+    private const long MaxDocumentSizeBytes = 20 * 1024 * 1024; // 20 MB
 
     private static bool IsValidDocument(IFormFile file, out string error)
     {
@@ -1128,13 +1042,13 @@ public class ApplicationService : IApplicationService
         }
         if (file.Length > MaxDocumentSizeBytes)
         {
-            error = "File exceeds the 15 MB size limit";
+            error = "File exceeds the 20 MB size limit";
             return false;
         }
         var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
         if (!AllowedDocumentExtensions.Contains(ext))
         {
-            error = "Only PDF or Word documents are allowed";
+            error = "Upload a valid PDF, PNG, JPEG, DOCX or XLSX attachment.";
             return false;
         }
         return true;
@@ -1190,6 +1104,8 @@ public class ApplicationService : IApplicationService
                 return new ApiResponse<ApplicationDocumentsResponse>(
                     "Documents can only be updated while the application is in Draft or Returned status", 400);
 
+            await ApplicantUploadValidation.ValidateAsync(request);
+
             if (request.CurriculumVitae != null)
             {
                 if (!IsValidDocument(request.CurriculumVitae, out var cvError))
@@ -1223,6 +1139,10 @@ public class ApplicationService : IApplicationService
             await _applicationRepository.UpdateAsync(application);
 
             return BuildDocumentsResponse(application).ToOkApiResponse("Application documents updated successfully");
+        }
+        catch (InvalidDataException ex)
+        {
+            return new ApiResponse<ApplicationDocumentsResponse>(ex.Message, 400);
         }
         catch (Exception ex)
         {

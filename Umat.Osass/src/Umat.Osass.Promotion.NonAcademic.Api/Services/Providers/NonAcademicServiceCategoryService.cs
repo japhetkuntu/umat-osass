@@ -1,3 +1,4 @@
+using Umat.Osass.Promotion.Domain;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Umat.Osass.Common.Sdk.Models;
@@ -20,6 +21,7 @@ public class NonAcademicServiceCategoryService : INonAcademicServiceCategoryServ
     private readonly IApplicationService _applicationService;
     private readonly INonAcademicPromotionPgRepository<NonAcademicServiceRecord> _serviceRepository;
     private readonly IIdentityPgRepository<ServicePosition> _servicePositionRepository;
+    private readonly IIdentityPgRepository<ServiceCategory> _serviceCategoryRepository;
     private readonly IStorageService _storageService;
     private readonly ILogger<NonAcademicServiceCategoryService> _logger;
 
@@ -28,6 +30,7 @@ public class NonAcademicServiceCategoryService : INonAcademicServiceCategoryServ
         IApplicationService applicationService,
         INonAcademicPromotionPgRepository<NonAcademicServiceRecord> serviceRepository,
         IIdentityPgRepository<ServicePosition> servicePositionRepository,
+        IIdentityPgRepository<ServiceCategory> serviceCategoryRepository,
         IStorageService storageService,
         ILogger<NonAcademicServiceCategoryService> logger)
     {
@@ -35,6 +38,7 @@ public class NonAcademicServiceCategoryService : INonAcademicServiceCategoryServ
         _applicationService = applicationService;
         _serviceRepository = serviceRepository;
         _servicePositionRepository = servicePositionRepository;
+        _serviceCategoryRepository = serviceCategoryRepository;
         _storageService = storageService;
         _logger = logger;
     }
@@ -45,14 +49,29 @@ public class NonAcademicServiceCategoryService : INonAcademicServiceCategoryServ
     {
         try
         {
-            _logger.LogInformation("[UpdateServiceCategoryState] By:{Auth}", auth.Serialize());
+            _logger.LogInformation("[UpdateServiceCategoryState] By:{Auth}", auth.Id);
+
+            await ApplicantUploadValidation.ValidateAsync(request);
 
             var application =
                 await _applicationRepository.GetOneAsync(a => a.IsActive && a.ApplicantId == auth.Id)
                 ?? await _applicationService.CreateNonAcademicPromotionApplication(auth.Id);
 
+            if (application.ApplicationStatus != ApplicationStatusTypes.Draft &&
+                application.ApplicationStatus != ApplicationStatusTypes.Returned)
+                return new ApiResponse<NonAcademicServiceResponse>("Submitted applications cannot be edited", 409);
+
             var record = await _serviceRepository.GetOneAsync(
                 s => s.ApplicantId == auth.Id && s.PromotionApplicationId == application.Id);
+
+            foreach (var item in request.UniversityCommunity.Concat(request.NationalInternationalCommunity))
+            {
+                if (string.IsNullOrWhiteSpace(item.ServiceTypeId))
+                    return new ApiResponse<NonAcademicServiceResponse>("Service type is required", 400);
+                var position = await _servicePositionRepository.GetByIdAsync(item.ServiceTypeId);
+                if (position == null || item.Score > position.Score)
+                    return new ApiResponse<NonAcademicServiceResponse>("Service score exceeds its configured maximum or has an invalid type", 400);
+            }
 
             if (record == null)
             {
@@ -81,10 +100,14 @@ public class NonAcademicServiceCategoryService : INonAcademicServiceCategoryServ
 
             return new NonAcademicServiceResponse
             {
-                PerformanceLevel = record.ApplicantPerformance,
+                PerformanceLevel = NonAcademicGradeTotals.ServicePerformance(record, 0),
                 UniversityCommunity = record.ServiceToTheUniversity.Select(MapItem).ToList(),
                 NationalInternationalCommunity = record.ServiceToNationalAndInternational.Select(MapItem).ToList()
             }.ToOkApiResponse("Service category updated successfully");
+        }
+        catch (InvalidDataException ex)
+        {
+            return new ApiResponse<NonAcademicServiceResponse>(ex.Message, 400);
         }
         catch (InvalidOperationException ex)
         {
@@ -92,7 +115,7 @@ public class NonAcademicServiceCategoryService : INonAcademicServiceCategoryServ
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[UpdateServiceCategoryState] Failed. By:{Auth}", auth.Serialize());
+            _logger.LogError(e, "[UpdateServiceCategoryState] Failed. By:{Auth}", auth.Id);
             return new ApiResponse<NonAcademicServiceResponse>("Failed to update service category", 500);
         }
     }
@@ -118,14 +141,14 @@ public class NonAcademicServiceCategoryService : INonAcademicServiceCategoryServ
 
             return new NonAcademicServiceResponse
             {
-                PerformanceLevel = record.ApplicantPerformance,
+                PerformanceLevel = NonAcademicGradeTotals.ServicePerformance(record, 0),
                 UniversityCommunity = record.ServiceToTheUniversity.Select(MapItem).ToList(),
                 NationalInternationalCommunity = record.ServiceToNationalAndInternational.Select(MapItem).ToList()
             }.ToOkApiResponse("Service category retrieved successfully");
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[GetServiceCategoryState] Failed. By:{Auth}", auth.Serialize());
+            _logger.LogError(e, "[GetServiceCategoryState] Failed. By:{Auth}", auth.Id);
             return new ApiResponse<NonAcademicServiceResponse>("Failed to retrieve service category", 500);
         }
     }
@@ -137,7 +160,9 @@ public class NonAcademicServiceCategoryService : INonAcademicServiceCategoryServ
             var positions = await _servicePositionRepository.GetQueryableAsync()
                 .OrderBy(x => x.Name)
                 .ToListAsync();
-            var response = positions.Adapt<List<ServicePositionIndicatorResponse>>();
+            var categories = (await _serviceCategoryRepository.GetAllAsync()).ToDictionary(category => category.Id);
+            var response = positions.Select(position => ServicePositionResponseMapping.Map(position,
+                categories.GetValueOrDefault(position.CategoryId))).ToList();
             return response.ToOkApiResponse("Service positions retrieved");
         }
         catch (Exception e)

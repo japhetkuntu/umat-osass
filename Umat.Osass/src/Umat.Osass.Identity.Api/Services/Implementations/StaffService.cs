@@ -83,7 +83,7 @@ public class StaffService : IStaffService
     {
         try
         {
-            _logger.LogInformation("Registering staff with request {@request}", request.Serialize());
+            _logger.LogInformation("Registering staff with request {@request}", "[redacted]");
             request.Email = request.Email.ToLower();
             var emailDomain = request.Email.Split("@").ToList()[1];
             if (!_extraConfig.UniversityDomain.Equals(emailDomain, StringComparison.InvariantCultureIgnoreCase))
@@ -95,17 +95,20 @@ public class StaffService : IStaffService
                 await _staffRepository.GetOneAsync(x => x.Email.Equals(request.Email));
             if (existingStaffRes != null)
                 return new ApiResponse<OtpResponse>("Staff already exists", 400);
+            if (!await AccountAttemptGuard.AllowAsync(_redisService.Database, "staff-register", request.Email, 3, 1800))
+                return new ApiResponse<OtpResponse>("Too many attempts. Please try again later.", 429);
             var uniqueId = Guid.NewGuid().ToString("N");
     
             var cacheStaffKey = $"{RegisterAccountPrefix}-{request.Email}";
-            var cachedStaff = await _redisService.GetAsync<Staff>(cacheStaffKey);
+            var cachedResponse = await _redisService.GetAsync<OtpResponse>(cacheStaffKey);
             var response = new OtpResponse
             {
                 Email = request.Email,
                 UniqueId = uniqueId
             };
-            if (cachedStaff != null)
-                return response.ToOkApiResponse(
+            if (!string.IsNullOrEmpty(cachedResponse?.UniqueId) &&
+                await _redisService.KeyExistsAsync($"{RegisterAccountPrefix}-{cachedResponse.UniqueId}"))
+                return cachedResponse.ToOkApiResponse(
                     "A verification email has been sent to your email. Kindly check your email to verify your account.");
             var otpCode = RandomNumberGeneratorExtension.GenerateOtp();
             var staff = request.Adapt<StaffCache>();
@@ -118,8 +121,8 @@ public class StaffService : IStaffService
 
             var cacheKey = $"{RegisterAccountPrefix}-{uniqueId}";
 
-            await _redisService.SetAsync(cacheKey, staff, TimeSpan.FromDays(30));
-            await _redisService.SetAsync(cacheStaffKey, staff, TimeSpan.FromDays(30));
+            await _redisService.SetAsync(cacheKey, staff, TimeSpan.FromMinutes(30));
+            await _redisService.SetAsync(cacheStaffKey, response, TimeSpan.FromMinutes(30));
 
             var emailRequest = new SendEmailRequest
             {
@@ -162,12 +165,14 @@ public class StaffService : IStaffService
     {
         try
         {
-            _logger.LogInformation("Received request to resend OTP with request {@request}", request.Serialize());
+            _logger.LogInformation("Received request to resend OTP with request {@request}", "[redacted]");
             var cacheKey = $"{RegisterAccountPrefix}-{request.UniqueId}";
             var staff = await _redisService.GetAsync<StaffCache>(cacheKey);
             if (staff == null)
                 return new ApiResponse<OtpResponse>("Invalid Request. Kindly try again later",
                     400);
+            if (!await AccountAttemptGuard.AllowAsync(_redisService.Database, "staff-resend", staff.Email, 3, 1800))
+                return new ApiResponse<OtpResponse>("Too many attempts. Please try again later.", 429);
             
             var emailRequest = new SendEmailRequest
             {
@@ -201,7 +206,7 @@ public class StaffService : IStaffService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[ResendOtp] Failed to resend OTP for request:{@Request}", request.Serialize());
+            _logger.LogError(e, "[ResendOtp] Failed to resend OTP for request:{@Request}", "[redacted]");
             return new ApiResponse<OtpResponse>("Failed to resend OTP", 500);
         }
     }
@@ -210,18 +215,13 @@ public class StaffService : IStaffService
     {
         try
         {
-            _logger.LogInformation("Verifying email with request {@request}", request.Serialize());
+            _logger.LogInformation("Verifying email with request {@request}", "[redacted]");
             var cacheKey = $"{RegisterAccountPrefix}-{request.UniqueId}";
-            var staff = await _redisService.GetAsync<StaffCache>(cacheKey);
+            var staff = await ResetAttemptGuard.ConsumeAsync<StaffCache>(
+                _redisService.Database, cacheKey, request.OTP, nameof(StaffCache.OTP));
             if (staff == null)
                 return new ApiResponse<StaffTokenResponse>("Staff not found or has expired",
                     400);
-            if (staff.OTP != request.OTP)
-            {
-                await _redisService.RemoveAsync(cacheKey);
-                return new ApiResponse<StaffTokenResponse>("Invalid OTP", 400);
-                
-            }
             var newStaff = staff.Adapt<Staff>();
             newStaff.UpdatedAt = DateTime.UtcNow;
             // Self-registration doesn't collect an org unit yet; an admin assigns
@@ -251,6 +251,7 @@ public class StaffService : IStaffService
 
             // Remove from cache
             await _redisService.RemoveAsync(cacheKey);
+            await _redisService.RemoveAsync($"{RegisterAccountPrefix}-{staff.Email}");
             var refreshToken = await GenerateCacheRefreshToken(staff.Id);
             var response = new StaffTokenResponse
             {
@@ -274,7 +275,7 @@ public class StaffService : IStaffService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[VerifyEmail] Failed to verify emai for request:{@Request}", request.Serialize());
+            _logger.LogError(e, "[VerifyEmail] Failed to verify emai for request:{@Request}", "[redacted]");
             return new ApiResponse<StaffTokenResponse>("Failed to verify email", 500);
         }
     }
@@ -304,7 +305,7 @@ public class StaffService : IStaffService
         try
         {
             _logger.LogInformation("[.RefreshTokenAsync] Received request to refresh token with request {request}",
-                request.Serialize());
+                "[redacted]");
             var claimToken = new AuthClaimData
             {
                 Token = request.AccessToken, Audience = _bearerTokenConfig.Audience, Issuer = _bearerTokenConfig.Issuer,
@@ -363,7 +364,7 @@ public class StaffService : IStaffService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Failed to refreshed token request {request}", request.Serialize());
+            _logger.LogError(e, "Failed to refreshed token request {request}", "[redacted]");
             return new ApiResponse<StaffTokenResponse>("Oops something went wrong", 500);
         }
     }
@@ -436,7 +437,7 @@ public class StaffService : IStaffService
     {
         try
         {
-            _logger.LogInformation("About to add staff with rawRequest: {Request} by {Auth}", request.Serialize(), auth.Serialize());
+            _logger.LogInformation("About to add staff with rawRequest: {Request} by {Auth}", "[redacted]", auth.Serialize());
             request.Email = request.Email.ToLower();
             var emailDomain = request.Email.Split("@").ToList()[1];
             if (!_extraConfig.UniversityDomain.Equals(emailDomain, StringComparison.InvariantCultureIgnoreCase))
@@ -506,10 +507,14 @@ public class StaffService : IStaffService
             }
             email = email.ToLower();
 
+            if (!await AccountAttemptGuard.AllowAsync(_redisService.Database, "staff-reset", email, 3, 1800))
+                return new ApiResponse<ResetPasswordResponse>("Too many attempts. Please try again later.", 429);
+
             var staff = await _staffRepository.GetOneAsync(x => x.Email.Equals(email));
             if (staff == null)
             {
-                return new ApiResponse<ResetPasswordResponse>("Staff not found", 400);
+                return new ResetPasswordResponse { Email = email, UniqueId = Guid.NewGuid().ToString("N") }
+                    .ToOkApiResponse("If the account exists, a verification email has been sent.");
             }
 
             //send a verification email to staff
@@ -549,7 +554,7 @@ public class StaffService : IStaffService
                 UniqueId = verificationCode
             };
 
-            return response.ToOkApiResponse("Password reset successfully");
+            return response.ToOkApiResponse("If the account exists, a verification email has been sent.");
         }
         catch (Exception e)
         {
@@ -561,11 +566,12 @@ public class StaffService : IStaffService
     {
         try
         {
-            _logger.LogInformation("Resetting password with request {@request}", request.Serialize());
+            _logger.LogInformation("Resetting password with request {@request}", "[redacted]");
 
             var cacheKey = $"{ResetPasswordPrefix}-{request.UniqueId}";
-            var staffCache = await _redisService.GetAsync<StaffCache>(cacheKey);
-            if (staffCache == null || staffCache.OTP != request.OtpCode)
+            var staffCache = await ResetAttemptGuard.ConsumeAsync<StaffCache>(
+                _redisService.Database, cacheKey, request.OtpCode, nameof(StaffCache.OTP));
+            if (staffCache == null)
             {
                 return new ApiResponse<StaffTokenResponse>("Invalid or expired verification code", 400);
             }
@@ -625,7 +631,7 @@ public class StaffService : IStaffService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[ResetPasswordAsync] Failed to reset password with request {@request}", request.Serialize());
+            _logger.LogError(e, "[ResetPasswordAsync] Failed to reset password with request {@request}", "[redacted]");
             return new ApiResponse<StaffTokenResponse>("Failed to reset password", 500);
         }
     }
@@ -633,7 +639,7 @@ public class StaffService : IStaffService
     {
         try
         {
-            _logger.LogInformation("Custom login with request {@request}", request.Serialize());
+            _logger.LogInformation("Custom login with request {@request}", "[redacted]");
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
                 return new ApiResponse<StaffTokenResponse>("Email or password is missing", 400);
@@ -642,6 +648,8 @@ public class StaffService : IStaffService
             request.Email = request.Email.ToLower();
 
             var staff = await _staffRepository.GetOneAsync(x => x.Email.Equals(request.Email));
+            if (!await AccountAttemptGuard.AllowAsync(_redisService.Database, "staff-login", request.Email, 10, 900))
+                return new ApiResponse<StaffTokenResponse>("Too many attempts. Please try again later.", 429);
             if (staff == null || !BCrypt.Net.BCrypt.Verify(request.Password, staff.Password!))
             {
                 return new ApiResponse<StaffTokenResponse>("Invalid username or password", 400);

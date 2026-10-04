@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Umat.Osass.Promotion.NonAcademic.Api.Models.Requests;
 
 /// <summary>
@@ -16,6 +18,7 @@ public class NonAcademicServiceRequestData
     public string? ServiceTypeId { get; set; }
     public string? Role { get; set; }
     public string? Duration { get; set; }
+    [Range(0, 100)]
     public required double Score { get; set; }
     public string? Remark { get; set; }
     public bool IsActing { get; set; } = false;

@@ -13,12 +13,14 @@ namespace Umat.Osass.Admin.Api.Services.Providers.Shared;
 
 public class FacultyService:IFacultyService
 {
+    private readonly DeletionGuard _deletionGuard;
     private readonly ILogger<FacultyService> _logger;
     private readonly IIdentityPgRepository<Faculty> _facultyRepository;
     private readonly IIdentityPgRepository<School> _schoolRepository;
 
-    public FacultyService(ILogger<FacultyService> logger,IIdentityPgRepository<Faculty> facultyRepository, IIdentityPgRepository<School> schoolRepository)
+    public FacultyService(DeletionGuard deletionGuard, ILogger<FacultyService> logger,IIdentityPgRepository<Faculty> facultyRepository, IIdentityPgRepository<School> schoolRepository)
     {
+        _deletionGuard = deletionGuard;
         _logger = logger;
         _facultyRepository = facultyRepository;
         _schoolRepository = schoolRepository;
@@ -28,7 +30,7 @@ public class FacultyService:IFacultyService
     {
         try
         {
-            _logger.LogInformation("Received request to add faculty with rawRequest:{Request} by {Auth}",request.Serialize(),auth.Serialize());
+            _logger.LogInformation("Received request to add faculty with rawRequest:{Request} by {Auth}","[redacted]",auth.Id);
             var facultyExist = await _facultyRepository.GetOneAsync(x => x.Name.ToLower() == request.Name.ToLower() && x.SchoolId == request.SchoolId);
             if (facultyExist != null)
             {
@@ -47,7 +49,7 @@ public class FacultyService:IFacultyService
         }
         catch (Exception e)
         {
-           _logger.LogError(e,"Error creating new faculty with rawRequest:{Request} by {Auth}",request.Serialize(),auth.Serialize());
+           _logger.LogError(e,"Error creating new faculty with rawRequest:{Request} by {Auth}","[redacted]",auth.Id);
            return new ApiResponse<FacultyResponse>("Failed to create new faculty",500);
         }
     }
@@ -56,7 +58,7 @@ public class FacultyService:IFacultyService
     {
         try
         {
-            _logger.LogInformation("Received request to update faculty with rawRequest:{Request} with Id: {Id} by {Auth}",request.Serialize(),id,auth.Serialize());
+            _logger.LogInformation("Received request to update faculty with rawRequest:{Request} with Id: {Id} by {Auth}","[redacted]",id,auth.Id);
             var facultyExist = await _facultyRepository.GetByIdAsync(id);
             if (facultyExist == null)
             {
@@ -77,16 +79,19 @@ public class FacultyService:IFacultyService
         }
         catch (Exception e)
         {
-            _logger.LogError(e,"Error updating new faculty with rawRequest:{Request} with Id: {Id} by {Auth}",request.Serialize(),id,auth.Serialize());
+            _logger.LogError(e,"Error updating new faculty with rawRequest:{Request} with Id: {Id} by {Auth}","[redacted]",id,auth.Id);
             return new ApiResponse<FacultyResponse>("Failed to update faculty",500);
         }
     }
 
     public async Task<IApiResponse<FacultyResponse>> Delete(string id, AuthData auth)
     {
+        if (await _deletionGuard.HasReferences("Faculty", id))
+            return new ApiResponse<FacultyResponse>("Cannot delete a record that is still referenced", 409);
+
         try
         {
-            _logger.LogInformation("Received request to delete faculty with Id: {Id} by {Auth}",id,auth.Serialize());
+            _logger.LogInformation("Received request to delete faculty with Id: {Id} by {Auth}",id,auth.Id);
             var facultyExist = await _facultyRepository.GetByIdAsync(id);
             if (facultyExist == null)
             {
@@ -107,7 +112,7 @@ public class FacultyService:IFacultyService
     {
         try
         {
-            _logger.LogInformation("Received request to get faculty with Id: {Id} by {Auth}",id,auth.Serialize());
+            _logger.LogInformation("Received request to get faculty with Id: {Id} by {Auth}",id,auth.Id);
             var facultyExist = await _facultyRepository.GetByIdAsync(id);
             if (facultyExist == null)
             {
@@ -133,7 +138,7 @@ public class FacultyService:IFacultyService
     {
         try
         {
-            _logger.LogInformation("Received request to retrieve list of facultys with rawFilter: {Filter} by: {Auth}",filter.Serialize(),auth.Serialize());
+            _logger.LogInformation("Received request to retrieve list of facultys with rawFilter: {Filter} by: {Auth}","[redacted]",auth.Id);
                   var facultyQuery = _facultyRepository.GetQueryableAsync();
 
             if (!string.IsNullOrEmpty(filter.Search) )
@@ -170,7 +175,7 @@ public class FacultyService:IFacultyService
         }
         catch (Exception e)
         {
-           _logger.LogError(e,"Error getting list of facultys with filter: {Filter}",filter.Serialize());
+           _logger.LogError(e,"Error getting list of facultys with filter: {Filter}","[redacted]");
            return new ApiResponse<PagedResult<FacultyResponse>>("Failed to get faculties list",500);
         }
     }

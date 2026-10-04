@@ -1,3 +1,6 @@
+import type { ServicePositionIndicator } from "@/types/academic";
+import { getEvidenceFileName, UPLOAD_ACCEPT, validateUploadFiles } from "@/lib/files";
+import { toast } from "sonner";
 import { useState } from "react";
 import { Upload, ChevronDown, ChevronUp, FileText, X, Trash2, Briefcase, Calendar, Award, Info, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -24,7 +27,7 @@ export interface ServiceRecordData {
 
 interface ServiceRecordCardProps {
   record: ServiceRecordData;
-  positions: any[];
+  positions: ServicePositionIndicator[];
   onUpdate: (record: ServiceRecordData) => void;
   onDelete: (id: string) => void;
   isReadOnly?: boolean;
@@ -40,7 +43,7 @@ export const ServiceRecordCard = ({
   const [isExpanded, setIsExpanded] = useState(!record.serviceTitle);
   const [previewFile, setPreviewFile] = useState<{ url: string; name: string } | null>(null);
 
-  const handleFieldChange = (field: keyof ServiceRecordData, value: any) => {
+  const handleFieldChange = <Field extends keyof ServiceRecordData,>(field: Field, value: ServiceRecordData[Field]) => {
     const updated = { ...record, [field]: value };
     if (field === "serviceTypeId") {
       const position = positions.find(p => p.id === value);
@@ -54,6 +57,9 @@ export const ServiceRecordCard = ({
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files);
+      const error = validateUploadFiles(selectedFiles);
+      e.target.value = "";
+      if (error) { toast.error(error); return; }
       const updatedFiles = [...(record.newFiles || []), ...selectedFiles];
       handleFieldChange("newFiles", updatedFiles);
     }
@@ -287,13 +293,13 @@ export const ServiceRecordCard = ({
                     <div key={`existing-${idx}`} className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border/30 group/file shadow-sm hover:border-primary/30 transition-all">
                       <button
                         type="button"
-                        onClick={() => setPreviewFile({ url: doc, name: doc.split('/').pop() || "Document" })}
+                        onClick={() => setPreviewFile({ url: doc, name: getEvidenceFileName(doc) || "Document" })}
                         className="flex items-center gap-3 flex-1 text-left"
                       >
                         <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center group-hover/file:scale-110 transition-transform">
                           <FileText className="w-4 h-4 text-primary" />
                         </div>
-                        <span className="text-xs font-medium text-foreground truncate max-w-[200px] font-light group-hover/file:text-primary transition-colors">{doc.split('/').pop()}</span>
+                        <span className="text-xs font-medium text-foreground truncate max-w-[200px] font-light group-hover/file:text-primary transition-colors">{getEvidenceFileName(doc)}</span>
                       </button>
                       {!isReadOnly && (
                         <button
@@ -327,6 +333,7 @@ export const ServiceRecordCard = ({
                     <div className="relative">
                       <input
                         type="file"
+                        accept={UPLOAD_ACCEPT}
                         id={`file-upload-service-${record.id}`}
                         className="hidden"
                         onChange={handleFileUpload}

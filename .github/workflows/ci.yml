@@ -1,0 +1,80 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m unittest discover -s scripts/tests -p 'test_check_secrets.py'
+      - run: python3 scripts/check-secrets.py
+  portals:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        portal:
+          - academic-portal
+          - academic-assessment-portal
+          - admin-portal
+          - non-academic-portal
+          - non-academic-assessment-portal
+    defaults:
+      run:
+        working-directory: Osass
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: Osass/package-lock.json
+      - run: npm ci
+        id: install
+      - name: Tests
+        run: npm run test --workspace apps/${{ matrix.portal }}
+      - name: Typecheck
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run typecheck --workspace apps/${{ matrix.portal }}
+      - name: Build
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run build --workspace apps/${{ matrix.portal }}
+      - name: Lint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run lint --workspace apps/${{ matrix.portal }}
+  dotnet:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 16389:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Start disposable private storage fixture
+        run: |
+          docker run -d --name osass-test-storage -p 127.0.0.1:19002:9000 -e MINIO_ROOT_USER=test-only-access -e MINIO_ROOT_PASSWORD=test-only-private-storage-password minio/minio:latest server /data
+          for attempt in $(seq 1 30); do curl --fail --silent http://127.0.0.1:19002/minio/health/ready && break; sleep 1; done
+          curl --fail --silent http://127.0.0.1:19002/minio/health/ready
+      - run: dotnet restore Umat.Osass/Umat.Osass.sln
+      - run: dotnet build Umat.Osass/Umat.Osass.sln --configuration Release --no-restore
+      - run: dotnet test Umat.Osass/tests/Umat.Osass.Tests/Umat.Osass.Tests.csproj --configuration Release --no-build --no-restore
+  identity-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build isolated Identity API image
+        run: docker build -t osass/identity-api:audit --build-arg PROJECT_NAME=Umat.Osass.Identity.Api Umat.Osass
+      - name: Verify permissions, reset security and throttling
+        run: python3 scripts/test-identity-security.py

@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/dist-ssr
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+**/*.log
+**/.DS_Store
+.git
+EmailTemplates

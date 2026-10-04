@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTable, Column } from '@/components/common/DataTable';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
@@ -165,7 +164,7 @@ export default function NonAcademicCommitteesPage() {
   };
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Non-Teaching Staff Committees"
         description="Manage HOU, AAPSC, and UAPC committee members for non-teaching staff promotions"
@@ -315,6 +314,6 @@ export default function NonAcademicCommitteesPage() {
         onConfirm={handleDelete}
         isDestructive
       />
-    </AdminLayout>
+    </>
   );
 }

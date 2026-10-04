@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { performancePreview } from "@osass/domain/performance";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Briefcase, Loader2, Save, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -59,7 +60,7 @@ const PERFORMANCE_CATEGORIES = [
     title: "Ability to Inspire and Motivate",
     description: "Capacity to encourage and motivate colleagues to achieve institutional goals",
   },
-];
+] as const;
 
 interface CategoryData {
   id: string | null;
@@ -94,7 +95,7 @@ const PerformanceAtWorkSection = () => {
         const data = res.data;
         const updated: Record<string, CategoryData> = {};
         PERFORMANCE_CATEGORIES.forEach((cat) => {
-          const backendData = (data as any)[cat.id];
+          const backendData = data[cat.id];
           updated[cat.id] = {
             id: backendData?.id || null,
             score: backendData?.score ?? null,
@@ -194,11 +195,7 @@ const PerformanceAtWorkSection = () => {
 
   const getPerformanceLevel = () => {
     if (completedCategories === 0) return { label: "Pending", className: "text-muted-foreground", bg: "bg-muted/50" };
-    const avg = totalScore / completedCategories;
-    if (avg >= 8) return { label: "Excellent", className: "text-success", bg: "bg-success/10" };
-    if (avg >= 6) return { label: "Proficient", className: "text-primary", bg: "bg-primary/10" };
-    if (avg >= 4) return { label: "Satisfactory", className: "text-warning", bg: "bg-warning/10" };
-    return { label: "Developing", className: "text-destructive", bg: "bg-destructive/10" };
+    return performancePreview(totalScore, "non-academic-work");
   };
 
   const perf = getPerformanceLevel();

@@ -52,7 +52,7 @@ const Guidelines = () => {
                         </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="card-elevated p-6 space-y-4">
-                                <h3 className="font-bold border-b border-border pb-2 text-sm uppercase tracking-wider">Teaching & Service (Max 100)</h3>
+                                <h3 className="font-bold border-b border-border pb-2 text-sm uppercase tracking-wider">Teaching (Total out of 100)</h3>
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center text-sm">
                                         <span className="text-muted-foreground font-medium">High</span>
@@ -73,11 +73,11 @@ const Guidelines = () => {
                                 </div>
                             </div>
                             <div className="card-elevated p-6 space-y-4">
-                                <h3 className="font-bold border-b border-border pb-2 text-sm uppercase tracking-wider">Research & Publication (Max 140)</h3>
+                                <h3 className="font-bold border-b border-border pb-2 text-sm uppercase tracking-wider">Research & Publication (Total Points)</h3>
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center text-sm">
                                         <span className="text-muted-foreground font-medium">High</span>
-                                        <span className="bg-success/10 text-success px-2 py-0.5 rounded-full font-bold">90 - 140</span>
+                                        <span className="bg-success/10 text-success px-2 py-0.5 rounded-full font-bold">≥ 90</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm">
                                         <span className="text-muted-foreground font-medium">Good</span>
@@ -101,6 +101,9 @@ const Guidelines = () => {
                             <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold">03</span>
                             Promotion Performance Matrix
                         </h2>
+                        <p className="text-sm text-muted-foreground">
+                            Service uses uncapped total points: High ≥ 100, Good 50–99.9, Adequate 30–49.9, Inadequate below 30. Publication points are also uncapped; neither total is normalized to a percentage.
+                        </p>
                         <p className="text-sm text-muted-foreground leading-relaxed italic">
                             Advancement is determined by the combination of assessment levels across Teaching, Research, and Service. Below are the minimum requirements for {requirement?.name || 'your next rank'}, as configured by the administrator:
                         </p>

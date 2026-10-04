@@ -57,9 +57,8 @@ ServiceRegistrationExtensions.AddControllers(services);
 
 services.AddHttpLogging(options =>
 {
-    options.LoggingFields = HttpLoggingFields.All;
-    options.RequestBodyLogLimit = 4096;
-    options.ResponseBodyLogLimit = 4096;
+    options.LoggingFields = HttpLoggingFields.RequestMethod | HttpLoggingFields.RequestPath |
+        HttpLoggingFields.ResponseStatusCode | HttpLoggingFields.Duration;
 });
 services.AddApiVersioning(1);
 

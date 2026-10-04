@@ -1,3 +1,4 @@
+import { normalizePerformance } from "@osass/domain/performance";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,6 +33,52 @@ import {
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { useState, useEffect, useMemo } from "react";
+
+type ApplicationListItem = {
+  applicationId?: string;
+  ApplicationId?: string;
+  applicantId?: string;
+  ApplicantId?: string;
+  applicantName?: string;
+  ApplicantName?: string;
+  applicantEmail?: string;
+  ApplicantEmail?: string;
+  applyingForPosition?: string;
+  ApplyingForPosition?: string;
+  promotionPosition?: string;
+  PromotionPosition?: string;
+  currentPosition?: string;
+  ApplicantCurrentPosition?: string;
+  unitName?: string;
+  departmentName?: string;
+  ApplicantDepartmentName?: string;
+  ApplicantFacultyName?: string;
+  PerformanceAtWorkPerformance?: string;
+  KnowledgeProfessionPerformance?: string;
+  ServicePerformance?: string;
+  applicationStatus?: string;
+  ApplicationStatus?: string;
+  submissionDate?: string;
+  SubmissionDate?: string;
+  applicantPerformance?: LegacyPerformance;
+  ApplicantPerformance?: LegacyPerformance;
+  isResubmission?: boolean;
+  IsResubmission?: boolean;
+  resubmissionCount?: number;
+  ResubmissionCount?: number;
+};
+type LegacyPerformance = {
+  performanceAtWorkPerformance?: string;
+  PerformanceAtWorkPerformance?: string;
+  teachingPerformance?: string;
+  TeachingPerformance?: string;
+  knowledgeProfessionPerformance?: string;
+  KnowledgeProfessionPerformance?: string;
+  publicationPerformance?: string;
+  PublicationPerformance?: string;
+  servicePerformance?: string;
+  ServicePerformance?: string;
+};
 
 export default function PendingApplicationsPage() {
   const { committeeType } = useParams<{ committeeType: string }>();
@@ -71,12 +118,12 @@ export default function PendingApplicationsPage() {
   const applications_list = useMemo(() => {
     if (!applications) return [];
     // Backend returns { results: [...], totalCount, pageIndex, pageSize, ... }
-    const items = Array.isArray(applications) ? applications : (applications.results || applications.items || applications.Items || []);
+    const items = Array.isArray(applications) ? applications : (applications.results || []);
     
     if (items.length === 0) return [];
     
     return items
-      .map((a: any) => {
+      .map((a: ApplicationListItem) => {
       const perf = a.applicantPerformance || a.ApplicantPerformance || {};
       return {
         applicationId: a.applicationId || a.ApplicationId,
@@ -118,9 +165,9 @@ export default function PendingApplicationsPage() {
       High: { variant: "success", icon: <CheckCircle2 className="h-3 w-3" /> },
       Good: { variant: "success", icon: <CheckCircle2 className="h-3 w-3" /> },
       Adequate: { variant: "warning", icon: <AlertCircle className="h-3 w-3" /> },
-      InAdequate: { variant: "destructive", icon: <MinusCircle className="h-3 w-3" /> },
+      Inadequate: { variant: "destructive", icon: <MinusCircle className="h-3 w-3" /> },
     };
-    const config = variants[performance] || { variant: "secondary" as const, icon: null };
+    const config = variants[normalizePerformance(performance)] || { variant: "secondary" as const, icon: null };
     return (
       <Badge variant={config.variant} className="inline-flex items-center gap-1 whitespace-nowrap text-xs">
         {config.icon}

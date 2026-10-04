@@ -1,4 +1,4 @@
-import { ApiResponse, LoginResponse, StaffLoginMetaData, StaffTokenResponse } from "../types/auth";
+import { ApiResponse, LoginResponse, StaffLoginMetaData, StaffTokenResponse, EligibilityData } from "../types/auth";
 import { identityClient, academicClient } from "./apiClient";
 
 class AuthService {
@@ -33,8 +33,8 @@ class AuthService {
         return await identityClient.get<StaffTokenResponse>("/Staffs/me");
     }
 
-    async getEligibility(): Promise<ApiResponse<any>> {
-        return await academicClient.get<any>("/Applications/eligibility");
+    async getEligibility(): Promise<ApiResponse<EligibilityData>> {
+        return await academicClient.get<EligibilityData>("/Applications/eligibility");
     }
 
     async refreshToken(accessToken: string, refreshToken: string): Promise<ApiResponse<LoginResponse>> {

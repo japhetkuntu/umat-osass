@@ -1,3 +1,4 @@
+using Umat.Osass.Promotion.Domain;
 using Umat.Osass.AcademicPromotion.Sdk.Services;
 using Umat.Osass.Common.Sdk.Models;
 using Umat.Osass.PostgresDb.Sdk.Common;
@@ -45,12 +46,18 @@ public class TeachingCategoryService : ITeachingCategoryService
         {
             _logger.LogInformation(
                 "[UpdateTeachingCategoryState] Request:{Request} By:{Auth}",
-                request.Serialize(),
-                auth.Serialize());
+                "[redacted]",
+                auth.Id);
+
+            await ApplicantUploadValidation.ValidateAsync(request);
 
             var application =
                 await _applicationRepository.GetOneAsync(a => a.IsActive && a.ApplicantId == auth.Id)
                 ?? await _applicationService.CreateAcademicPromotionApplication(auth.Id);
+
+            if (application.ApplicationStatus != ApplicationStatusTypes.Draft &&
+                application.ApplicationStatus != ApplicationStatusTypes.Returned)
+                return new ApiResponse<TeachingResponse>("Submitted applications cannot be edited", 409);
 
             var teaching =
                 await _teachingRepository.GetOneAsync(t => t.ApplicantId == auth.Id &&
@@ -143,6 +150,10 @@ public class TeachingCategoryService : ITeachingCategoryService
 
             return FormatTeachingResponse(teaching).ToOkApiResponse("Teaching category updated successfully");
         }
+        catch (InvalidDataException ex)
+        {
+            return new ApiResponse<TeachingResponse>(ex.Message, 400);
+        }
         catch (InvalidOperationException ex)
         {
             return new ApiResponse<TeachingResponse>(ex.Message, 400);
@@ -152,8 +163,8 @@ public class TeachingCategoryService : ITeachingCategoryService
             _logger.LogError(
                 e,
                 "[UpdateTeachingCategoryState] Failed. Request:{Request} By:{Auth}",
-                request.Serialize(),
-                auth.Serialize());
+                "[redacted]",
+                auth.Id);
 
             return new ApiResponse<TeachingResponse>(
                 "Failed to update teaching category state",
@@ -183,7 +194,7 @@ public class TeachingCategoryService : ITeachingCategoryService
         {
             _logger.LogInformation(
                 "[GetTeachingCategoryState] Fetching teaching category state for {Auth}",
-                auth.Serialize());
+                auth.Id);
             AcademicPromotionApplication? application;
             if (!string.IsNullOrEmpty(id))
             {
@@ -217,7 +228,7 @@ public class TeachingCategoryService : ITeachingCategoryService
             _logger.LogError(
                 e,
                 "[GetTeachingCategoryState] Failed for {Auth}",
-                auth.Serialize());
+                auth.Id);
 
             return new ApiResponse<TeachingResponse>(
                 "Failed to retrieve teaching category state",
@@ -320,7 +331,7 @@ public class TeachingCategoryService : ITeachingCategoryService
         {
             CompletedCategories = scores.Count,
             AverageScore = scores.Any() ? Math.Round(scores.Average(), 2) : null,
-            PerformanceLevel =record.ApplicantPerformance,
+            PerformanceLevel = AcademicGradeTotals.TeachingPerformance(record, 0),
             LectureLoad = MapTeachingData(record.LectureLoad),
             AbilityToAdaptToTeaching = MapTeachingData(record.AbilityToAdaptToTeaching),
             RegularityAndPunctuality = MapTeachingData(record.RegularityAndPunctuality),

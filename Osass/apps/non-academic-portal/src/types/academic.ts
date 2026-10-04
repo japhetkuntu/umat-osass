@@ -71,6 +71,9 @@ export interface KnowledgeProfessionResponseData {
     systemGeneratedScore: number;
     applicantScore: number;
     materialTypeId: string;
+    score: number;
+    isPresented?: boolean;
+    presentationEvidence?: string[];
     remark: string | null;
     evidence: string[];
 }
@@ -83,6 +86,11 @@ export interface KnowledgeProfessionResponse {
 export interface NonAcademicServiceResponseData {
     id: string;
     serviceTitle: string;
+    serviceTypeId: string;
+    role: string | null;
+    duration: string | null;
+    isActing?: boolean;
+    systemGeneratedScore: number;
     score: number;
     remark: string | null;
     evidence: string[];
@@ -139,11 +147,20 @@ export interface StaffUpdateItem {
     createdAt: string;
 }
 
-export interface PagedResult<T> {
-    results: T[];
-    totalCount: number;
-    pageIndex: number;
-    pageSize: number;
-    count: number;
-    totalPages: number;
+export type { PagedResult } from "@osass/domain";
+
+export interface SubmittedApplicationResponse {
+    performanceAtWorkApplication: {
+        totalNumberOfCategoriesAssessed: number;
+        categories: { category: string; remark: string | null; score: number }[];
+    } | null;
+    knowledgeProfessionApplication: {
+        totalNumberOfMaterialsRecorded: number;
+        materials: { title: string; year: number; materialCategory: string; remark: string | null; score: number; systemScore: number }[];
+    } | null;
+    serviceApplication: {
+        totalNumberOfServicesRecorded: number;
+        serviceToUniversityApplicationData: { title: string; remark: string | null; score: number }[];
+        serviceToNationalInternationApplicationData: { title: string; remark: string | null; score: number }[];
+    } | null;
 }

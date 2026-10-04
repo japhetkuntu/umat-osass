@@ -1,3 +1,5 @@
+import type { KnowledgeProfessionResponseData } from "@/types/academic";
+import { normalizeStatus } from "@osass/domain/status";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Lock, Download, BarChart3, BookOpen, Users, Loader2 } from "lucide-react";
@@ -12,9 +14,9 @@ const ApplicationView = () => {
   const { user, logout, eligibility } = useAuth();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<{
-    performance: any[];
-    knowledge: any[];
-    service: { university: any[]; national: any[] };
+    performance: { name: string; score: number; remark: string }[];
+    knowledge: KnowledgeProfessionResponseData[];
+    service: { university: { title: string; score: number }[]; national: { title: string; score: number }[] };
   }>({
     performance: [],
     knowledge: [],
@@ -41,25 +43,25 @@ const ApplicationView = () => {
           { id: "humanRelations", name: "Human Relations" },
           { id: "initiativeAndForesight", name: "Initiative & Foresight" },
           { id: "abilityToInspireAndMotivate", name: "Ability to Inspire & Motivate" },
-        ];
+        ] as const;
 
         const performanceData = perfRes.success ? performanceCategories.map(cat => ({
           name: cat.name,
-          score: (perfRes.data as any)[cat.id]?.score || 0,
-          remark: (perfRes.data as any)[cat.id]?.remark || ""
+          score: perfRes.data[cat.id]?.score || 0,
+          remark: perfRes.data[cat.id]?.remark || ""
         })) : [];
 
-        const knowData = knowRes.success ? (knowRes.data as any).materials || [] : [];
+        const knowData = knowRes.success ? knowRes.data.materials || [] : [];
 
-        let universityService: any[] = [];
-        let nationalService: any[] = [];
+        const universityService: { title: string; score: number }[] = [];
+        const nationalService: { title: string; score: number }[] = [];
 
         if (serviceRes.success) {
-          serviceRes.data.universityCommunity?.forEach((s: any) => {
+          serviceRes.data.universityCommunity?.forEach((s) => {
             universityService.push({ title: s.serviceTitle, score: s.score });
           });
 
-          serviceRes.data.nationalInternationalCommunity?.forEach((s: any) => {
+          serviceRes.data.nationalInternationalCommunity?.forEach((s) => {
             nationalService.push({ title: s.serviceTitle, score: s.score });
           });
         }
@@ -80,7 +82,7 @@ const ApplicationView = () => {
   }, []);
 
   const activeApp = eligibility?.activeApplication;
-  const applicationStatus = (activeApp?.applicationStatus || "submitted") as any;
+  const applicationStatus = normalizeStatus(activeApp?.applicationStatus || "submitted");
 
   const handleDownloadPDF = () => {
     toast.info("PDF download isn't available yet. Please check back soon.");
@@ -178,7 +180,7 @@ const ApplicationView = () => {
           <div className="space-y-4">
             {data.knowledge.length === 0 ? (
               <p className="text-sm text-muted-foreground italic py-4">No knowledge & profession records submitted.</p>
-            ) : data.knowledge.map((item: any, index: number) => (
+            ) : data.knowledge.map((item, index) => (
               <div
                 key={index}
                 className="bg-muted/50 rounded-lg p-4 border border-border/50"

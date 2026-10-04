@@ -13,13 +13,15 @@ namespace Umat.Osass.Admin.Api.Services.Providers.Shared;
 
 public class DepartmentService:IDepartmentService
 {
+    private readonly DeletionGuard _deletionGuard;
     private readonly ILogger<DepartmentService> _logger;
     private readonly IIdentityPgRepository<Department> _departmentRepository;
     private readonly IIdentityPgRepository<Faculty> _facultyRepository;
     private readonly IIdentityPgRepository<School> _schoolRepository;
 
-    public DepartmentService(ILogger<DepartmentService> logger,IIdentityPgRepository<Department> departmentRepository, IIdentityPgRepository<Faculty> facultyRepository, IIdentityPgRepository<School> schoolRepository)
+    public DepartmentService(DeletionGuard deletionGuard, ILogger<DepartmentService> logger,IIdentityPgRepository<Department> departmentRepository, IIdentityPgRepository<Faculty> facultyRepository, IIdentityPgRepository<School> schoolRepository)
     {
+        _deletionGuard = deletionGuard;
         _logger = logger;
         _departmentRepository = departmentRepository;
         _facultyRepository = facultyRepository;
@@ -30,7 +32,7 @@ public class DepartmentService:IDepartmentService
     {
         try
         {
-            _logger.LogInformation("Received request to add department with rawRequest:{Request} by {Auth}",request.Serialize(),auth.Serialize());
+            _logger.LogInformation("Received request to add department with rawRequest:{Request} by {Auth}","[redacted]",auth.Id);
 
             var isNonAcademic = string.Equals(request.DepartmentType, "non-academic", StringComparison.OrdinalIgnoreCase);
 
@@ -86,7 +88,7 @@ public class DepartmentService:IDepartmentService
         }
         catch (Exception e)
         {
-           _logger.LogError(e,"Error creating new department with rawRequest:{Request} by {Auth}",request.Serialize(),auth.Serialize());
+           _logger.LogError(e,"Error creating new department with rawRequest:{Request} by {Auth}","[redacted]",auth.Id);
            return new ApiResponse<DepartmentResponse>("Failed to create new department",500);
         }
     }
@@ -95,7 +97,7 @@ public class DepartmentService:IDepartmentService
     {
         try
         {
-            _logger.LogInformation("Received request to update department with rawRequest:{Request} with Id: {Id} by {Auth}",request.Serialize(),id,auth.Serialize());
+            _logger.LogInformation("Received request to update department with rawRequest:{Request} with Id: {Id} by {Auth}","[redacted]",id,auth.Id);
             var departmentExist = await _departmentRepository.GetByIdAsync(id);
             if (departmentExist == null)
                 return new ApiResponse<DepartmentResponse>("Department does not exist", 400);
@@ -148,16 +150,19 @@ public class DepartmentService:IDepartmentService
         }
         catch (Exception e)
         {
-            _logger.LogError(e,"Error updating new department with rawRequest:{Request} with Id: {Id} by {Auth}",request.Serialize(),id,auth.Serialize());
+            _logger.LogError(e,"Error updating new department with rawRequest:{Request} with Id: {Id} by {Auth}","[redacted]",id,auth.Id);
             return new ApiResponse<DepartmentResponse>("Failed to update department",500);
         }
     }
 
     public async Task<IApiResponse<DepartmentResponse>> Delete(string id, AuthData auth)
     {
+        if (await _deletionGuard.HasReferences("Department", id))
+            return new ApiResponse<DepartmentResponse>("Cannot delete a record that is still referenced", 409);
+
         try
         {
-            _logger.LogInformation("Received request to delete department with Id: {Id} by {Auth}",id,auth.Serialize());
+            _logger.LogInformation("Received request to delete department with Id: {Id} by {Auth}",id,auth.Id);
             var departmentExist = await _departmentRepository.GetByIdAsync(id);
             if (departmentExist == null)
             {
@@ -178,7 +183,7 @@ public class DepartmentService:IDepartmentService
     {
         try
         {
-            _logger.LogInformation("Received request to get department with Id: {Id} by {Auth}",id,auth.Serialize());
+            _logger.LogInformation("Received request to get department with Id: {Id} by {Auth}",id,auth.Id);
             var departmentExist = await _departmentRepository.GetByIdAsync(id);
             if (departmentExist == null)
             {
@@ -209,7 +214,7 @@ public class DepartmentService:IDepartmentService
     {
         try
         {
-            _logger.LogInformation("Received request to retrieve list of departments with rawFilter: {Filter} by: {Auth}",filter.Serialize(),auth.Serialize());
+            _logger.LogInformation("Received request to retrieve list of departments with rawFilter: {Filter} by: {Auth}","[redacted]",auth.Id);
                   var departmentQuery = _departmentRepository.GetQueryableAsync();
 
             if (!string.IsNullOrEmpty(filter.Search) )
@@ -260,7 +265,7 @@ public class DepartmentService:IDepartmentService
         }
         catch (Exception e)
         {
-           _logger.LogError(e,"Error getting list of departments with filter: {Filter}",filter.Serialize());
+           _logger.LogError(e,"Error getting list of departments with filter: {Filter}","[redacted]");
            return new ApiResponse<PagedResult<DepartmentResponse>>("Failed to get faculties list",500);
         }
     }

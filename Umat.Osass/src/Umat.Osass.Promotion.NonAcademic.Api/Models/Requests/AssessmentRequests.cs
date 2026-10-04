@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Umat.Osass.Promotion.NonAcademic.Api.Models.Requests;
 
 /// <summary>
@@ -28,6 +30,7 @@ public class PerformanceAtWorkAssessmentScores
 
 public class CategoryScore
 {
+    [Range(0, 10)]
     public double Score { get; set; }
     public string? Remarks { get; set; }
 }
@@ -35,6 +38,7 @@ public class CategoryScore
 public class RecordScore
 {
     public required string RecordId { get; set; }
+    [Range(0, 100)]
     public double Score { get; set; }
     public string? Remarks { get; set; }
 }

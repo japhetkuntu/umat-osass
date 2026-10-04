@@ -1,3 +1,5 @@
+import { normalizeStatus } from "@osass/domain/status";
+import { performanceRank } from "@osass/domain/performance";
 import { useState, useEffect, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, CheckCircle2, ChevronDown, ChevronUp, BarChart3, BookOpen, Users, AlertCircle } from "lucide-react";
@@ -19,7 +21,7 @@ const Review = () => {
   const [appState, setAppState] = useState<ApplicationCategoryState | null>(null);
   const [overallReview, setOverallReview] = useState<OverallReview | null>(null);
 
-  const applicationStatus = (eligibility?.activeApplication?.applicationStatus?.toLowerCase() || "not-started") as any;
+  const applicationStatus = normalizeStatus(eligibility?.activeApplication?.applicationStatus || "not-started");
   // Allow submission for both draft and returned applications
   const canSubmit = applicationStatus === "draft" || applicationStatus === "returned";
 
@@ -64,7 +66,7 @@ const Review = () => {
   const reviewData = {
     performance: {
       level: appState?.performanceAtWorkPerformance || "Not Started",
-      avgScore: overallReview?.totalPerformanceAtWorkScore ? `${overallReview.totalPerformanceAtWorkScore.toFixed(1)}/10` : "0/10",
+      avgScore: `${(overallReview?.totalPerformanceAtWorkScore ?? 0).toFixed(1)}/100`,
       categoriesCompleted: appState?.numberOfRecordsForPerformanceAtWork || 0,
       description: "Self-assessment across 10 work performance evaluation categories",
     },
@@ -154,9 +156,9 @@ const Review = () => {
               <h3 className="font-medium text-foreground">{title}</h3>
               <p className={cn(
                 "text-sm font-medium",
-                level.toLowerCase().includes("high") || level.toLowerCase().includes("excellent") || level.toLowerCase().includes("good")
+                performanceRank(level) >= 2
                   ? "text-success"
-                  : level.toLowerCase().includes("adequate")
+                  : performanceRank(level) === 1
                     ? "text-warning"
                     : "text-muted-foreground"
               )}>
@@ -253,7 +255,7 @@ const Review = () => {
               </p>
               <div className="flex gap-4 text-sm">
                 <span className="text-foreground">
-                  Average Score: <strong>{reviewData.performance.avgScore}</strong>
+                  Total Score: <strong>{reviewData.performance.avgScore}</strong>
                 </span>
                 <span className="text-muted-foreground">
                   {reviewData.performance.categoriesCompleted}/10 categories
